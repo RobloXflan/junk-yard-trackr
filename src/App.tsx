@@ -1,27 +1,109 @@
+
+import { useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/AppSidebar";
+import { LoginForm } from "@/components/LoginForm";
+import { Dashboard } from "@/pages/Dashboard";
+import { Intake } from "@/pages/Intake";
+import { Inventory } from "@/pages/Inventory";
+import { Menu } from "lucide-react";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentPage, setCurrentPage] = useState("dashboard");
+
+  const handleLogin = () => {
+    setIsAuthenticated(true);
+  };
+
+  const renderPage = () => {
+    switch (currentPage) {
+      case "dashboard":
+        return <Dashboard />;
+      case "intake":
+        return <Intake />;
+      case "inventory":
+        return <Inventory />;
+      default:
+        return <Dashboard />;
+    }
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <LoginForm onLogin={handleLogin} />
+        </TooltipProvider>
+      </QueryClientProvider>
+    );
+  }
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <SidebarProvider>
+          <div className="min-h-screen flex w-full bg-background">
+            <AppSidebar />
+            <main className="flex-1 flex flex-col">
+              <header className="border-b bg-card px-4 py-3 lg:px-6">
+                <div className="flex items-center gap-4">
+                  <SidebarTrigger className="lg:hidden">
+                    <Menu className="w-5 h-5" />
+                  </SidebarTrigger>
+                  <nav className="hidden lg:flex items-center space-x-4">
+                    <button
+                      onClick={() => setCurrentPage("dashboard")}
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                        currentPage === "dashboard"
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      }`}
+                    >
+                      Dashboard
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage("intake")}
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                        currentPage === "intake"
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      }`}
+                    >
+                      Vehicle Intake
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage("inventory")}
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                        currentPage === "inventory"
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      }`}
+                    >
+                      Inventory
+                    </button>
+                  </nav>
+                </div>
+              </header>
+              <div className="flex-1 p-4 lg:p-6">
+                {renderPage()}
+              </div>
+            </main>
+          </div>
+        </SidebarProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
