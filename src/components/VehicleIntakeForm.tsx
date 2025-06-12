@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ export function VehicleIntakeForm() {
     year: "",
     make: "",
     model: "",
-    vin: "",
+    vehicleId: "", // Changed from vin to vehicleId
     licensePlate: "",
     sellerName: "",
     purchaseDate: "",
@@ -94,7 +95,7 @@ export function VehicleIntakeForm() {
 
   const handleApplyOCRData = (data: Partial<ExtractedVehicleData>) => {
     const updates: any = {};
-    if (data.vin) updates.vin = data.vin;
+    if (data.vehicleId) updates.vehicleId = data.vehicleId; // Changed from vin to vehicleId
     if (data.licensePlate) updates.licensePlate = data.licensePlate;
     if (data.year) updates.year = data.year;
     if (data.make) updates.make = data.make;
@@ -121,7 +122,7 @@ export function VehicleIntakeForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.year || !formData.make || !formData.model || !formData.vin) {
+    if (!formData.year || !formData.make || !formData.model || !formData.vehicleId) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required vehicle details.",
@@ -153,7 +154,7 @@ export function VehicleIntakeForm() {
       year: "",
       make: "",
       model: "",
-      vin: "",
+      vehicleId: "", // Changed from vin to vehicleId
       licensePlate: "",
       sellerName: "",
       purchaseDate: "",
@@ -279,13 +280,14 @@ export function VehicleIntakeForm() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="vin" className="text-slate-700 font-medium">VIN *</Label>
+                <Label htmlFor="vehicleId" className="text-slate-700 font-medium">Vehicle ID (Last 5 of VIN) *</Label>
                 <Input
-                  id="vin"
-                  placeholder="1HGBH41JXMN109186"
-                  value={formData.vin}
-                  onChange={(e) => handleInputChange("vin", e.target.value.toUpperCase())}
+                  id="vehicleId"
+                  placeholder="09186"
+                  value={formData.vehicleId}
+                  onChange={(e) => handleInputChange("vehicleId", e.target.value.toUpperCase())}
                   required
+                  maxLength={5}
                   className="border-slate-300 focus:border-blue-500"
                 />
               </div>

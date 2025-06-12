@@ -2,13 +2,13 @@
 import Tesseract from 'tesseract.js';
 
 export interface ExtractedVehicleData {
-  vin?: string;
+  vehicleId?: string; // Changed from vin to vehicleId (last 5 digits)
   licensePlate?: string;
   year?: string;
   make?: string;
   model?: string;
   confidence: {
-    vin?: number;
+    vehicleId?: number; // Changed from vin to vehicleId
     licensePlate?: number;
     year?: number;
     make?: number;
@@ -58,26 +58,37 @@ export class OCRService {
         confidence: {}
       };
 
-      // Extract VIN (17 characters, alphanumeric, no I, O, Q)
-      const vinMatch = text.match(/\b[A-HJ-NPR-Z0-9]{17}\b/g);
-      if (vinMatch) {
-        extractedData.vin = vinMatch[0];
-        extractedData.confidence.vin = 0.9;
+      // Enhanced VIN extraction - extract last 5 digits only
+      const fullVin = this.extractFullVIN(text);
+      if (fullVin) {
+        extractedData.vehicleId = fullVin.slice(-5); // Get last 5 digits
+        extractedData.confidence.vehicleId = 0.9;
+        console.log('Full VIN found:', fullVin, 'Vehicle ID (last 5):', extractedData.vehicleId);
       }
 
-      // Extract license plate (various patterns)
+      // Extract license plate (various patterns) - excluding common document words
       const platePatterns = [
         /\b[A-Z0-9]{2,3}[-\s]?[A-Z0-9]{3,4}\b/g, // Standard format like ABC-1234
         /\b[0-9]{3}[-\s]?[A-Z]{3}\b/g, // Number-letter format like 123-ABC
         /\b[A-Z]{3}[-\s]?[0-9]{3,4}\b/g, // Letter-number format like ABC-123
+        /\b[0-9][A-Z]{3}[0-9]{3}\b/g, // Format like 4RZZ216
       ];
       
+      const excludePlateWords = ['TITLE', 'CERTIFICATE', 'CALIFORNIA', 'VEHICLE', 'REGISTRATION', 'OWNER', 'ISSUED'];
+      
       for (const pattern of platePatterns) {
-        const plateMatch = text.match(pattern);
-        if (plateMatch) {
-          extractedData.licensePlate = plateMatch[0].replace(/[-\s]/g, '');
-          extractedData.confidence.licensePlate = 0.8;
-          break;
+        const plateMatches = text.match(pattern);
+        if (plateMatches) {
+          for (const match of plateMatches) {
+            const cleanMatch = match.replace(/[-\s]/g, '');
+            if (!excludePlateWords.some(word => cleanMatch.includes(word)) && cleanMatch.length >= 5) {
+              extractedData.licensePlate = cleanMatch;
+              extractedData.confidence.licensePlate = 0.8;
+              console.log('License plate found:', cleanMatch);
+              break;
+            }
+          }
+          if (extractedData.licensePlate) break;
         }
       }
 
@@ -125,6 +136,63 @@ export class OCRService {
       console.error('OCR processing error:', error);
       return { confidence: {} };
     }
+  }
+
+  private extractFullVIN(text: string): string | null {
+    // Clean the text for better VIN detection
+    const cleanedText = text.replace(/\s+/g, ' ').replace(/[-_]/g, '');
+    
+    console.log('Searching for VIN in cleaned text:', cleanedText);
+    
+    // Multiple VIN detection strategies
+    const vinStrategies = [
+      // Strategy 1: Look for 17 consecutive valid VIN characters (no spaces)
+      /\b[A-HJ-NPR-Z0-9]{17}\b/g,
+      
+      // Strategy 2: Look for VIN with spaces/formatting, then clean it
+      /[A-HJ-NPR-Z0-9][\s\-A-HJ-NPR-Z0-9]{15,20}[A-HJ-NPR-Z0-9]/g,
+      
+      // Strategy 3: More flexible pattern for spaced VINs
+      /(?:[A-HJ-NPR-Z0-9]\s*){17}/g
+    ];
+    
+    for (let i = 0; i < vinStrategies.length; i++) {
+      const strategy = vinStrategies[i];
+      const matches = cleanedText.match(strategy);
+      
+      if (matches) {
+        console.log(`VIN Strategy ${i + 1} found matches:`, matches);
+        
+        for (const match of matches) {
+          // Clean the match by removing all non-VIN characters
+          const cleanVin = match.replace(/[^A-HJ-NPR-Z0-9]/g, '');
+          
+          // Validate VIN length and characters
+          if (cleanVin.length === 17 && this.isValidVINPattern(cleanVin)) {
+            console.log('Valid VIN found:', cleanVin);
+            return cleanVin;
+          }
+        }
+      }
+    }
+    
+    console.log('No valid VIN found');
+    return null;
+  }
+
+  private isValidVINPattern(vin: string): boolean {
+    // Basic VIN validation - no I, O, Q characters and proper length
+    if (vin.length !== 17) return false;
+    if (/[IOQ]/.test(vin)) return false;
+    
+    // Avoid obvious false positives (too many repeated characters)
+    const charCounts = {};
+    for (const char of vin) {
+      charCounts[char] = (charCounts[char] || 0) + 1;
+      if (charCounts[char] > 3) return false; // No character should appear more than 3 times
+    }
+    
+    return true;
   }
 
   private formatMakeName(make: string): string {

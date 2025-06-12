@@ -33,7 +33,7 @@ export function OCRResults({ extractedData, onApplyData, onClose }: OCRResultsPr
 
   const handleApplyAll = () => {
     const dataToApply: Partial<ExtractedVehicleData> = {};
-    if (extractedData.vin) dataToApply.vin = extractedData.vin;
+    if (extractedData.vehicleId) dataToApply.vehicleId = extractedData.vehicleId;
     if (extractedData.licensePlate) dataToApply.licensePlate = extractedData.licensePlate;
     if (extractedData.year) dataToApply.year = extractedData.year;
     if (extractedData.make) dataToApply.make = extractedData.make;
@@ -42,7 +42,7 @@ export function OCRResults({ extractedData, onApplyData, onClose }: OCRResultsPr
     onApplyData(dataToApply);
   };
 
-  const hasAnyData = extractedData.vin || extractedData.licensePlate || extractedData.year || extractedData.make || extractedData.model;
+  const hasAnyData = extractedData.vehicleId || extractedData.licensePlate || extractedData.year || extractedData.make || extractedData.model;
 
   return (
     <Card className="border-blue-200 bg-blue-50">
@@ -62,21 +62,21 @@ export function OCRResults({ extractedData, onApplyData, onClose }: OCRResultsPr
         ) : (
           <>
             <div className="space-y-3">
-              {extractedData.vin && (
+              {extractedData.vehicleId && (
                 <div className="flex items-center justify-between p-3 bg-white rounded-lg border">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-slate-700">VIN:</span>
-                      <code className="text-sm bg-slate-100 px-2 py-1 rounded">{extractedData.vin}</code>
+                      <span className="font-medium text-slate-700">Vehicle ID:</span>
+                      <code className="text-sm bg-slate-100 px-2 py-1 rounded">{extractedData.vehicleId}</code>
                     </div>
-                    <Badge variant={getConfidenceColor(extractedData.confidence.vin)} className="mt-1">
-                      {getConfidenceText(extractedData.confidence.vin)}
+                    <Badge variant={getConfidenceColor(extractedData.confidence.vehicleId)} className="mt-1">
+                      {getConfidenceText(extractedData.confidence.vehicleId)}
                     </Badge>
                   </div>
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => handleApplyField('vin', extractedData.vin!)}
+                    onClick={() => handleApplyField('vehicleId', extractedData.vehicleId!)}
                   >
                     Apply
                   </Button>
