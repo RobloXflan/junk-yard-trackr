@@ -14,12 +14,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useVehicleStore } from "@/hooks/useVehicleStore";
-import { useNavigate } from "react-router-dom";
 
-export function VehicleInventory() {
+interface VehicleInventoryProps {
+  onNavigate: (page: string) => void;
+}
+
+export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const { vehicles } = useVehicleStore();
-  const navigate = useNavigate();
 
   const filteredVehicles = vehicles.filter((vehicle) =>
     vehicle.make?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -29,7 +31,7 @@ export function VehicleInventory() {
   );
 
   const handleAddVehicle = () => {
-    navigate('/intake');
+    onNavigate('intake');
   };
 
   return (

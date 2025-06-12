@@ -1,7 +1,11 @@
 
 import { VehicleInventory } from "@/components/VehicleInventory";
 
-export function Inventory() {
+interface InventoryProps {
+  onNavigate: (page: string) => void;
+}
+
+export function Inventory({ onNavigate }: InventoryProps) {
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
@@ -11,7 +15,7 @@ export function Inventory() {
         </p>
       </div>
 
-      <VehicleInventory />
+      <VehicleInventory onNavigate={onNavigate} />
     </div>
   );
 }
