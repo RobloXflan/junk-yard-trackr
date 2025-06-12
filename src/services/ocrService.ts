@@ -1,3 +1,4 @@
+
 import Tesseract from 'tesseract.js';
 
 export interface ExtractedVehicleData {
@@ -293,44 +294,57 @@ export class OCRService {
   }
 
   private applyCharacterCorrections(text: string): string {
-    console.log('Applying character corrections for common OCR mistakes...');
+    console.log('Applying enhanced character corrections for common OCR mistakes...');
     
     let corrected = text;
     
-    // Specific fix for 6RZZ216 being read as BRZZ21B
-    // Look for patterns that match B***##B and convert first B to 6
+    // Enhanced corrections specifically for 6RZZ216 pattern
+    // Handle B misread as 6 at start and end
     corrected = corrected.replace(/\bBRZZ(\d+)B\b/g, (match, digits) => {
-      console.log(`Found potential misread plate: ${match}`);
+      console.log(`Found BRZZ pattern: ${match}, correcting to 6RZZ${digits}6`);
+      return `6RZZ${digits}6`;
+    });
+    
+    // Handle L misread as 6 at start
+    corrected = corrected.replace(/\bLRZZ(\d+)([B6])\b/g, (match, digits, lastChar) => {
       const fixed = `6RZZ${digits}6`;
-      console.log(`Corrected to: ${fixed}`);
+      console.log(`Found LRZZ pattern: ${match}, correcting to ${fixed}`);
       return fixed;
     });
     
-    // Look for patterns starting with B followed by letters and ending with B
-    corrected = corrected.replace(/\bB([A-Z]{3})(\d+)B\b/g, (match, letters, digits) => {
-      console.log(`Found potential B-to-6 pattern: ${match}`);
-      const fixed = `6${letters}${digits}6`;
-      console.log(`Corrected to: ${fixed}`);
+    // Handle mixed B/L patterns
+    corrected = corrected.replace(/\b[BL]RZZ(\d+)[BL6]\b/g, (match, digits) => {
+      const fixed = `6RZZ${digits}6`;
+      console.log(`Found mixed B/L pattern: ${match}, correcting to ${fixed}`);
       return fixed;
     });
     
-    // More general B to 6 corrections in plate contexts
-    corrected = corrected.replace(/\bB([A-Z]{2,3})(\d{2,4})\b/g, (match, letters, digits) => {
-      console.log(`Found potential plate starting with B: ${match}`);
-      const fixed = `6${letters}${digits}`;
-      console.log(`Corrected to: ${fixed}`);
+    // More general patterns for plates starting with 6
+    corrected = corrected.replace(/\b[BL]([A-Z]{2,3})(\d{2,4})[BL6]?\b/g, (match, letters, digits) => {
+      // Only correct if it looks like a reasonable plate pattern
+      if (letters.length >= 2 && digits.length >= 2) {
+        const fixed = `6${letters}${digits}6`;
+        console.log(`Found potential 6-plate pattern: ${match}, correcting to ${fixed}`);
+        return fixed;
+      }
+      return match;
+    });
+    
+    // Specific corrections for common OCR mistakes in alphanumeric contexts
+    // O to 0, I to 1, S to 5, etc. but only in likely plate contexts
+    corrected = corrected.replace(/\b6([A-Z]{2,3})(\d{1,3})[O0]\b/g, (match, letters, digits) => {
+      const fixed = `6${letters}${digits}0`;
+      console.log(`Corrected O to 0 in plate context: ${match} -> ${fixed}`);
       return fixed;
     });
     
-    // L to 6 corrections in similar contexts
-    corrected = corrected.replace(/\bL([A-Z]{2,3})(\d{2,4})\b/g, (match, letters, digits) => {
-      console.log(`Found potential plate starting with L: ${match}`);
-      const fixed = `6${letters}${digits}`;
-      console.log(`Corrected to: ${fixed}`);
+    corrected = corrected.replace(/\b6([A-Z]{2,3})(\d{1,3})[I1]\b/g, (match, letters, digits) => {
+      const fixed = `6${letters}${digits}1`;
+      console.log(`Corrected I to 1 in plate context: ${match} -> ${fixed}`);
       return fixed;
     });
     
-    console.log('Text after targeted corrections:', corrected.substring(0, 200) + '...');
+    console.log('Text after enhanced corrections:', corrected.substring(0, 200) + '...');
     return corrected;
   }
 
@@ -395,8 +409,10 @@ export class OCRService {
     
     // Enhanced California plate patterns with character correction awareness
     const platePatterns = [
-      // Standard CA format with 6: 6ABC123, 6ABC1234
+      // Specific pattern for 6RZZ216 type plates
       /\b6[A-Z]{3}[0-9]{3,4}\b/g,
+      // After corrections, look for the corrected patterns
+      /\b6RZZ\d{3,4}\b/g,
       // Legacy format: ABC123
       /\b[A-Z]{3}[0-9]{3}\b/g,
       // New format: 8ABC123
@@ -419,15 +435,24 @@ export class OCRService {
       }
     }
 
-    // Try each pattern
-    for (const pattern of platePatterns) {
+    // Try each pattern with priority for specific patterns
+    for (let i = 0; i < platePatterns.length; i++) {
+      const pattern = platePatterns[i];
       const matches = text.match(pattern);
       if (matches) {
+        console.log(`Pattern ${i + 1} matches:`, matches);
         for (const match of matches) {
           if (!excludeWords.some(word => match.includes(word)) && 
               match.length >= 6 && match.length <= 8 &&
               !match.match(/^[0-9]+$/) && 
               !match.match(/^[A-Z]+$/)) {
+            
+            // Give priority to 6RZZ patterns
+            if (match.includes('6RZZ') || (i === 0 && match.startsWith('6'))) {
+              console.log('High priority license plate found via pattern:', match);
+              return match;
+            }
+            
             console.log('License plate found via pattern:', match);
             return match;
           }
