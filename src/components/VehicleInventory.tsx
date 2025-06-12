@@ -13,19 +13,24 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useVehicleStore } from "@/hooks/useVehicleStore";
+import { useNavigate } from "react-router-dom";
 
 export function VehicleInventory() {
   const [searchTerm, setSearchTerm] = useState("");
-  
-  // Empty vehicles array - will be populated when user adds vehicles
-  const vehicles: any[] = [];
+  const { vehicles } = useVehicleStore();
+  const navigate = useNavigate();
 
   const filteredVehicles = vehicles.filter((vehicle) =>
     vehicle.make?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     vehicle.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     vehicle.year?.toString().includes(searchTerm) ||
-    vehicle.vin?.toLowerCase().includes(searchTerm.toLowerCase())
+    vehicle.vehicleId?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleAddVehicle = () => {
+    navigate('/intake');
+  };
 
   return (
     <div className="space-y-6">
@@ -36,7 +41,7 @@ export function VehicleInventory() {
             Manage your vehicle inventory and track status
           </p>
         </div>
-        <Button className="gradient-primary">
+        <Button className="gradient-primary" onClick={handleAddVehicle}>
           <Plus className="w-4 h-4 mr-2" />
           Add Vehicle
         </Button>
@@ -49,7 +54,7 @@ export function VehicleInventory() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
-                placeholder="Search by make, model, year, or VIN..."
+                placeholder="Search by make, model, year, or Vehicle ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -76,7 +81,7 @@ export function VehicleInventory() {
               <p className="text-muted-foreground mb-4">
                 Start by adding your first vehicle to the inventory.
               </p>
-              <Button className="gradient-primary">
+              <Button className="gradient-primary" onClick={handleAddVehicle}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add First Vehicle
               </Button>
@@ -86,7 +91,7 @@ export function VehicleInventory() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Vehicle</TableHead>
-                  <TableHead>VIN</TableHead>
+                  <TableHead>Vehicle ID</TableHead>
                   <TableHead>Purchase Price</TableHead>
                   <TableHead>Sale Price</TableHead>
                   <TableHead>Status</TableHead>
@@ -102,24 +107,30 @@ export function VehicleInventory() {
                           {vehicle.year} {vehicle.make} {vehicle.model}
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {vehicle.color}
+                          {vehicle.licensePlate && `Plate: ${vehicle.licensePlate}`}
                         </div>
                       </div>
                     </TableCell>
                     <TableCell className="font-mono text-sm">
-                      {vehicle.vin}
+                      {vehicle.vehicleId}
                     </TableCell>
-                    <TableCell>${vehicle.purchasePrice?.toLocaleString()}</TableCell>
                     <TableCell>
-                      {vehicle.salePrice ? `$${vehicle.salePrice.toLocaleString()}` : '-'}
+                      {vehicle.purchasePrice ? `$${parseFloat(vehicle.purchasePrice).toLocaleString()}` : '-'}
+                    </TableCell>
+                    <TableCell>
+                      {vehicle.salePrice ? `$${parseFloat(vehicle.salePrice).toLocaleString()}` : '-'}
                     </TableCell>
                     <TableCell>
                       <Badge variant={
                         vehicle.status === 'sold' ? 'default' :
-                        vehicle.status === 'available' ? 'secondary' :
+                        vehicle.status === 'yard' ? 'secondary' :
                         'outline'
                       }>
-                        {vehicle.status}
+                        {vehicle.status === 'yard' ? 'In Yard' : 
+                         vehicle.status === 'sold' ? 'Sold' :
+                         vehicle.status === 'pick-your-part' ? 'Pick Your Part' :
+                         vehicle.status === 'sa-recycling' ? 'SA Recycling' :
+                         vehicle.status}
                       </Badge>
                     </TableCell>
                     <TableCell>

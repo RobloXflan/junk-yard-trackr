@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Upload, Save, FileText, X, Eye } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useVehicleStore } from "@/hooks/useVehicleStore";
 
 interface UploadedDocument {
   id: string;
@@ -17,11 +17,13 @@ interface UploadedDocument {
 }
 
 export function VehicleIntakeForm() {
+  const { addVehicle } = useVehicleStore();
+  
   const [formData, setFormData] = useState({
     year: "",
     make: "",
     model: "",
-    vehicleId: "", // Changed from vin to vehicleId
+    vehicleId: "",
     licensePlate: "",
     sellerName: "",
     purchaseDate: "",
@@ -46,7 +48,6 @@ export function VehicleIntakeForm() {
     if (!files) return;
 
     Array.from(files).forEach(file => {
-      // Validate file type
       const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
       if (!allowedTypes.includes(file.type)) {
         toast({
@@ -57,7 +58,6 @@ export function VehicleIntakeForm() {
         return;
       }
 
-      // Validate file size (max 10MB)
       if (file.size > 10 * 1024 * 1024) {
         toast({
           title: "File too large",
@@ -84,7 +84,6 @@ export function VehicleIntakeForm() {
       });
     });
 
-    // Reset the input
     event.target.value = '';
   };
 
@@ -114,8 +113,11 @@ export function VehicleIntakeForm() {
       return;
     }
 
-    console.log("Submitting vehicle data:", formData);
-    console.log("Uploaded documents:", uploadedDocuments);
+    // Add vehicle to store
+    addVehicle({
+      ...formData,
+      documents: uploadedDocuments
+    });
     
     let successMessage = "Vehicle has been added to inventory.";
     if (uploadedDocuments.length > 0) {
