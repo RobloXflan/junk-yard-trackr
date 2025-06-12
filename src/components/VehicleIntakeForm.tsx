@@ -62,9 +62,21 @@ export function VehicleIntakeForm() {
     console.log("Submitting vehicle data:", formData);
     console.log("Uploaded file:", uploadedFile);
     
+    // Different messages based on destination
+    let successMessage = "Vehicle has been added to inventory.";
+    if (formData.destination === "pick-your-part") {
+      successMessage += " Pick Your Part bill of sale will be generated.";
+    } else if (formData.destination === "sa-recycling") {
+      successMessage += " SA Recycling paperwork will be prepared.";
+    } else if (formData.destination === "blank-bill-sale") {
+      successMessage += " Blank bill of sale will be generated for manual completion.";
+    } else if (formData.destination === "buyer") {
+      successMessage += " Sale forms will be generated.";
+    }
+
     toast({
       title: "Vehicle Added Successfully",
-      description: "Vehicle has been added to inventory and forms will be generated.",
+      description: successMessage,
     });
 
     // Reset form
@@ -237,7 +249,9 @@ export function VehicleIntakeForm() {
               <SelectContent>
                 <SelectItem value="yard">Still in Yard</SelectItem>
                 <SelectItem value="buyer">Sold to Buyer</SelectItem>
-                <SelectItem value="pick-your-part">Sent to Pick Your Part</SelectItem>
+                <SelectItem value="pick-your-part">Send to Pick Your Part</SelectItem>
+                <SelectItem value="sa-recycling">SA Recycling</SelectItem>
+                <SelectItem value="blank-bill-sale">Blank Bill of Sale</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -273,6 +287,31 @@ export function VehicleIntakeForm() {
                   onChange={(e) => handleInputChange("salePrice", e.target.value)}
                 />
               </div>
+            </div>
+          )}
+
+          {/* Information panels for other destinations */}
+          {formData.destination === "pick-your-part" && (
+            <div className="p-4 bg-info/10 border border-info rounded-lg">
+              <p className="text-sm text-info font-medium">
+                📋 Pick Your Part bill of sale will be auto-generated with vehicle details
+              </p>
+            </div>
+          )}
+
+          {formData.destination === "sa-recycling" && (
+            <div className="p-4 bg-success/10 border border-success rounded-lg">
+              <p className="text-sm text-success font-medium">
+                ♻️ SA Recycling paperwork will be prepared with vehicle information
+              </p>
+            </div>
+          )}
+
+          {formData.destination === "blank-bill-sale" && (
+            <div className="p-4 bg-warning/10 border border-warning rounded-lg">
+              <p className="text-sm text-warning font-medium">
+                📝 Blank bill of sale will be generated for manual completion and handwriting
+              </p>
             </div>
           )}
 
