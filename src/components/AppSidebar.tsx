@@ -11,42 +11,56 @@ import {
   SidebarMenuItem,
   SidebarHeader,
   SidebarFooter,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
 const menuItems = [
   {
     title: "Dashboard",
-    url: "/",
+    page: "dashboard",
     icon: BarChart3,
   },
   {
     title: "Vehicle Intake",
-    url: "/intake",
+    page: "intake",
     icon: Upload,
   },
   {
     title: "Vehicle Inventory",
-    url: "/inventory",
+    page: "inventory",
     icon: Car,
   },
   {
     title: "Documents",
-    url: "/documents",
+    page: "documents",
     icon: FileText,
   },
   {
     title: "Users",
-    url: "/users",
+    page: "users",
     icon: Users,
   },
   {
     title: "Settings",
-    url: "/settings",
+    page: "settings",
     icon: Settings,
   },
 ];
 
-export function AppSidebar() {
+interface AppSidebarProps {
+  currentPage: string;
+  onNavigate: (page: string) => void;
+}
+
+export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
+  const { setOpenMobile } = useSidebar();
+
+  const handleNavigation = (page: string) => {
+    onNavigate(page);
+    // Close mobile sidebar after navigation
+    setOpenMobile(false);
+  };
+
   return (
     <Sidebar className="border-r border-sidebar-border">
       <SidebarHeader className="p-4">
@@ -70,11 +84,15 @@ export function AppSidebar() {
             <SidebarMenu>
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild className="hover:bg-sidebar-accent">
-                    <a href={item.url} className="flex items-center gap-3 text-sidebar-foreground">
+                  <SidebarMenuButton 
+                    onClick={() => handleNavigation(item.page)}
+                    isActive={currentPage === item.page}
+                    className="hover:bg-sidebar-accent cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3 text-sidebar-foreground">
                       <item.icon className="w-4 h-4" />
                       <span>{item.title}</span>
-                    </a>
+                    </div>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}

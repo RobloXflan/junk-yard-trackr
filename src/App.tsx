@@ -36,7 +36,7 @@ const App = () => {
         <Sonner />
         <SidebarProvider>
           <div className="min-h-screen flex w-full bg-background">
-            <AppSidebar />
+            <AppSidebar currentPage={currentPage} onNavigate={setCurrentPage} />
             <main className="flex-1 flex flex-col">
               <header className="border-b bg-card px-4 py-3 lg:px-6">
                 <div className="flex items-center gap-4">
