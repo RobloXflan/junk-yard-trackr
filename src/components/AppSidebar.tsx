@@ -62,22 +62,22 @@ export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
   };
 
   return (
-    <Sidebar className="border-r border-sidebar-border">
-      <SidebarHeader className="p-4">
+    <Sidebar className="border-r border-slate-200 bg-white">
+      <SidebarHeader className="p-4 border-b border-slate-200">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <Car className="w-5 h-5 text-primary-foreground" />
+          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+            <Car className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-sidebar-foreground">JunkCar Pro</h2>
-            <p className="text-xs text-sidebar-foreground/70">Admin Dashboard</p>
+            <h2 className="text-lg font-bold text-slate-800">JunkCar Pro</h2>
+            <p className="text-xs text-slate-500">Admin Dashboard</p>
           </div>
         </div>
       </SidebarHeader>
       
-      <SidebarContent>
+      <SidebarContent className="bg-white">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/70">
+          <SidebarGroupLabel className="text-slate-600 font-medium">
             Main Menu
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -87,11 +87,15 @@ export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
                   <SidebarMenuButton 
                     onClick={() => handleNavigation(item.page)}
                     isActive={currentPage === item.page}
-                    className="hover:bg-sidebar-accent cursor-pointer"
+                    className={`hover:bg-slate-100 cursor-pointer ${
+                      currentPage === item.page 
+                        ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' 
+                        : 'text-slate-700'
+                    }`}
                   >
-                    <div className="flex items-center gap-3 text-sidebar-foreground">
+                    <div className="flex items-center gap-3">
                       <item.icon className="w-4 h-4" />
-                      <span>{item.title}</span>
+                      <span className="font-medium">{item.title}</span>
                     </div>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -101,8 +105,8 @@ export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
         </SidebarGroup>
       </SidebarContent>
       
-      <SidebarFooter className="p-4">
-        <div className="text-xs text-sidebar-foreground/50">
+      <SidebarFooter className="p-4 border-t border-slate-200 bg-white">
+        <div className="text-xs text-slate-400">
           © 2024 JunkCar Pro
         </div>
       </SidebarFooter>
