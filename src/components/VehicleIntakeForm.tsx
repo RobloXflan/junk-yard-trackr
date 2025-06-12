@@ -7,11 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Upload, Save, FileText, X, Scan } from "lucide-react";
+import { Upload, Save, FileText, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { useOCR } from "@/hooks/useOCR";
-import { OCRResults } from "@/components/OCRResults";
-import { ExtractedVehicleData } from "@/services/ocrService";
 
 export function VehicleIntakeForm() {
   const [formData, setFormData] = useState({
@@ -33,8 +30,6 @@ export function VehicleIntakeForm() {
   });
 
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const { isProcessing, extractedData, processFile, reset } = useOCR();
-  const [showOCRResults, setShowOCRResults] = useState(false);
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -65,8 +60,6 @@ export function VehicleIntakeForm() {
       }
 
       setUploadedFile(file);
-      reset(); // Reset OCR state
-      setShowOCRResults(false);
       toast({
         title: "File uploaded",
         description: `${file.name} has been uploaded successfully.`,
@@ -74,45 +67,8 @@ export function VehicleIntakeForm() {
     }
   };
 
-  const handleScanDocument = async () => {
-    if (!uploadedFile) return;
-
-    try {
-      await processFile(uploadedFile);
-      setShowOCRResults(true);
-      toast({
-        title: "Document scanned",
-        description: "Information has been extracted from the document.",
-      });
-    } catch (error) {
-      toast({
-        title: "Scan failed",
-        description: "Could not extract information from the document. Please try a different image.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleApplyOCRData = (data: Partial<ExtractedVehicleData>) => {
-    const updates: any = {};
-    if (data.vehicleId) updates.vehicleId = data.vehicleId; // Changed from vin to vehicleId
-    if (data.licensePlate) updates.licensePlate = data.licensePlate;
-    if (data.year) updates.year = data.year;
-    if (data.make) updates.make = data.make;
-    if (data.model) updates.model = data.model;
-
-    setFormData(prev => ({ ...prev, ...updates }));
-    
-    toast({
-      title: "Information applied",
-      description: "Scanned data has been added to the form.",
-    });
-  };
-
   const removeFile = () => {
     setUploadedFile(null);
-    reset();
-    setShowOCRResults(false);
     const fileInput = document.getElementById('document') as HTMLInputElement;
     if (fileInput) {
       fileInput.value = '';
@@ -168,8 +124,6 @@ export function VehicleIntakeForm() {
       notes: ""
     });
     setUploadedFile(null);
-    reset();
-    setShowOCRResults(false);
     const fileInput = document.getElementById('document') as HTMLInputElement;
     if (fileInput) {
       fileInput.value = '';
@@ -216,15 +170,9 @@ export function VehicleIntakeForm() {
                         <X className="w-4 h-4" />
                       </Button>
                     </div>
-                    <Button
-                      type="button"
-                      onClick={handleScanDocument}
-                      disabled={isProcessing}
-                      className="w-full bg-blue-600 hover:bg-blue-700"
-                    >
-                      <Scan className="w-4 h-4 mr-2" />
-                      {isProcessing ? 'Scanning Document...' : 'Scan for Vehicle Info'}
-                    </Button>
+                    <p className="text-sm text-slate-600">
+                      Document uploaded. Please manually enter the vehicle information below.
+                    </p>
                   </div>
                 ) : (
                   <label htmlFor="document" className="cursor-pointer">
@@ -457,15 +405,6 @@ export function VehicleIntakeForm() {
           </form>
         </CardContent>
       </Card>
-
-      {/* OCR Results */}
-      {showOCRResults && extractedData && (
-        <OCRResults
-          extractedData={extractedData}
-          onApplyData={handleApplyOCRData}
-          onClose={() => setShowOCRResults(false)}
-        />
-      )}
     </div>
   );
 }
