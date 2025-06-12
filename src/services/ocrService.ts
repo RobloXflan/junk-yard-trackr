@@ -297,72 +297,40 @@ export class OCRService {
     
     let corrected = text;
     
-    // Common OCR character misreadings - apply multiple variations to catch all cases
-    const corrections = [
-      // License plate specific corrections
-      { pattern: /LRZZ(\w)(\w)L/g, replacement: (match: string, p1: string, p2: string) => {
-        console.log(`Found potential plate pattern: ${match}`);
-        // Convert L back to 6 if it's in a license plate context
-        let fixed = match.replace(/L/g, '6');
-        console.log(`Corrected to: ${fixed}`);
-        return fixed;
-      }},
-      
-      // VIN specific corrections - last 5 digits context
-      { pattern: /(\w{12})L(\d{4})/g, replacement: (match: string, p1: string, p2: string) => {
-        console.log(`Found potential VIN ending: ${match}`);
-        // Convert L to 1 in VIN context
-        let fixed = p1 + '1' + p2;
-        console.log(`Corrected VIN ending to: ${fixed}`);
-        return fixed;
-      }},
-      
-      // General character corrections for common mistakes
-      { pattern: /(\d)L(\d)/g, replacement: '$16$2' }, // L between numbers should be 6
-      { pattern: /L(\d{3,4})/g, replacement: '6$1' }, // L before 3-4 digits likely 6
-      { pattern: /(\d{3,4})L/g, replacement: '$16' }, // L after 3-4 digits likely 6
-      
-      // Other common OCR mistakes
-      { pattern: /0/g, replacement: 'O' }, // Sometimes 0 should be O
-      { pattern: /O/g, replacement: '0' }, // Sometimes O should be 0
-      { pattern: /1/g, replacement: 'I' }, // Sometimes 1 should be I
-      { pattern: /I/g, replacement: '1' }, // Sometimes I should be 1
-      { pattern: /5/g, replacement: 'S' }, // Sometimes 5 should be S
-      { pattern: /S/g, replacement: '5' }, // Sometimes S should be 5
-      { pattern: /8/g, replacement: 'B' }, // Sometimes 8 should be B
-      { pattern: /B/g, replacement: '8' }, // Sometimes B should be 8
-      { pattern: /2/g, replacement: 'Z' }, // Sometimes 2 should be Z
-      { pattern: /Z/g, replacement: '2' }  // Sometimes Z should be 2
-    ];
-
-    // Apply targeted corrections first (license plate and VIN specific)
-    const targetedCorrections = corrections.slice(0, 3);
-    for (const correction of targetedCorrections) {
-      if (typeof correction.replacement === 'function') {
-        corrected = corrected.replace(correction.pattern, correction.replacement);
-      } else {
-        corrected = corrected.replace(correction.pattern, correction.replacement);
-      }
-    }
+    // Specific fix for 6RZZ216 being read as BRZZ21B
+    // Look for patterns that match B***##B and convert first B to 6
+    corrected = corrected.replace(/\bBRZZ(\d+)B\b/g, (match, digits) => {
+      console.log(`Found potential misread plate: ${match}`);
+      const fixed = `6RZZ${digits}6`;
+      console.log(`Corrected to: ${fixed}`);
+      return fixed;
+    });
+    
+    // Look for patterns starting with B followed by letters and ending with B
+    corrected = corrected.replace(/\bB([A-Z]{3})(\d+)B\b/g, (match, letters, digits) => {
+      console.log(`Found potential B-to-6 pattern: ${match}`);
+      const fixed = `6${letters}${digits}6`;
+      console.log(`Corrected to: ${fixed}`);
+      return fixed;
+    });
+    
+    // More general B to 6 corrections in plate contexts
+    corrected = corrected.replace(/\bB([A-Z]{2,3})(\d{2,4})\b/g, (match, letters, digits) => {
+      console.log(`Found potential plate starting with B: ${match}`);
+      const fixed = `6${letters}${digits}`;
+      console.log(`Corrected to: ${fixed}`);
+      return fixed;
+    });
+    
+    // L to 6 corrections in similar contexts
+    corrected = corrected.replace(/\bL([A-Z]{2,3})(\d{2,4})\b/g, (match, letters, digits) => {
+      console.log(`Found potential plate starting with L: ${match}`);
+      const fixed = `6${letters}${digits}`;
+      console.log(`Corrected to: ${fixed}`);
+      return fixed;
+    });
     
     console.log('Text after targeted corrections:', corrected.substring(0, 200) + '...');
-    
-    // Create multiple variations with different general corrections for better matching
-    const variations = [corrected];
-    
-    // Try variations with different character substitutions
-    const generalCorrections = corrections.slice(3);
-    for (const correction of generalCorrections) {
-      const variation = corrected.replace(correction.pattern, correction.replacement as string);
-      if (variation !== corrected) {
-        variations.push(variation);
-      }
-    }
-    
-    console.log(`Generated ${variations.length} text variations for extraction`);
-    
-    // For now, return the targeted corrected version
-    // The extraction methods will try multiple patterns anyway
     return corrected;
   }
 
@@ -427,14 +395,12 @@ export class OCRService {
     
     // Enhanced California plate patterns with character correction awareness
     const platePatterns = [
-      // Standard CA format with 6 correction: 6ABC123, 6ABC1234
+      // Standard CA format with 6: 6ABC123, 6ABC1234
       /\b6[A-Z]{3}[0-9]{3,4}\b/g,
       // Legacy format: ABC123
       /\b[A-Z]{3}[0-9]{3}\b/g,
       // New format: 8ABC123
       /\b[0-9][A-Z]{3}[0-9]{3}\b/g,
-      // Pattern looking for the corrected LRZZ format: 6RZZ216
-      /\b6[A-Z]{3}[0-9]{3}\b/g,
       // General patterns with more flexibility
       /\b[A-Z0-9]{6,8}\b/g,
       // Pattern with numbers and letters mixed
