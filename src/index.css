@@ -8,22 +8,22 @@
 @layer base {
   :root {
     --background: 191 219 254;
-    --foreground: 30 41 59;
+    --foreground: 0 0 0;
 
     --card: 219 234 254;
-    --card-foreground: 30 41 59;
+    --card-foreground: 0 0 0;
 
     --popover: 219 234 254;
-    --popover-foreground: 30 41 59;
+    --popover-foreground: 0 0 0;
 
     --primary: 37 99 235;
     --primary-foreground: 255 255 255;
 
     --secondary: 71 85 105;
-    --secondary-foreground: 248 250 252;
+    --secondary-foreground: 0 0 0;
 
     --muted: 203 213 225;
-    --muted-foreground: 100 116 139;
+    --muted-foreground: 0 0 0;
 
     --accent: 59 130 246;
     --accent-foreground: 255 255 255;
@@ -42,11 +42,11 @@
     --radius: 0.5rem;
 
     --sidebar-background: 219 234 254;
-    --sidebar-foreground: 30 41 59;
+    --sidebar-foreground: 0 0 0;
     --sidebar-primary: 37 99 235;
     --sidebar-primary-foreground: 255 255 255;
     --sidebar-accent: 203 213 225;
-    --sidebar-accent-foreground: 30 41 59;
+    --sidebar-accent-foreground: 0 0 0;
     --sidebar-border: 191 219 254;
     --sidebar-ring: 37 99 235;
   }
@@ -80,7 +80,7 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply bg-background text-foreground font-sans font-bold;
   }
 }
 
