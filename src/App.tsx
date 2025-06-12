@@ -1,26 +1,20 @@
 
-import { useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { LoginForm } from "@/components/LoginForm";
 import { Dashboard } from "@/pages/Dashboard";
 import { Intake } from "@/pages/Intake";
 import { Inventory } from "@/pages/Inventory";
 import { Menu } from "lucide-react";
+import { useState } from "react";
 
 const queryClient = new QueryClient();
 
 const App = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentPage, setCurrentPage] = useState("dashboard");
-
-  const handleLogin = () => {
-    setIsAuthenticated(true);
-  };
 
   const renderPage = () => {
     switch (currentPage) {
@@ -34,18 +28,6 @@ const App = () => {
         return <Dashboard />;
     }
   };
-
-  if (!isAuthenticated) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <LoginForm onLogin={handleLogin} />
-        </TooltipProvider>
-      </QueryClientProvider>
-    );
-  }
 
   return (
     <QueryClientProvider client={queryClient}>
