@@ -13,7 +13,12 @@ interface VehicleDetailsDialogProps {
   vehicle: Vehicle | null;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (vehicleId: string, newStatus: Vehicle['status']) => void;
+  onSave: (vehicleId: string, newStatus: Vehicle['status'], soldData?: {
+    buyerFirstName: string;
+    buyerLastName: string;
+    salePrice: string;
+    saleDate: string;
+  }) => void;
 }
 
 export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: VehicleDetailsDialogProps) {
@@ -34,6 +39,7 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
       // Don't update selectedStatus yet, wait for sold dialog completion
     } else {
       setSelectedStatus(newStatus);
+      setPendingSoldData(null); // Clear sold data if not sold
     }
   };
 
@@ -52,7 +58,11 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
   };
 
   const handleSave = () => {
-    onSave(vehicle.id, selectedStatus);
+    if (selectedStatus === 'sold' && pendingSoldData) {
+      onSave(vehicle.id, selectedStatus, pendingSoldData);
+    } else {
+      onSave(vehicle.id, selectedStatus);
+    }
     onClose();
   };
 
@@ -65,6 +75,9 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
       default: return status;
     }
   };
+
+  // Get the current sale price - use pending data if available, otherwise vehicle data
+  const currentSalePrice = pendingSoldData?.salePrice || vehicle.salePrice;
 
   return (
     <>
@@ -104,7 +117,7 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Sale Price:</span>
-                    <span>{vehicle.salePrice ? `$${parseFloat(vehicle.salePrice).toLocaleString()}` : '-'}</span>
+                    <span>{currentSalePrice ? `$${parseFloat(currentSalePrice).toLocaleString()}` : '-'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Current Status:</span>

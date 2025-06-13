@@ -45,15 +45,27 @@ class VehicleStore {
     console.log('Vehicle added to store:', vehicle);
   }
 
-  updateVehicleStatus(vehicleId: string, newStatus: Vehicle['status']) {
+  updateVehicleStatus(vehicleId: string, newStatus: Vehicle['status'], soldData?: {
+    buyerFirstName: string;
+    buyerLastName: string;
+    salePrice: string;
+    saleDate: string;
+  }) {
     const vehicleIndex = this.vehicles.findIndex(v => v.id === vehicleId);
     if (vehicleIndex !== -1) {
       this.vehicles[vehicleIndex] = {
         ...this.vehicles[vehicleIndex],
-        status: newStatus
+        status: newStatus,
+        ...(soldData && {
+          buyerFirstName: soldData.buyerFirstName,
+          buyerLastName: soldData.buyerLastName,
+          salePrice: soldData.salePrice,
+          saleDate: soldData.saleDate,
+          buyerName: `${soldData.buyerFirstName} ${soldData.buyerLastName}`
+        })
       };
       this.notifyListeners();
-      console.log('Vehicle status updated:', vehicleId, newStatus);
+      console.log('Vehicle status updated:', vehicleId, newStatus, soldData);
     }
   }
 

@@ -43,8 +43,13 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
     setIsDialogOpen(true);
   };
 
-  const handleSaveVehicle = (vehicleId: string, newStatus: Vehicle['status']) => {
-    updateVehicleStatus(vehicleId, newStatus);
+  const handleSaveVehicle = (vehicleId: string, newStatus: Vehicle['status'], soldData?: {
+    buyerFirstName: string;
+    buyerLastName: string;
+    salePrice: string;
+    saleDate: string;
+  }) => {
+    updateVehicleStatus(vehicleId, newStatus, soldData);
   };
 
   const handleCloseDialog = () => {
