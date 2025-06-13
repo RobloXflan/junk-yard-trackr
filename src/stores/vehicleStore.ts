@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface UploadedDocument {
@@ -89,8 +90,6 @@ class VehicleStore {
   }
 
   async loadVehicles() {
-    if (this.isLoaded) return;
-
     try {
       console.log('Loading vehicles from Supabase...');
       const { data, error } = await supabase
@@ -173,32 +172,8 @@ class VehicleStore {
         throw error;
       }
 
-      const addedVehicle: Vehicle = {
-        id: data.id,
-        year: data.year,
-        make: data.make,
-        model: data.model,
-        vehicleId: data.vehicle_id,
-        licensePlate: data.license_plate,
-        sellerName: data.seller_name,
-        purchaseDate: data.purchase_date,
-        purchasePrice: data.purchase_price,
-        titlePresent: data.title_present || false,
-        billOfSale: data.bill_of_sale || false,
-        destination: data.destination,
-        buyerName: data.buyer_name,
-        buyerFirstName: data.buyer_first_name,
-        buyerLastName: data.buyer_last_name,
-        saleDate: data.sale_date,
-        salePrice: data.sale_price,
-        notes: data.notes,
-        status: data.status as Vehicle['status'],
-        createdAt: data.created_at,
-        documents: this.deserializeDocuments(data.documents)
-      };
-
-      this.vehicles.unshift(addedVehicle);
-      this.notify();
+      // Reload all vehicles from database to ensure consistency
+      await this.loadVehicles();
     } catch (error) {
       console.error('Failed to add vehicle:', error);
       throw error;
@@ -212,18 +187,30 @@ class VehicleStore {
     saleDate: string;
   }) {
     try {
+      console.log('Updating vehicle status for ID:', vehicleId, 'to status:', newStatus, 'with data:', soldData);
+      
       const updateData: any = {
         status: newStatus,
         updated_at: new Date().toISOString()
       };
 
-      if (soldData) {
+      // Clear sold data if status is not sold
+      if (newStatus !== 'sold') {
+        updateData.buyer_first_name = null;
+        updateData.buyer_last_name = null;
+        updateData.buyer_name = null;
+        updateData.sale_price = null;
+        updateData.sale_date = null;
+      } else if (soldData) {
+        // Only set sold data if status is sold and soldData is provided
         updateData.buyer_first_name = soldData.buyerFirstName;
         updateData.buyer_last_name = soldData.buyerLastName;
         updateData.buyer_name = `${soldData.buyerFirstName} ${soldData.buyerLastName}`;
         updateData.sale_price = soldData.salePrice;
         updateData.sale_date = soldData.saleDate;
       }
+
+      console.log('Sending update to Supabase:', updateData);
 
       const { error } = await supabase
         .from('vehicles')
@@ -235,27 +222,22 @@ class VehicleStore {
         throw error;
       }
 
-      // Update local state
-      this.vehicles = this.vehicles.map(vehicle => {
-        if (vehicle.id === vehicleId) {
-          const updatedVehicle = { ...vehicle, status: newStatus };
-          if (soldData) {
-            updatedVehicle.buyerFirstName = soldData.buyerFirstName;
-            updatedVehicle.buyerLastName = soldData.buyerLastName;
-            updatedVehicle.buyerName = `${soldData.buyerFirstName} ${soldData.buyerLastName}`;
-            updatedVehicle.salePrice = soldData.salePrice;
-            updatedVehicle.saleDate = soldData.saleDate;
-          }
-          return updatedVehicle;
-        }
-        return vehicle;
-      });
+      console.log('Vehicle status updated successfully in database');
 
-      this.notify();
+      // Reload all vehicles from database to ensure consistency across all devices
+      await this.loadVehicles();
+      
+      console.log('Vehicles reloaded after status update');
     } catch (error) {
       console.error('Failed to update vehicle status:', error);
       throw error;
     }
+  }
+
+  // Force refresh from database - useful for manual sync
+  async refreshVehicles() {
+    console.log('Manually refreshing vehicles from database...');
+    await this.loadVehicles();
   }
 
   getVehicles(): Vehicle[] {

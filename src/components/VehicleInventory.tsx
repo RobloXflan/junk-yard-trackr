@@ -1,9 +1,10 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter, Car, Plus, Edit } from "lucide-react";
+import { Search, Filter, Car, Plus, Edit, RefreshCw } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -15,6 +16,7 @@ import {
 import { useVehicleStore } from "@/hooks/useVehicleStore";
 import { VehicleDetailsDialog } from "@/components/VehicleDetailsDialog";
 import { Vehicle } from "@/stores/vehicleStore";
+import { toast } from "sonner";
 
 interface VehicleInventoryProps {
   onNavigate: (page: string) => void;
@@ -24,7 +26,7 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const { vehicles, updateVehicleStatus } = useVehicleStore();
+  const { vehicles, updateVehicleStatus, refreshVehicles, isLoading } = useVehicleStore();
 
   const filteredVehicles = vehicles.filter((vehicle) => {
     if (!searchTerm.trim()) return true;
@@ -63,13 +65,29 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
     setIsDialogOpen(true);
   };
 
-  const handleSaveVehicle = (vehicleId: string, newStatus: Vehicle['status'], soldData?: {
+  const handleSaveVehicle = async (vehicleId: string, newStatus: Vehicle['status'], soldData?: {
     buyerFirstName: string;
     buyerLastName: string;
     salePrice: string;
     saleDate: string;
   }) => {
-    updateVehicleStatus(vehicleId, newStatus, soldData);
+    try {
+      await updateVehicleStatus(vehicleId, newStatus, soldData);
+      toast.success("Vehicle status updated successfully");
+    } catch (error) {
+      console.error('Error updating vehicle:', error);
+      toast.error("Failed to update vehicle status");
+    }
+  };
+
+  const handleRefresh = async () => {
+    try {
+      await refreshVehicles();
+      toast.success("Vehicles refreshed successfully");
+    } catch (error) {
+      console.error('Error refreshing vehicles:', error);
+      toast.error("Failed to refresh vehicles");
+    }
   };
 
   const handleCloseDialog = () => {
@@ -86,10 +104,20 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
             Manage your vehicle inventory and track status
           </p>
         </div>
-        <Button className="gradient-primary" onClick={handleAddVehicle}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Vehicle
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleRefresh}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button className="gradient-primary" onClick={handleAddVehicle}>
+            <Plus className="w-4 h-4 mr-2" />
+            Add Vehicle
+          </Button>
+        </div>
       </div>
 
       {/* Search and Filter Bar */}
@@ -152,6 +180,7 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
                   <TableHead>Vehicle ID</TableHead>
                   <TableHead>Purchase Price</TableHead>
                   <TableHead>Sale Price</TableHead>
+                  <TableHead>Buyer</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -179,6 +208,16 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
                       {vehicle.salePrice ? `$${parseFloat(vehicle.salePrice).toLocaleString()}` : '-'}
                     </TableCell>
                     <TableCell>
+                      {vehicle.status === 'sold' && vehicle.buyerFirstName && vehicle.buyerLastName ? (
+                        <div className="text-sm">
+                          <div>{vehicle.buyerFirstName} {vehicle.buyerLastName}</div>
+                          {vehicle.saleDate && (
+                            <div className="text-muted-foreground">{vehicle.saleDate}</div>
+                          )}
+                        </div>
+                      ) : '-'}
+                    </TableCell>
+                    <TableCell>
                       <Badge variant={
                         vehicle.status === 'sold' ? 'default' :
                         vehicle.status === 'yard' ? 'secondary' :
@@ -196,6 +235,7 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
                         variant="ghost" 
                         size="sm"
                         onClick={() => handleEditVehicle(vehicle)}
+                        disabled={isLoading}
                       >
                         <Edit className="w-4 h-4 mr-2" />
                         Edit

@@ -4,6 +4,7 @@ import { vehicleStore, Vehicle } from '@/stores/vehicleStore';
 
 export function useVehicleStore() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const updateVehicles = () => {
@@ -21,12 +22,16 @@ export function useVehicleStore() {
 
   return {
     vehicles,
+    isLoading,
     addVehicle: async (vehicleData: Omit<Vehicle, 'id' | 'createdAt' | 'status'>) => {
+      setIsLoading(true);
       try {
         await vehicleStore.addVehicle(vehicleData);
       } catch (error) {
         console.error('Error adding vehicle:', error);
         throw error;
+      } finally {
+        setIsLoading(false);
       }
     },
     updateVehicleStatus: async (vehicleId: string, newStatus: Vehicle['status'], soldData?: {
@@ -35,11 +40,24 @@ export function useVehicleStore() {
       salePrice: string;
       saleDate: string;
     }) => {
+      setIsLoading(true);
       try {
         await vehicleStore.updateVehicleStatus(vehicleId, newStatus, soldData);
       } catch (error) {
         console.error('Error updating vehicle status:', error);
         throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    refreshVehicles: async () => {
+      setIsLoading(true);
+      try {
+        await vehicleStore.refreshVehicles();
+      } catch (error) {
+        console.error('Error refreshing vehicles:', error);
+      } finally {
+        setIsLoading(false);
       }
     },
     getTotalVehicles: vehicleStore.getTotalVehicles.bind(vehicleStore),
