@@ -1,4 +1,6 @@
 
+import { supabase } from '@/integrations/supabase/client';
+
 interface Vehicle {
   id: string;
   year: string;
@@ -29,163 +31,103 @@ interface Vehicle {
   createdAt: string;
 }
 
-interface SerializedDocument {
-  id: string;
-  fileData: string; // base64 encoded file data
-  url: string;
-  name: string;
-  size: number;
-  type: string; // MIME type
-}
-
-interface SerializedVehicle extends Omit<Vehicle, 'documents'> {
-  documents: SerializedDocument[];
-}
-
 class VehicleStore {
   private vehicles: Vehicle[] = [];
   private listeners: Array<() => void> = [];
-  private readonly STORAGE_KEY = 'vehicle_inventory_data';
 
   constructor() {
-    this.loadFromStorage();
+    this.loadFromSupabase();
   }
 
-  private async fileToBase64(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = error => reject(error);
-    });
-  }
-
-  private base64ToFile(base64: string, name: string, type: string): File {
-    const arr = base64.split(',');
-    const mime = arr[0].match(/:(.*?);/)?.[1] || type;
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new File([u8arr], name, { type: mime });
-  }
-
-  private async serializeVehicles(): Promise<SerializedVehicle[]> {
-    const serializedVehicles: SerializedVehicle[] = [];
-    
-    for (const vehicle of this.vehicles) {
-      const serializedDocuments: SerializedDocument[] = [];
-      
-      for (const doc of vehicle.documents) {
-        try {
-          const fileData = await this.fileToBase64(doc.file);
-          serializedDocuments.push({
-            id: doc.id,
-            fileData,
-            url: doc.url,
-            name: doc.name,
-            size: doc.size,
-            type: doc.file.type
-          });
-        } catch (error) {
-          console.error('Error serializing document:', error);
-          // Skip this document if serialization fails
-        }
-      }
-      
-      serializedVehicles.push({
-        ...vehicle,
-        documents: serializedDocuments
-      });
-    }
-    
-    return serializedVehicles;
-  }
-
-  private deserializeVehicles(serializedVehicles: SerializedVehicle[]): Vehicle[] {
-    return serializedVehicles.map(vehicle => {
-      const documents = vehicle.documents.map(doc => {
-        const file = this.base64ToFile(doc.fileData, doc.name, doc.type);
-        return {
-          id: doc.id,
-          file,
-          url: doc.url,
-          name: doc.name,
-          size: doc.size
-        };
-      });
-      
-      return {
-        ...vehicle,
-        documents
-      };
-    });
-  }
-
-  private async saveToStorage(): Promise<void> {
+  private async loadFromSupabase(): Promise<void> {
     try {
-      console.log('Starting save to localStorage...');
-      const serializedVehicles = await this.serializeVehicles();
-      
-      // Check if data is too large for localStorage
-      const dataSize = JSON.stringify(serializedVehicles).length;
-      console.log('Data size to save:', dataSize, 'characters');
-      
-      if (dataSize > 5000000) { // 5MB limit
-        console.warn('Data size exceeds recommended localStorage limit');
-        // Save without documents if too large
-        const vehiclesWithoutDocs = serializedVehicles.map(v => ({
-          ...v,
-          documents: []
-        }));
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(vehiclesWithoutDocs));
-        console.log('Vehicles saved to localStorage without documents due to size:', vehiclesWithoutDocs.length);
-      } else {
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(serializedVehicles));
-        console.log('Vehicles successfully saved to localStorage:', serializedVehicles.length);
-      }
-    } catch (error) {
-      console.error('Error saving vehicles to localStorage:', error);
-      if (error instanceof DOMException && error.code === 22) {
-        console.error('localStorage quota exceeded');
-      }
-    }
-  }
+      console.log('Loading vehicles from Supabase...');
+      const { data, error } = await supabase
+        .from('vehicles')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-  private loadFromStorage(): void {
-    try {
-      console.log('Loading vehicles from localStorage...');
-      const stored = localStorage.getItem(this.STORAGE_KEY);
-      if (stored) {
-        const serializedVehicles: SerializedVehicle[] = JSON.parse(stored);
-        this.vehicles = this.deserializeVehicles(serializedVehicles);
-        console.log('Vehicles successfully loaded from localStorage:', this.vehicles.length);
-      } else {
-        console.log('No vehicles found in localStorage');
+      if (error) {
+        console.error('Error loading vehicles from Supabase:', error);
+        return;
       }
+
+      // Convert Supabase data to local Vehicle format
+      this.vehicles = (data || []).map(vehicle => ({
+        id: vehicle.id,
+        year: vehicle.year,
+        make: vehicle.make,
+        model: vehicle.model,
+        vehicleId: vehicle.vehicle_id,
+        licensePlate: vehicle.license_plate || '',
+        sellerName: vehicle.seller_name || '',
+        purchaseDate: vehicle.purchase_date || '',
+        purchasePrice: vehicle.purchase_price || '',
+        titlePresent: vehicle.title_present || false,
+        billOfSale: vehicle.bill_of_sale || false,
+        destination: vehicle.destination || '',
+        buyerName: vehicle.buyer_name || '',
+        buyerFirstName: vehicle.buyer_first_name || '',
+        buyerLastName: vehicle.buyer_last_name || '',
+        saleDate: vehicle.sale_date || '',
+        salePrice: vehicle.sale_price || '',
+        notes: vehicle.notes || '',
+        documents: [], // Documents will be handled separately
+        status: vehicle.status as Vehicle['status'] || 'yard',
+        createdAt: vehicle.created_at,
+      }));
+
+      console.log('Vehicles successfully loaded from Supabase:', this.vehicles.length);
+      this.notifyListeners();
     } catch (error) {
-      console.error('Error loading vehicles from localStorage:', error);
-      this.vehicles = [];
+      console.error('Error loading vehicles from Supabase:', error);
     }
   }
 
   async addVehicle(vehicleData: Omit<Vehicle, 'id' | 'createdAt' | 'status'>) {
-    const vehicle: Vehicle = {
-      ...vehicleData,
-      id: `vehicle_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      createdAt: new Date().toISOString(),
-      status: this.getStatusFromDestination(vehicleData.destination)
-    };
-    
-    console.log('Adding vehicle to store:', vehicle.id);
-    this.vehicles.push(vehicle);
-    
-    // Await the save operation
-    await this.saveToStorage();
-    this.notifyListeners();
-    console.log('Vehicle added and saved successfully:', vehicle.id);
+    try {
+      console.log('Adding vehicle to Supabase...');
+      
+      const vehicleToInsert = {
+        year: vehicleData.year,
+        make: vehicleData.make,
+        model: vehicleData.model,
+        vehicle_id: vehicleData.vehicleId,
+        license_plate: vehicleData.licensePlate || null,
+        seller_name: vehicleData.sellerName || null,
+        purchase_date: vehicleData.purchaseDate || null,
+        purchase_price: vehicleData.purchasePrice || null,
+        title_present: vehicleData.titlePresent,
+        bill_of_sale: vehicleData.billOfSale,
+        destination: vehicleData.destination || null,
+        buyer_name: vehicleData.buyerName || null,
+        buyer_first_name: vehicleData.buyerFirstName || null,
+        buyer_last_name: vehicleData.buyerLastName || null,
+        sale_date: vehicleData.saleDate || null,
+        sale_price: vehicleData.salePrice || null,
+        notes: vehicleData.notes || null,
+        status: this.getStatusFromDestination(vehicleData.destination)
+      };
+
+      const { data, error } = await supabase
+        .from('vehicles')
+        .insert([vehicleToInsert])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error adding vehicle to Supabase:', error);
+        throw error;
+      }
+
+      console.log('Vehicle added to Supabase successfully:', data.id);
+      
+      // Reload from Supabase to get the updated list
+      await this.loadFromSupabase();
+    } catch (error) {
+      console.error('Error adding vehicle:', error);
+      throw error;
+    }
   }
 
   async updateVehicleStatus(vehicleId: string, newStatus: Vehicle['status'], soldData?: {
@@ -194,25 +136,39 @@ class VehicleStore {
     salePrice: string;
     saleDate: string;
   }) {
-    const vehicleIndex = this.vehicles.findIndex(v => v.id === vehicleId);
-    if (vehicleIndex !== -1) {
-      console.log('Updating vehicle status:', vehicleId, newStatus);
-      this.vehicles[vehicleIndex] = {
-        ...this.vehicles[vehicleIndex],
-        status: newStatus,
-        ...(soldData && {
-          buyerFirstName: soldData.buyerFirstName,
-          buyerLastName: soldData.buyerLastName,
-          salePrice: soldData.salePrice,
-          saleDate: soldData.saleDate,
-          buyerName: `${soldData.buyerFirstName} ${soldData.buyerLastName}`
-        })
-      };
+    try {
+      console.log('Updating vehicle status in Supabase:', vehicleId, newStatus);
       
-      // Await the save operation
-      await this.saveToStorage();
-      this.notifyListeners();
-      console.log('Vehicle status updated and saved successfully:', vehicleId, newStatus);
+      const updateData: any = {
+        status: newStatus,
+        updated_at: new Date().toISOString()
+      };
+
+      if (soldData) {
+        updateData.buyer_first_name = soldData.buyerFirstName;
+        updateData.buyer_last_name = soldData.buyerLastName;
+        updateData.sale_price = soldData.salePrice;
+        updateData.sale_date = soldData.saleDate;
+        updateData.buyer_name = `${soldData.buyerFirstName} ${soldData.buyerLastName}`;
+      }
+
+      const { error } = await supabase
+        .from('vehicles')
+        .update(updateData)
+        .eq('id', vehicleId);
+
+      if (error) {
+        console.error('Error updating vehicle status in Supabase:', error);
+        throw error;
+      }
+
+      console.log('Vehicle status updated in Supabase successfully:', vehicleId, newStatus);
+      
+      // Reload from Supabase to get the updated data
+      await this.loadFromSupabase();
+    } catch (error) {
+      console.error('Error updating vehicle status:', error);
+      throw error;
     }
   }
 

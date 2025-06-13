@@ -60,6 +60,78 @@ export type Database = {
         }
         Relationships: []
       }
+      vehicles: {
+        Row: {
+          bill_of_sale: boolean | null
+          buyer_first_name: string | null
+          buyer_last_name: string | null
+          buyer_name: string | null
+          created_at: string
+          destination: string | null
+          id: string
+          license_plate: string | null
+          make: string
+          model: string
+          notes: string | null
+          purchase_date: string | null
+          purchase_price: string | null
+          sale_date: string | null
+          sale_price: string | null
+          seller_name: string | null
+          status: string | null
+          title_present: boolean | null
+          updated_at: string
+          vehicle_id: string
+          year: string
+        }
+        Insert: {
+          bill_of_sale?: boolean | null
+          buyer_first_name?: string | null
+          buyer_last_name?: string | null
+          buyer_name?: string | null
+          created_at?: string
+          destination?: string | null
+          id?: string
+          license_plate?: string | null
+          make: string
+          model: string
+          notes?: string | null
+          purchase_date?: string | null
+          purchase_price?: string | null
+          sale_date?: string | null
+          sale_price?: string | null
+          seller_name?: string | null
+          status?: string | null
+          title_present?: boolean | null
+          updated_at?: string
+          vehicle_id: string
+          year: string
+        }
+        Update: {
+          bill_of_sale?: boolean | null
+          buyer_first_name?: string | null
+          buyer_last_name?: string | null
+          buyer_name?: string | null
+          created_at?: string
+          destination?: string | null
+          id?: string
+          license_plate?: string | null
+          make?: string
+          model?: string
+          notes?: string | null
+          purchase_date?: string | null
+          purchase_price?: string | null
+          sale_date?: string | null
+          sale_price?: string | null
+          seller_name?: string | null
+          status?: string | null
+          title_present?: boolean | null
+          updated_at?: string
+          vehicle_id?: string
+          year?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
