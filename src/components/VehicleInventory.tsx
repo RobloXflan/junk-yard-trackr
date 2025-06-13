@@ -181,6 +181,7 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
                   <TableHead>Purchase Price</TableHead>
                   <TableHead>Sale Price</TableHead>
                   <TableHead>Buyer</TableHead>
+                  <TableHead>Sold To</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -206,6 +207,9 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
                     </TableCell>
                     <TableCell>
                       {vehicle.salePrice ? `$${parseFloat(vehicle.salePrice).toLocaleString()}` : '-'}
+                    </TableCell>
+                    <TableCell>
+                      -
                     </TableCell>
                     <TableCell>
                       {vehicle.status === 'sold' && vehicle.buyerFirstName && vehicle.buyerLastName ? (
