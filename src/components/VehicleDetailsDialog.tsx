@@ -49,6 +49,12 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
   };
 
   const handleSoldDialogClose = (open: boolean) => {
+    if (!open) {
+      // Only reset if we don't have pending sold data (meaning it was cancelled, not confirmed)
+      if (!pendingSoldData) {
+        setSelectedStatus(vehicle.status); // Reset to original status only if cancelled
+      }
+    }
     setSoldDialogOpen(open);
   };
 
