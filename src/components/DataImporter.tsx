@@ -17,13 +17,8 @@ interface ParsedVehicleData {
   licensePlate?: string;
   purchaseDate?: string;
   purchasePrice?: string;
-  saleDate?: string;
-  salePrice?: string;
-  buyerFirstName?: string;
-  buyerLastName?: string;
-  buyerName?: string;
   sellerName?: string;
-  status: 'yard' | 'sold';
+  status: 'yard';
   titlePresent: boolean;
   billOfSale: boolean;
   notes?: string;
@@ -45,171 +40,61 @@ export function DataImporter() {
       // Split by tabs or multiple spaces
       const parts = line.split(/\t+|\s{2,}/).map(part => part.trim()).filter(part => part);
       
-      console.log(`Line ${index + 1} parts:`, parts);
-
-      if (parts.length < 4) {
-        console.warn(`Line ${index + 1} has insufficient data (need at least 4 columns):`, parts);
+      if (parts.length < 6) {
+        console.warn(`Line ${index + 1} has insufficient data:`, parts);
         return;
       }
 
-      // Expected format: YEAR, MAKE, MODEL, VIN, PLATE, DATE, BUYER, PRICE
-      const [
-        yearRaw = "",
-        makeRaw = "",
-        modelRaw = "",
-        vin = "",
-        plate = "",
-        date = "",
-        buyer = "",
-        price = ""
-      ] = parts;
+      const [year, make, model = "", vin, plate, date, buyer = "", price = ""] = parts;
 
-      console.log(`Parsing line ${index + 1}:`, {
-        yearRaw, makeRaw, modelRaw, vin, plate, date, buyer, price
-      });
-
-      // Parse year/make/model flexibly
-      let year = "", make = "", model = "";
-      
-      // Check if first field looks like a year (4 digits)
-      if (/^\d{4}$/.test(yearRaw)) {
-        year = yearRaw;
-        make = makeRaw;
-        model = modelRaw;
-      } else {
-        // Handle cases like "1999 mustang" or "ford mustang" etc.
-        const combined = `${yearRaw} ${makeRaw} ${modelRaw}`.trim();
-        const words = combined.split(/\s+/);
-        
-        // Look for year in the combined text
-        const yearMatch = words.find(word => /^\d{4}$/.test(word));
-        if (yearMatch) {
-          year = yearMatch;
-          // Remove year from words and split remaining into make/model
-          const remainingWords = words.filter(word => word !== yearMatch);
-          make = remainingWords[0] || "";
-          model = remainingWords.slice(1).join(" ") || "";
-        } else {
-          // No year found, treat as make/model
-          make = words[0] || "";
-          model = words.slice(1).join(" ") || "";
+      // Handle special price cases
+      let processedPrice = "";
+      if (price && price !== "") {
+        if (price.toLowerCase().includes("free")) {
+          processedPrice = "0";
+        } else if (price === "0") {
+          processedPrice = "0";
+        } else if (!isNaN(parseFloat(price))) {
+          processedPrice = price;
         }
       }
 
-      // Clean up make names
-      if (make) {
-        make = make.replace(/MERZ/gi, 'MERCEDES')
-                   .replace(/CHEV/gi, 'CHEVROLET')
-                   .replace(/VOLK/gi, 'VOLKSWAGEN')
-                   .replace(/MNNI/gi, 'MINI')
-                   .replace(/TOYOYA/gi, 'TOYOTA');
-      }
-
-      // Process license plate
-      let processedPlate: string | undefined;
-      if (plate && plate !== "" && !plate.toLowerCase().includes("out of state")) {
-        processedPlate = plate;
-      }
-
-      // Process date - handle both purchase and sale dates
-      let processedPurchaseDate: string | undefined;
-      let processedSaleDate: string | undefined;
-      
+      // Handle date format (convert M/D/YYYY to YYYY-MM-DD)
+      let processedDate = "";
       if (date && date !== "") {
         try {
           const dateParts = date.split('/');
           if (dateParts.length === 3) {
             const [month, day, year] = dateParts;
-            const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-            
-            // If there's a buyer, this is a sale date, otherwise purchase date
-            if (buyer && buyer.trim() && buyer.toLowerCase() !== "n/a") {
-              processedSaleDate = formattedDate;
-            } else {
-              processedPurchaseDate = formattedDate;
-            }
+            processedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
           }
         } catch (error) {
           console.warn(`Failed to parse date: ${date}`);
         }
       }
 
-      // Process buyer information
-      let buyerFirstName: string | undefined;
-      let buyerLastName: string | undefined;
-      let buyerName: string | undefined;
-      
-      if (buyer && buyer.trim() && buyer.toLowerCase() !== "n/a") {
-        buyerName = buyer.trim();
-        const buyerParts = buyerName.split(/\s+/);
-        buyerFirstName = buyerParts[0] || "";
-        buyerLastName = buyerParts.slice(1).join(" ") || "";
-      }
-
-      // Process price - handle both purchase and sale prices
-      let processedPurchasePrice: string | undefined;
-      let processedSalePrice: string | undefined;
-      
-      if (price && price !== "") {
-        let processedPrice = "";
-        const priceStr = price.toLowerCase();
-        
-        if (priceStr.includes("free")) {
-          processedPrice = "0";
-        } else if (priceStr === "0" || priceStr === "$0") {
-          processedPrice = "0";
-        } else {
-          // Extract numeric value from price string
-          const numericMatch = price.match(/[\d,]+\.?\d*/);
-          if (numericMatch) {
-            const numericValue = numericMatch[0].replace(/,/g, '');
-            if (!isNaN(parseFloat(numericValue))) {
-              processedPrice = numericValue;
-            }
-          }
-        }
-        
-        // If there's a buyer, this is a sale price, otherwise purchase price
-        if (buyer && buyer.trim() && buyer.toLowerCase() !== "n/a") {
-          processedSalePrice = processedPrice || undefined;
-        } else {
-          processedPurchasePrice = processedPrice || undefined;
-        }
-      }
-
-      // Determine status based on whether there's buyer information
-      const status: 'yard' | 'sold' = (buyer && buyer.trim() && buyer.toLowerCase() !== "n/a") ? 'sold' : 'yard';
-
-      // Create notes for special cases
-      let notes: string | undefined;
-      if (plate && plate.toLowerCase().includes("out of state")) {
-        notes = "Out of state vehicle";
-      }
-      if (price && price.toLowerCase().includes("free")) {
-        const existingNotes = notes || "";
-        notes = existingNotes ? `${existingNotes}; Free vehicle (${price})` : `Free vehicle (${price})`;
-      }
+      // Clean up make names
+      const cleanMake = make.replace(/MERZ/gi, 'MERCEDES')
+                           .replace(/CHEV/gi, 'CHEVROLET')
+                           .replace(/VOLK/gi, 'VOLKSWAGEN')
+                           .replace(/MNNI/gi, 'MINI')
+                           .replace(/TOYOYA/gi, 'TOYOTA');
 
       const vehicle: ParsedVehicleData = {
         year: year || "",
-        make: make || "",
+        make: cleanMake || "",
         model: model || "",
         vehicleId: vin || "",
-        licensePlate: processedPlate,
-        purchaseDate: processedPurchaseDate,
-        purchasePrice: processedPurchasePrice,
-        saleDate: processedSaleDate,
-        salePrice: processedSalePrice,
-        buyerFirstName,
-        buyerLastName,
-        buyerName,
-        status,
+        licensePlate: (plate && plate !== "" && !plate.toLowerCase().includes("out of state")) ? plate : undefined,
+        purchaseDate: processedDate || undefined,
+        purchasePrice: processedPrice || undefined,
+        sellerName: buyer || undefined,
+        status: 'yard',
         titlePresent: false,
         billOfSale: false,
-        notes
+        notes: plate && plate.toLowerCase().includes("out of state") ? "Out of state vehicle" : undefined
       };
 
-      console.log(`Parsed vehicle ${index + 1}:`, vehicle);
       vehicles.push(vehicle);
     });
 
@@ -273,7 +158,7 @@ export function DataImporter() {
         <CardContent className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-2">
-              Paste your Excel data here (YEAR, MAKE, MODEL, VIN, PLATE, DATE, BUYER, PRICE):
+              Paste your Excel data here:
             </label>
             <Textarea
               placeholder="Paste your tab-separated or space-separated vehicle data..."
@@ -323,43 +208,31 @@ export function DataImporter() {
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="font-medium">
-                          {vehicle.year && `${vehicle.year} `}
-                          {vehicle.make && `${vehicle.make} `}
-                          {vehicle.model || '[No Model]'}
+                          {vehicle.year} {vehicle.make} {vehicle.model || '[No Model]'}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          VIN: {vehicle.vehicleId || '[No VIN]'}
+                          VIN: {vehicle.vehicleId}
                         </p>
                         {vehicle.licensePlate && (
                           <p className="text-sm text-muted-foreground">
                             Plate: {vehicle.licensePlate}
                           </p>
                         )}
-                        <div className="flex gap-2 mt-1 flex-wrap">
+                        <div className="flex gap-2 mt-1">
                           {vehicle.purchaseDate && (
-                            <Badge variant="outline">Purchase: {vehicle.purchaseDate}</Badge>
-                          )}
-                          {vehicle.saleDate && (
-                            <Badge variant="outline">Sale: {vehicle.saleDate}</Badge>
+                            <Badge variant="outline">Date: {vehicle.purchaseDate}</Badge>
                           )}
                           {vehicle.purchasePrice && (
                             <Badge variant="outline">
-                              Purchase: ${vehicle.purchasePrice === "0" ? "FREE" : vehicle.purchasePrice}
+                              Price: ${vehicle.purchasePrice === "0" ? "FREE" : vehicle.purchasePrice}
                             </Badge>
                           )}
-                          {vehicle.salePrice && (
-                            <Badge variant="outline">
-                              Sale: ${vehicle.salePrice === "0" ? "FREE" : vehicle.salePrice}
-                            </Badge>
-                          )}
-                          {vehicle.buyerName && (
-                            <Badge variant="outline">Buyer: {vehicle.buyerName}</Badge>
+                          {vehicle.sellerName && (
+                            <Badge variant="outline">Seller: {vehicle.sellerName}</Badge>
                           )}
                         </div>
                       </div>
-                      <Badge variant={vehicle.status === 'sold' ? 'default' : 'secondary'}>
-                        {vehicle.status === 'sold' ? 'Sold' : 'Yard'}
-                      </Badge>
+                      <Badge variant="secondary">Yard</Badge>
                     </div>
                     {vehicle.notes && (
                       <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
