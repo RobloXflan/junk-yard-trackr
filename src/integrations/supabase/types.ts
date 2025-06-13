@@ -68,6 +68,7 @@ export type Database = {
           buyer_name: string | null
           created_at: string
           destination: string | null
+          documents: Json | null
           id: string
           license_plate: string | null
           make: string
@@ -91,6 +92,7 @@ export type Database = {
           buyer_name?: string | null
           created_at?: string
           destination?: string | null
+          documents?: Json | null
           id?: string
           license_plate?: string | null
           make: string
@@ -114,6 +116,7 @@ export type Database = {
           buyer_name?: string | null
           created_at?: string
           destination?: string | null
+          documents?: Json | null
           id?: string
           license_plate?: string | null
           make?: string

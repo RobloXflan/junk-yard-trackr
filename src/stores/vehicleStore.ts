@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface UploadedDocument {
@@ -125,7 +124,7 @@ class VehicleStore {
         notes: vehicle.notes,
         status: vehicle.status as Vehicle['status'],
         createdAt: vehicle.created_at,
-        documents: this.deserializeDocuments(vehicle.documents)
+        documents: this.deserializeDocuments(vehicle.documents || [])
       }));
 
       this.isLoaded = true;
@@ -195,7 +194,7 @@ class VehicleStore {
         notes: data.notes,
         status: data.status as Vehicle['status'],
         createdAt: data.created_at,
-        documents: this.deserializeDocuments(data.documents)
+        documents: this.deserializeDocuments(data.documents || [])
       };
 
       this.vehicles.unshift(addedVehicle);
