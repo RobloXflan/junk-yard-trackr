@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -21,7 +22,7 @@ interface VehicleDetailsDialogProps {
 }
 
 export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: VehicleDetailsDialogProps) {
-  const [selectedStatus, setSelectedStatus] = useState<Vehicle['status']>(vehicle?.status || 'yard');
+  const [selectedStatus, setSelectedStatus] = useState<Vehicle['status']>('yard');
   const [soldDialogOpen, setSoldDialogOpen] = useState(false);
   const [pendingSoldData, setPendingSoldData] = useState<{
     buyerFirstName: string;
@@ -29,6 +30,15 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
     salePrice: string;
     saleDate: string;
   } | null>(null);
+
+  // Reset state when vehicle changes or dialog opens/closes
+  useEffect(() => {
+    if (vehicle && isOpen) {
+      setSelectedStatus(vehicle.status);
+      setPendingSoldData(null);
+      setSoldDialogOpen(false);
+    }
+  }, [vehicle, isOpen]);
 
   if (!vehicle) return null;
 
@@ -67,6 +77,14 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
     onClose();
   };
 
+  const handleClose = () => {
+    // Reset state when closing
+    setSelectedStatus(vehicle.status);
+    setPendingSoldData(null);
+    setSoldDialogOpen(false);
+    onClose();
+  };
+
   const getStatusLabel = (status: Vehicle['status']) => {
     switch (status) {
       case 'yard': return 'In Yard';
@@ -82,7 +100,7 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
+      <Dialog open={isOpen} onOpenChange={handleClose}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
@@ -169,7 +187,7 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
                       <Save className="w-4 h-4 mr-2" />
                       Save Status
                     </Button>
-                    <Button variant="outline" onClick={onClose}>
+                    <Button variant="outline" onClick={handleClose}>
                       <X className="w-4 h-4 mr-2" />
                       Cancel
                     </Button>

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface UploadedDocument {
@@ -37,6 +36,7 @@ class VehicleStore {
   private subscribers: (() => void)[] = [];
   private vehicles: Vehicle[] = [];
   private isLoaded = false;
+  private updateInProgress = new Set<string>(); // Track which vehicles are being updated
 
   constructor() {
     this.loadVehicles();
@@ -102,26 +102,27 @@ class VehicleStore {
         throw error;
       }
 
+      // Create completely new vehicle objects to prevent any reference sharing
       this.vehicles = (data || []).map(vehicle => ({
         id: vehicle.id,
-        year: vehicle.year,
-        make: vehicle.make,
-        model: vehicle.model,
-        vehicleId: vehicle.vehicle_id,
-        licensePlate: vehicle.license_plate,
-        sellerName: vehicle.seller_name,
-        purchaseDate: vehicle.purchase_date,
-        purchasePrice: vehicle.purchase_price,
-        titlePresent: vehicle.title_present || false,
-        billOfSale: vehicle.bill_of_sale || false,
-        destination: vehicle.destination,
-        buyerName: vehicle.buyer_name,
-        buyerFirstName: vehicle.buyer_first_name,
-        buyerLastName: vehicle.buyer_last_name,
-        saleDate: vehicle.sale_date,
-        salePrice: vehicle.sale_price,
-        notes: vehicle.notes,
-        status: vehicle.status as Vehicle['status'],
+        year: vehicle.year || '',
+        make: vehicle.make || '',
+        model: vehicle.model || '',
+        vehicleId: vehicle.vehicle_id || '',
+        licensePlate: vehicle.license_plate || undefined,
+        sellerName: vehicle.seller_name || undefined,
+        purchaseDate: vehicle.purchase_date || undefined,
+        purchasePrice: vehicle.purchase_price || undefined,
+        titlePresent: Boolean(vehicle.title_present),
+        billOfSale: Boolean(vehicle.bill_of_sale),
+        destination: vehicle.destination || undefined,
+        buyerName: vehicle.buyer_name || undefined,
+        buyerFirstName: vehicle.buyer_first_name || undefined,
+        buyerLastName: vehicle.buyer_last_name || undefined,
+        saleDate: vehicle.sale_date || undefined,
+        salePrice: vehicle.sale_price || undefined,
+        notes: vehicle.notes || undefined,
+        status: (vehicle.status as Vehicle['status']) || 'yard',
         createdAt: vehicle.created_at,
         documents: this.deserializeDocuments(vehicle.documents)
       }));
@@ -186,32 +187,42 @@ class VehicleStore {
     salePrice: string;
     saleDate: string;
   }) {
+    // Prevent concurrent updates to the same vehicle
+    if (this.updateInProgress.has(vehicleId)) {
+      console.log('Update already in progress for vehicle:', vehicleId);
+      return;
+    }
+
+    this.updateInProgress.add(vehicleId);
+
     try {
       console.log('Updating vehicle status for ID:', vehicleId, 'to status:', newStatus, 'with data:', soldData);
       
+      // Create the update object with only the specific fields for this vehicle
       const updateData: any = {
         status: newStatus,
         updated_at: new Date().toISOString()
       };
 
-      // Clear sold data if status is not sold
-      if (newStatus !== 'sold') {
-        updateData.buyer_first_name = null;
-        updateData.buyer_last_name = null;
-        updateData.buyer_name = null;
-        updateData.sale_price = null;
-        updateData.sale_date = null;
-      } else if (soldData) {
-        // Only set sold data if status is sold and soldData is provided
+      // Handle sold status specifically
+      if (newStatus === 'sold' && soldData) {
         updateData.buyer_first_name = soldData.buyerFirstName;
         updateData.buyer_last_name = soldData.buyerLastName;
         updateData.buyer_name = `${soldData.buyerFirstName} ${soldData.buyerLastName}`;
         updateData.sale_price = soldData.salePrice;
         updateData.sale_date = soldData.saleDate;
+      } else if (newStatus !== 'sold') {
+        // Clear sold data if status is not sold
+        updateData.buyer_first_name = null;
+        updateData.buyer_last_name = null;
+        updateData.buyer_name = null;
+        updateData.sale_price = null;
+        updateData.sale_date = null;
       }
 
-      console.log('Sending update to Supabase:', updateData);
+      console.log('Sending update to Supabase for vehicle ID:', vehicleId, updateData);
 
+      // Update only this specific vehicle by ID
       const { error } = await supabase
         .from('vehicles')
         .update(updateData)
@@ -222,15 +233,18 @@ class VehicleStore {
         throw error;
       }
 
-      console.log('Vehicle status updated successfully in database');
+      console.log('Vehicle status updated successfully in database for ID:', vehicleId);
 
-      // Reload all vehicles from database to ensure consistency across all devices
+      // Reload vehicles to get the latest state from database
       await this.loadVehicles();
       
       console.log('Vehicles reloaded after status update');
     } catch (error) {
       console.error('Failed to update vehicle status:', error);
       throw error;
+    } finally {
+      // Always remove from update progress set
+      this.updateInProgress.delete(vehicleId);
     }
   }
 
@@ -241,7 +255,11 @@ class VehicleStore {
   }
 
   getVehicles(): Vehicle[] {
-    return this.vehicles;
+    // Return a deep copy to prevent external modifications
+    return this.vehicles.map(vehicle => ({
+      ...vehicle,
+      documents: vehicle.documents ? [...vehicle.documents] : []
+    }));
   }
 
   getTotalVehicles(): number {
