@@ -45,7 +45,7 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
 
   const handleSoldConfirm = (data: { buyerFirstName: string; buyerLastName: string; salePrice: string; saleDate: string }) => {
     setPendingSoldData(data);
-    setSelectedStatus('sold');
+    setSelectedStatus('sold'); // Set the status to sold when confirmed
     setSoldDialogOpen(false);
   };
 
