@@ -9,6 +9,8 @@ interface UploadedDocument {
   id: string;
   file: File;
   url: string;
+  name: string;
+  size: number;
 }
 
 interface DocumentUploadProps {
@@ -42,20 +44,42 @@ export function DocumentUpload({ uploadedDocuments, onDocumentsChange }: Documen
       }
 
       const documentId = `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const url = URL.createObjectURL(file);
       
-      const newDocument: UploadedDocument = {
-        id: documentId,
-        file: file,
-        url: url
-      };
+      // Create a more stable URL using FileReader for images
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const url = e.target?.result as string;
+        
+        const newDocument: UploadedDocument = {
+          id: documentId,
+          file: file,
+          url: url,
+          name: file.name,
+          size: file.size
+        };
 
-      onDocumentsChange([...uploadedDocuments, newDocument]);
+        onDocumentsChange([...uploadedDocuments, newDocument]);
+        
+        toast({
+          title: "Document uploaded",
+          description: `${file.name} has been uploaded successfully.`,
+        });
+      };
       
-      toast({
-        title: "Document uploaded",
-        description: `${file.name} has been uploaded successfully.`,
-      });
+      if (file.type.startsWith('image/')) {
+        reader.readAsDataURL(file);
+      } else {
+        // For PDFs, still use object URL
+        const url = URL.createObjectURL(file);
+        const newDocument: UploadedDocument = {
+          id: documentId,
+          file: file,
+          url: url,
+          name: file.name,
+          size: file.size
+        };
+        onDocumentsChange([...uploadedDocuments, newDocument]);
+      }
     });
 
     event.target.value = '';
@@ -63,14 +87,29 @@ export function DocumentUpload({ uploadedDocuments, onDocumentsChange }: Documen
 
   const removeDocument = (documentId: string) => {
     const documentToRemove = uploadedDocuments.find(doc => doc.id === documentId);
-    if (documentToRemove) {
+    if (documentToRemove && documentToRemove.url.startsWith('blob:')) {
       URL.revokeObjectURL(documentToRemove.url);
     }
     onDocumentsChange(uploadedDocuments.filter(doc => doc.id !== documentId));
   };
 
   const viewDocument = (document: UploadedDocument) => {
-    window.open(document.url, '_blank');
+    if (document.file.type === 'application/pdf') {
+      window.open(document.url, '_blank');
+    } else {
+      // For images, create a new window to display them
+      const newWindow = window.open('', '_blank');
+      if (newWindow) {
+        newWindow.document.write(`
+          <html>
+            <head><title>${document.name}</title></head>
+            <body style="margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#f0f0f0;">
+              <img src="${document.url}" style="max-width:100%;max-height:100%;object-fit:contain;" alt="${document.name}" />
+            </body>
+          </html>
+        `);
+      }
+    }
   };
 
   return (
@@ -104,8 +143,8 @@ export function DocumentUpload({ uploadedDocuments, onDocumentsChange }: Documen
               <div key={document.id} className="flex items-center gap-3 p-3 bg-card rounded-lg border border-border">
                 <FileText className="w-6 h-6 text-primary flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{document.file.name}</p>
-                  <p className="text-xs text-foreground">{(document.file.size / 1024 / 1024).toFixed(2)} MB</p>
+                  <p className="text-sm font-medium text-foreground truncate">{document.name}</p>
+                  <p className="text-xs text-foreground">{(document.size / 1024 / 1024).toFixed(2)} MB</p>
                 </div>
                 <div className="flex gap-1">
                   <Button

@@ -29,6 +29,8 @@ export function VehicleIntakeForm() {
     billOfSale: false,
     destination: "",
     buyerName: "",
+    buyerFirstName: "",
+    buyerLastName: "",
     saleDate: "",
     salePrice: "",
     notes: ""
@@ -52,9 +54,26 @@ export function VehicleIntakeForm() {
       return;
     }
 
+    // Check if sold and missing buyer info
+    if ((formData.destination === "sold" || formData.destination === "buyer") && 
+        (!formData.buyerFirstName || !formData.buyerLastName || !formData.salePrice)) {
+      toast({
+        title: "Missing Sale Information",
+        description: "Please fill in buyer first name, last name, and sale price for sold vehicles.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Combine first and last name for backward compatibility
+    const combinedBuyerName = formData.buyerFirstName && formData.buyerLastName 
+      ? `${formData.buyerFirstName} ${formData.buyerLastName}` 
+      : formData.buyerName;
+
     // Add vehicle to store
     addVehicle({
       ...formData,
+      buyerName: combinedBuyerName,
       documents: uploadedDocuments
     });
     
@@ -69,7 +88,7 @@ export function VehicleIntakeForm() {
       successMessage += " SA Recycling paperwork will be prepared.";
     } else if (formData.destination === "blank-bill-sale") {
       successMessage += " Blank bill of sale will be generated for manual completion.";
-    } else if (formData.destination === "buyer") {
+    } else if (formData.destination === "buyer" || formData.destination === "sold") {
       successMessage += " Sale forms will be generated.";
     }
 
@@ -92,13 +111,19 @@ export function VehicleIntakeForm() {
       billOfSale: false,
       destination: "",
       buyerName: "",
+      buyerFirstName: "",
+      buyerLastName: "",
       saleDate: "",
       salePrice: "",
       notes: ""
     });
     
     // Clean up document URLs and reset
-    uploadedDocuments.forEach(doc => URL.revokeObjectURL(doc.url));
+    uploadedDocuments.forEach(doc => {
+      if (doc.url.startsWith('blob:')) {
+        URL.revokeObjectURL(doc.url);
+      }
+    });
     setUploadedDocuments([]);
   };
 

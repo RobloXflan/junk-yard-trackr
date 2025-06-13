@@ -12,6 +12,8 @@ interface Vehicle {
   billOfSale: boolean;
   destination: string;
   buyerName: string;
+  buyerFirstName: string;
+  buyerLastName: string;
   saleDate: string;
   salePrice: string;
   notes: string;
@@ -19,6 +21,8 @@ interface Vehicle {
     id: string;
     file: File;
     url: string;
+    name: string;
+    size: number;
   }>;
   status: 'yard' | 'sold' | 'pick-your-part' | 'sa-recycling' | 'available';
   createdAt: string;
@@ -56,6 +60,7 @@ class VehicleStore {
   private getStatusFromDestination(destination: string): Vehicle['status'] {
     switch (destination) {
       case 'buyer':
+      case 'sold':
         return 'sold';
       case 'pick-your-part':
         return 'pick-your-part';

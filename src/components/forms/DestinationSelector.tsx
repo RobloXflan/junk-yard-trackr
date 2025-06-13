@@ -7,6 +7,8 @@ interface DestinationSelectorProps {
   formData: {
     destination: string;
     buyerName: string;
+    buyerFirstName: string;
+    buyerLastName: string;
     saleDate: string;
     salePrice: string;
   };
@@ -24,7 +26,7 @@ export function DestinationSelector({ formData, onInputChange }: DestinationSele
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="yard">Still in Yard</SelectItem>
-            <SelectItem value="buyer">Sold to Buyer</SelectItem>
+            <SelectItem value="sold">Sold to Buyer</SelectItem>
             <SelectItem value="pick-your-part">Send to Pick Your Part</SelectItem>
             <SelectItem value="sa-recycling">SA Recycling</SelectItem>
             <SelectItem value="blank-bill-sale">Blank Bill of Sale</SelectItem>
@@ -32,15 +34,25 @@ export function DestinationSelector({ formData, onInputChange }: DestinationSele
         </Select>
       </div>
 
-      {formData.destination === "buyer" && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-card border border-border rounded-lg">
+      {(formData.destination === "buyer" || formData.destination === "sold") && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-card border border-border rounded-lg">
           <div className="space-y-2">
-            <Label htmlFor="buyerName" className="text-foreground font-medium">Buyer Name</Label>
+            <Label htmlFor="buyerFirstName" className="text-foreground font-medium">First Name</Label>
             <Input
-              id="buyerName"
-              placeholder="Jane Smith"
-              value={formData.buyerName}
-              onChange={(e) => onInputChange("buyerName", e.target.value)}
+              id="buyerFirstName"
+              placeholder="John"
+              value={formData.buyerFirstName}
+              onChange={(e) => onInputChange("buyerFirstName", e.target.value)}
+              className="border-border focus:border-primary text-foreground"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="buyerLastName" className="text-foreground font-medium">Last Name</Label>
+            <Input
+              id="buyerLastName"
+              placeholder="Smith"
+              value={formData.buyerLastName}
+              onChange={(e) => onInputChange("buyerLastName", e.target.value)}
               className="border-border focus:border-primary text-foreground"
             />
           </div>
