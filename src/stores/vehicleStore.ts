@@ -1,3 +1,4 @@
+
 interface Vehicle {
   id: string;
   year: string;
@@ -28,9 +29,126 @@ interface Vehicle {
   createdAt: string;
 }
 
+interface SerializedDocument {
+  id: string;
+  fileData: string; // base64 encoded file data
+  url: string;
+  name: string;
+  size: number;
+  type: string; // MIME type
+}
+
+interface SerializedVehicle extends Omit<Vehicle, 'documents'> {
+  documents: SerializedDocument[];
+}
+
 class VehicleStore {
   private vehicles: Vehicle[] = [];
   private listeners: Array<() => void> = [];
+  private readonly STORAGE_KEY = 'vehicle_inventory_data';
+
+  constructor() {
+    this.loadFromStorage();
+  }
+
+  private async fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  }
+
+  private base64ToFile(base64: string, name: string, type: string): File {
+    const arr = base64.split(',');
+    const mime = arr[0].match(/:(.*?);/)?.[1] || type;
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], name, { type: mime });
+  }
+
+  private async serializeVehicles(): Promise<SerializedVehicle[]> {
+    const serializedVehicles: SerializedVehicle[] = [];
+    
+    for (const vehicle of this.vehicles) {
+      const serializedDocuments: SerializedDocument[] = [];
+      
+      for (const doc of vehicle.documents) {
+        try {
+          const fileData = await this.fileToBase64(doc.file);
+          serializedDocuments.push({
+            id: doc.id,
+            fileData,
+            url: doc.url,
+            name: doc.name,
+            size: doc.size,
+            type: doc.file.type
+          });
+        } catch (error) {
+          console.error('Error serializing document:', error);
+          // Skip this document if serialization fails
+        }
+      }
+      
+      serializedVehicles.push({
+        ...vehicle,
+        documents: serializedDocuments
+      });
+    }
+    
+    return serializedVehicles;
+  }
+
+  private deserializeVehicles(serializedVehicles: SerializedVehicle[]): Vehicle[] {
+    return serializedVehicles.map(vehicle => {
+      const documents = vehicle.documents.map(doc => {
+        const file = this.base64ToFile(doc.fileData, doc.name, doc.type);
+        return {
+          id: doc.id,
+          file,
+          url: doc.url,
+          name: doc.name,
+          size: doc.size
+        };
+      });
+      
+      return {
+        ...vehicle,
+        documents
+      };
+    });
+  }
+
+  private async saveToStorage(): Promise<void> {
+    try {
+      const serializedVehicles = await this.serializeVehicles();
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(serializedVehicles));
+      console.log('Vehicles saved to localStorage:', serializedVehicles.length);
+    } catch (error) {
+      console.error('Error saving vehicles to localStorage:', error);
+    }
+  }
+
+  private loadFromStorage(): void {
+    try {
+      const stored = localStorage.getItem(this.STORAGE_KEY);
+      if (stored) {
+        const serializedVehicles: SerializedVehicle[] = JSON.parse(stored);
+        this.vehicles = this.deserializeVehicles(serializedVehicles);
+        console.log('Vehicles loaded from localStorage:', this.vehicles.length);
+      } else {
+        console.log('No vehicles found in localStorage');
+      }
+    } catch (error) {
+      console.error('Error loading vehicles from localStorage:', error);
+      this.vehicles = [];
+    }
+  }
 
   addVehicle(vehicleData: Omit<Vehicle, 'id' | 'createdAt' | 'status'>) {
     const vehicle: Vehicle = {
@@ -41,6 +159,7 @@ class VehicleStore {
     };
     
     this.vehicles.push(vehicle);
+    this.saveToStorage(); // Save to localStorage
     this.notifyListeners();
     console.log('Vehicle added to store:', vehicle);
   }
@@ -64,6 +183,7 @@ class VehicleStore {
           buyerName: `${soldData.buyerFirstName} ${soldData.buyerLastName}`
         })
       };
+      this.saveToStorage(); // Save to localStorage
       this.notifyListeners();
       console.log('Vehicle status updated:', vehicleId, newStatus, soldData);
     }
