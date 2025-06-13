@@ -3,52 +3,52 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Professional design system for junk car business admin dashboard */
+/* California DMV inspired design system for junk car business admin dashboard */
 
 @layer base {
   :root {
-    --background: 191 219 254;
-    --foreground: 0 0 0;
+    --background: 245 248 250;
+    --foreground: 30 41 59;
 
-    --card: 219 234 254;
-    --card-foreground: 0 0 0;
+    --card: 255 255 255;
+    --card-foreground: 30 41 59;
 
-    --popover: 219 234 254;
-    --popover-foreground: 0 0 0;
+    --popover: 255 255 255;
+    --popover-foreground: 30 41 59;
 
-    --primary: 37 99 235;
+    --primary: 12 74 110;
     --primary-foreground: 255 255 255;
 
-    --secondary: 71 85 105;
-    --secondary-foreground: 0 0 0;
+    --secondary: 203 213 225;
+    --secondary-foreground: 30 41 59;
 
-    --muted: 203 213 225;
-    --muted-foreground: 0 0 0;
+    --muted: 241 245 249;
+    --muted-foreground: 100 116 139;
 
-    --accent: 59 130 246;
+    --accent: 217 119 6;
     --accent-foreground: 255 255 255;
 
-    --destructive: 239 68 68;
+    --destructive: 220 38 38;
     --destructive-foreground: 248 250 252;
 
-    --border: 191 219 254;
-    --input: 191 219 254;
-    --ring: 37 99 235;
+    --border: 226 232 240;
+    --input: 226 232 240;
+    --ring: 12 74 110;
 
-    --success: 34 197 94;
-    --warning: 245 158 11;
+    --success: 22 163 74;
+    --warning: 217 119 6;
     --info: 59 130 246;
 
     --radius: 0.5rem;
 
-    --sidebar-background: 219 234 254;
-    --sidebar-foreground: 0 0 0;
-    --sidebar-primary: 37 99 235;
+    --sidebar-background: 255 255 255;
+    --sidebar-foreground: 30 41 59;
+    --sidebar-primary: 12 74 110;
     --sidebar-primary-foreground: 255 255 255;
-    --sidebar-accent: 203 213 225;
-    --sidebar-accent-foreground: 0 0 0;
-    --sidebar-border: 191 219 254;
-    --sidebar-ring: 37 99 235;
+    --sidebar-accent: 241 245 249;
+    --sidebar-accent-foreground: 30 41 59;
+    --sidebar-border: 226 232 240;
+    --sidebar-ring: 12 74 110;
   }
 
   .dark {
@@ -91,5 +91,9 @@
   
   .shadow-business {
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  .dmv-header {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, rgb(15, 64, 96) 100%);
   }
 }
