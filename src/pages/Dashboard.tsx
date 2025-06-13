@@ -8,7 +8,7 @@ export function Dashboard() {
     <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
+        <p className="text-black">
           Overview of your junk car business operations
         </p>
       </div>
@@ -18,7 +18,7 @@ export function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="shadow-business">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-black font-bold">
               <TrendingUp className="w-5 h-5" />
               Recent Activity
             </CardTitle>
@@ -53,7 +53,7 @@ export function Dashboard() {
 
         <Card className="shadow-business">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-black font-bold">
               <AlertTriangle className="w-5 h-5" />
               Pending Actions
             </CardTitle>
