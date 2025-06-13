@@ -1,7 +1,9 @@
 
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SoldDialog } from "./SoldDialog";
 
 interface DestinationSelectorProps {
   formData: {
@@ -16,11 +18,42 @@ interface DestinationSelectorProps {
 }
 
 export function DestinationSelector({ formData, onInputChange }: DestinationSelectorProps) {
+  const [soldDialogOpen, setSoldDialogOpen] = useState(false);
+
+  const handleDestinationChange = (value: string) => {
+    onInputChange("destination", value);
+    
+    if (value === "sold") {
+      setSoldDialogOpen(true);
+    } else {
+      // Clear sale data if not sold
+      onInputChange("buyerFirstName", "");
+      onInputChange("buyerLastName", "");
+      onInputChange("salePrice", "");
+      onInputChange("saleDate", "");
+    }
+  };
+
+  const handleSoldConfirm = (data: { buyerFirstName: string; buyerLastName: string; salePrice: string; saleDate: string }) => {
+    onInputChange("buyerFirstName", data.buyerFirstName);
+    onInputChange("buyerLastName", data.buyerLastName);
+    onInputChange("salePrice", data.salePrice);
+    onInputChange("saleDate", data.saleDate);
+  };
+
+  const handleSoldDialogClose = (open: boolean) => {
+    if (!open && formData.destination === "sold" && (!formData.buyerFirstName || !formData.buyerLastName || !formData.salePrice)) {
+      // If dialog is closed without completing the form, reset destination
+      onInputChange("destination", "");
+    }
+    setSoldDialogOpen(open);
+  };
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="destination" className="text-foreground font-medium">Vehicle Destination</Label>
-        <Select value={formData.destination} onValueChange={(value) => onInputChange("destination", value)}>
+        <Select value={formData.destination} onValueChange={handleDestinationChange}>
           <SelectTrigger className="border-border focus:border-primary text-foreground">
             <SelectValue placeholder="Select destination" />
           </SelectTrigger>
@@ -34,48 +67,13 @@ export function DestinationSelector({ formData, onInputChange }: DestinationSele
         </Select>
       </div>
 
-      {(formData.destination === "buyer" || formData.destination === "sold") && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-card border border-border rounded-lg">
+      {formData.destination === "sold" && formData.buyerFirstName && formData.buyerLastName && formData.salePrice && (
+        <div className="p-4 bg-card border border-border rounded-lg">
           <div className="space-y-2">
-            <Label htmlFor="buyerFirstName" className="text-foreground font-medium">First Name</Label>
-            <Input
-              id="buyerFirstName"
-              placeholder="John"
-              value={formData.buyerFirstName}
-              onChange={(e) => onInputChange("buyerFirstName", e.target.value)}
-              className="border-border focus:border-primary text-foreground"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="buyerLastName" className="text-foreground font-medium">Last Name</Label>
-            <Input
-              id="buyerLastName"
-              placeholder="Smith"
-              value={formData.buyerLastName}
-              onChange={(e) => onInputChange("buyerLastName", e.target.value)}
-              className="border-border focus:border-primary text-foreground"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="saleDate" className="text-foreground font-medium">Date of Sale</Label>
-            <Input
-              id="saleDate"
-              type="date"
-              value={formData.saleDate}
-              onChange={(e) => onInputChange("saleDate", e.target.value)}
-              className="border-border focus:border-primary text-foreground"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="salePrice" className="text-foreground font-medium">Sale Price</Label>
-            <Input
-              id="salePrice"
-              type="number"
-              placeholder="1500"
-              value={formData.salePrice}
-              onChange={(e) => onInputChange("salePrice", e.target.value)}
-              className="border-border focus:border-primary text-foreground"
-            />
+            <p className="text-sm font-medium text-foreground">Sale Details:</p>
+            <p className="text-sm text-foreground">Buyer: {formData.buyerFirstName} {formData.buyerLastName}</p>
+            <p className="text-sm text-foreground">Sale Price: ${formData.salePrice}</p>
+            {formData.saleDate && <p className="text-sm text-foreground">Date: {formData.saleDate}</p>}
           </div>
         </div>
       )}
@@ -103,6 +101,18 @@ export function DestinationSelector({ formData, onInputChange }: DestinationSele
           </p>
         </div>
       )}
+
+      <SoldDialog
+        open={soldDialogOpen}
+        onOpenChange={handleSoldDialogClose}
+        onConfirm={handleSoldConfirm}
+        initialData={{
+          buyerFirstName: formData.buyerFirstName,
+          buyerLastName: formData.buyerLastName,
+          salePrice: formData.salePrice,
+          saleDate: formData.saleDate
+        }}
+      />
     </div>
   );
 }
