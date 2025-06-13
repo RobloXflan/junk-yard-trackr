@@ -64,7 +64,7 @@ class VehicleStore {
   }
 
   // Helper function to convert documents back from storage
-  private deserializeDocuments(documentsData: any[]): UploadedDocument[] {
+  private deserializeDocuments(documentsData: any): UploadedDocument[] {
     if (!documentsData || !Array.isArray(documentsData)) return [];
     
     return documentsData.map(doc => ({
@@ -124,7 +124,7 @@ class VehicleStore {
         notes: vehicle.notes,
         status: vehicle.status as Vehicle['status'],
         createdAt: vehicle.created_at,
-        documents: this.deserializeDocuments(vehicle.documents || [])
+        documents: this.deserializeDocuments(vehicle.documents)
       }));
 
       this.isLoaded = true;
@@ -194,7 +194,7 @@ class VehicleStore {
         notes: data.notes,
         status: data.status as Vehicle['status'],
         createdAt: data.created_at,
-        documents: this.deserializeDocuments(data.documents || [])
+        documents: this.deserializeDocuments(data.documents)
       };
 
       this.vehicles.unshift(addedVehicle);

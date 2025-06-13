@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Upload, FileText, X, Eye } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface UploadedDocument {
   id: string;
@@ -19,77 +20,131 @@ interface DocumentUploadProps {
 }
 
 export function DocumentUpload({ uploadedDocuments, onDocumentsChange }: DocumentUploadProps) {
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const [uploading, setUploading] = useState(false);
+
+  const uploadFileToStorage = async (file: File): Promise<string> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+    const filePath = fileName;
+
+    console.log('Uploading file to storage:', filePath);
+
+    const { data, error } = await supabase.storage
+      .from('vehicle-documents')
+      .upload(filePath, file);
+
+    if (error) {
+      console.error('Storage upload error:', error);
+      throw error;
+    }
+
+    // Get the public URL
+    const { data: urlData } = supabase.storage
+      .from('vehicle-documents')
+      .getPublicUrl(filePath);
+
+    console.log('File uploaded successfully, URL:', urlData.publicUrl);
+    return urlData.publicUrl;
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files) return;
 
-    Array.from(files).forEach(file => {
-      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
-      if (!allowedTypes.includes(file.type)) {
-        toast({
-          title: "Invalid file type",
-          description: `${file.name} - Please upload a PDF or image file (JPG, PNG).`,
-          variant: "destructive",
-        });
-        return;
-      }
+    setUploading(true);
 
-      if (file.size > 10 * 1024 * 1024) {
-        toast({
-          title: "File too large",
-          description: `${file.name} - Please upload a file smaller than 10MB.`,
-          variant: "destructive",
-        });
-        return;
-      }
+    try {
+      const uploadPromises = Array.from(files).map(async (file) => {
+        const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+        if (!allowedTypes.includes(file.type)) {
+          toast({
+            title: "Invalid file type",
+            description: `${file.name} - Please upload a PDF or image file (JPG, PNG).`,
+            variant: "destructive",
+          });
+          return null;
+        }
 
-      const documentId = `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        if (file.size > 10 * 1024 * 1024) {
+          toast({
+            title: "File too large",
+            description: `${file.name} - Please upload a file smaller than 10MB.`,
+            variant: "destructive",
+          });
+          return null;
+        }
+
+        try {
+          const url = await uploadFileToStorage(file);
+          const documentId = `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          
+          const newDocument: UploadedDocument = {
+            id: documentId,
+            file: file,
+            url: url,
+            name: file.name,
+            size: file.size
+          };
+
+          toast({
+            title: "Document uploaded",
+            description: `${file.name} has been uploaded successfully.`,
+          });
+
+          return newDocument;
+        } catch (error) {
+          console.error('Upload failed for file:', file.name, error);
+          toast({
+            title: "Upload failed",
+            description: `Failed to upload ${file.name}. Please try again.`,
+            variant: "destructive",
+          });
+          return null;
+        }
+      });
+
+      const results = await Promise.all(uploadPromises);
+      const successfulUploads = results.filter(doc => doc !== null) as UploadedDocument[];
       
-      // Create a more stable URL using FileReader for images
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const url = e.target?.result as string;
-        
-        const newDocument: UploadedDocument = {
-          id: documentId,
-          file: file,
-          url: url,
-          name: file.name,
-          size: file.size
-        };
-
-        onDocumentsChange([...uploadedDocuments, newDocument]);
-        
-        toast({
-          title: "Document uploaded",
-          description: `${file.name} has been uploaded successfully.`,
-        });
-      };
-      
-      if (file.type.startsWith('image/')) {
-        reader.readAsDataURL(file);
-      } else {
-        // For PDFs, still use object URL
-        const url = URL.createObjectURL(file);
-        const newDocument: UploadedDocument = {
-          id: documentId,
-          file: file,
-          url: url,
-          name: file.name,
-          size: file.size
-        };
-        onDocumentsChange([...uploadedDocuments, newDocument]);
+      if (successfulUploads.length > 0) {
+        onDocumentsChange([...uploadedDocuments, ...successfulUploads]);
       }
-    });
-
-    event.target.value = '';
+    } catch (error) {
+      console.error('Upload process failed:', error);
+      toast({
+        title: "Upload failed",
+        description: "An error occurred during file upload. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+      event.target.value = '';
+    }
   };
 
-  const removeDocument = (documentId: string) => {
+  const removeDocument = async (documentId: string) => {
     const documentToRemove = uploadedDocuments.find(doc => doc.id === documentId);
-    if (documentToRemove && documentToRemove.url.startsWith('blob:')) {
-      URL.revokeObjectURL(documentToRemove.url);
+    if (documentToRemove) {
+      // Extract the file path from the URL to delete from storage
+      try {
+        const url = new URL(documentToRemove.url);
+        const pathParts = url.pathname.split('/');
+        const fileName = pathParts[pathParts.length - 1];
+        
+        if (fileName) {
+          const { error } = await supabase.storage
+            .from('vehicle-documents')
+            .remove([fileName]);
+          
+          if (error) {
+            console.error('Error deleting file from storage:', error);
+          }
+        }
+      } catch (error) {
+        console.error('Error parsing URL for deletion:', error);
+      }
     }
+    
     onDocumentsChange(uploadedDocuments.filter(doc => doc.id !== documentId));
   };
 
@@ -122,12 +177,13 @@ export function DocumentUpload({ uploadedDocuments, onDocumentsChange }: Documen
           accept=".pdf,.jpg,.jpeg,.png"
           onChange={handleFileUpload}
           multiple
+          disabled={uploading}
           className="hidden"
         />
-        <label htmlFor="documents" className="cursor-pointer">
+        <label htmlFor="documents" className={`cursor-pointer ${uploading ? 'opacity-50' : ''}`}>
           <Upload className="w-8 h-8 mx-auto mb-2 text-foreground" />
           <p className="text-sm text-foreground">
-            Click to upload or drag and drop multiple documents
+            {uploading ? 'Uploading files...' : 'Click to upload or drag and drop multiple documents'}
           </p>
           <p className="text-xs text-foreground mt-1">
             PDF, JPG, PNG up to 10MB each
