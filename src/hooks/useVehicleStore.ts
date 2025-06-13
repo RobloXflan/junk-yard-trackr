@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { vehicleStore, Vehicle } from '@/stores/vehicleStore';
 
@@ -22,6 +21,7 @@ export function useVehicleStore() {
   return {
     vehicles,
     addVehicle: vehicleStore.addVehicle.bind(vehicleStore),
+    updateVehicleStatus: vehicleStore.updateVehicleStatus.bind(vehicleStore),
     getTotalVehicles: vehicleStore.getTotalVehicles.bind(vehicleStore),
     getTotalRevenue: vehicleStore.getTotalRevenue.bind(vehicleStore),
     getPendingDMV: vehicleStore.getPendingDMV.bind(vehicleStore),

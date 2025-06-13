@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter, Car, Plus } from "lucide-react";
+import { Search, Filter, Car, Plus, Edit } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -14,6 +14,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useVehicleStore } from "@/hooks/useVehicleStore";
+import { VehicleDetailsDialog } from "@/components/VehicleDetailsDialog";
+import { Vehicle } from "@/stores/vehicleStore";
 
 interface VehicleInventoryProps {
   onNavigate: (page: string) => void;
@@ -21,7 +23,9 @@ interface VehicleInventoryProps {
 
 export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const { vehicles } = useVehicleStore();
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { vehicles, updateVehicleStatus } = useVehicleStore();
 
   const filteredVehicles = vehicles.filter((vehicle) =>
     vehicle.make?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -32,6 +36,20 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
 
   const handleAddVehicle = () => {
     onNavigate('intake');
+  };
+
+  const handleEditVehicle = (vehicle: Vehicle) => {
+    setSelectedVehicle(vehicle);
+    setIsDialogOpen(true);
+  };
+
+  const handleSaveVehicle = (vehicleId: string, newStatus: Vehicle['status']) => {
+    updateVehicleStatus(vehicleId, newStatus);
+  };
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    setSelectedVehicle(null);
   };
 
   return (
@@ -136,7 +154,12 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleEditVehicle(vehicle)}
+                      >
+                        <Edit className="w-4 h-4 mr-2" />
                         Edit
                       </Button>
                     </TableCell>
@@ -147,6 +170,13 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
           )}
         </CardContent>
       </Card>
+
+      <VehicleDetailsDialog
+        vehicle={selectedVehicle}
+        isOpen={isDialogOpen}
+        onClose={handleCloseDialog}
+        onSave={handleSaveVehicle}
+      />
     </div>
   );
 }

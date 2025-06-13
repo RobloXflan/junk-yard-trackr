@@ -1,4 +1,3 @@
-
 interface Vehicle {
   id: string;
   year: string;
@@ -40,6 +39,18 @@ class VehicleStore {
     this.vehicles.push(vehicle);
     this.notifyListeners();
     console.log('Vehicle added to store:', vehicle);
+  }
+
+  updateVehicleStatus(vehicleId: string, newStatus: Vehicle['status']) {
+    const vehicleIndex = this.vehicles.findIndex(v => v.id === vehicleId);
+    if (vehicleIndex !== -1) {
+      this.vehicles[vehicleIndex] = {
+        ...this.vehicles[vehicleIndex],
+        status: newStatus
+      };
+      this.notifyListeners();
+      console.log('Vehicle status updated:', vehicleId, newStatus);
+    }
   }
 
   private getStatusFromDestination(destination: string): Vehicle['status'] {
