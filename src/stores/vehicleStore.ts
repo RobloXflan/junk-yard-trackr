@@ -1,4 +1,3 @@
-
 interface Vehicle {
   id: string;
   year: string;
@@ -126,21 +125,42 @@ class VehicleStore {
 
   private async saveToStorage(): Promise<void> {
     try {
+      console.log('Starting save to localStorage...');
       const serializedVehicles = await this.serializeVehicles();
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(serializedVehicles));
-      console.log('Vehicles saved to localStorage:', serializedVehicles.length);
+      
+      // Check if data is too large for localStorage
+      const dataSize = JSON.stringify(serializedVehicles).length;
+      console.log('Data size to save:', dataSize, 'characters');
+      
+      if (dataSize > 5000000) { // 5MB limit
+        console.warn('Data size exceeds recommended localStorage limit');
+        // Save without documents if too large
+        const vehiclesWithoutDocs = serializedVehicles.map(v => ({
+          ...v,
+          documents: []
+        }));
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(vehiclesWithoutDocs));
+        console.log('Vehicles saved to localStorage without documents due to size:', vehiclesWithoutDocs.length);
+      } else {
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(serializedVehicles));
+        console.log('Vehicles successfully saved to localStorage:', serializedVehicles.length);
+      }
     } catch (error) {
       console.error('Error saving vehicles to localStorage:', error);
+      if (error instanceof DOMException && error.code === 22) {
+        console.error('localStorage quota exceeded');
+      }
     }
   }
 
   private loadFromStorage(): void {
     try {
+      console.log('Loading vehicles from localStorage...');
       const stored = localStorage.getItem(this.STORAGE_KEY);
       if (stored) {
         const serializedVehicles: SerializedVehicle[] = JSON.parse(stored);
         this.vehicles = this.deserializeVehicles(serializedVehicles);
-        console.log('Vehicles loaded from localStorage:', this.vehicles.length);
+        console.log('Vehicles successfully loaded from localStorage:', this.vehicles.length);
       } else {
         console.log('No vehicles found in localStorage');
       }
@@ -150,7 +170,7 @@ class VehicleStore {
     }
   }
 
-  addVehicle(vehicleData: Omit<Vehicle, 'id' | 'createdAt' | 'status'>) {
+  async addVehicle(vehicleData: Omit<Vehicle, 'id' | 'createdAt' | 'status'>) {
     const vehicle: Vehicle = {
       ...vehicleData,
       id: `vehicle_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -158,13 +178,16 @@ class VehicleStore {
       status: this.getStatusFromDestination(vehicleData.destination)
     };
     
+    console.log('Adding vehicle to store:', vehicle.id);
     this.vehicles.push(vehicle);
-    this.saveToStorage(); // Save to localStorage
+    
+    // Await the save operation
+    await this.saveToStorage();
     this.notifyListeners();
-    console.log('Vehicle added to store:', vehicle);
+    console.log('Vehicle added and saved successfully:', vehicle.id);
   }
 
-  updateVehicleStatus(vehicleId: string, newStatus: Vehicle['status'], soldData?: {
+  async updateVehicleStatus(vehicleId: string, newStatus: Vehicle['status'], soldData?: {
     buyerFirstName: string;
     buyerLastName: string;
     salePrice: string;
@@ -172,6 +195,7 @@ class VehicleStore {
   }) {
     const vehicleIndex = this.vehicles.findIndex(v => v.id === vehicleId);
     if (vehicleIndex !== -1) {
+      console.log('Updating vehicle status:', vehicleId, newStatus);
       this.vehicles[vehicleIndex] = {
         ...this.vehicles[vehicleIndex],
         status: newStatus,
@@ -183,9 +207,11 @@ class VehicleStore {
           buyerName: `${soldData.buyerFirstName} ${soldData.buyerLastName}`
         })
       };
-      this.saveToStorage(); // Save to localStorage
+      
+      // Await the save operation
+      await this.saveToStorage();
       this.notifyListeners();
-      console.log('Vehicle status updated:', vehicleId, newStatus, soldData);
+      console.log('Vehicle status updated and saved successfully:', vehicleId, newStatus);
     }
   }
 

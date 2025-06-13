@@ -21,13 +21,27 @@ export function useVehicleStore() {
 
   return {
     vehicles,
-    addVehicle: vehicleStore.addVehicle.bind(vehicleStore),
-    updateVehicleStatus: (vehicleId: string, newStatus: Vehicle['status'], soldData?: {
+    addVehicle: async (vehicleData: Omit<Vehicle, 'id' | 'createdAt' | 'status'>) => {
+      try {
+        await vehicleStore.addVehicle(vehicleData);
+      } catch (error) {
+        console.error('Error adding vehicle:', error);
+        throw error;
+      }
+    },
+    updateVehicleStatus: async (vehicleId: string, newStatus: Vehicle['status'], soldData?: {
       buyerFirstName: string;
       buyerLastName: string;
       salePrice: string;
       saleDate: string;
-    }) => vehicleStore.updateVehicleStatus(vehicleId, newStatus, soldData),
+    }) => {
+      try {
+        await vehicleStore.updateVehicleStatus(vehicleId, newStatus, soldData);
+      } catch (error) {
+        console.error('Error updating vehicle status:', error);
+        throw error;
+      }
+    },
     getTotalVehicles: vehicleStore.getTotalVehicles.bind(vehicleStore),
     getTotalRevenue: vehicleStore.getTotalRevenue.bind(vehicleStore),
     getPendingDMV: vehicleStore.getPendingDMV.bind(vehicleStore),
