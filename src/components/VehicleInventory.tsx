@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,12 +26,33 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { vehicles, updateVehicleStatus } = useVehicleStore();
 
-  const filteredVehicles = vehicles.filter((vehicle) =>
-    vehicle.make?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vehicle.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vehicle.year?.toString().includes(searchTerm) ||
-    vehicle.vehicleId?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredVehicles = vehicles.filter((vehicle) => {
+    if (!searchTerm.trim()) return true;
+    
+    const search = searchTerm.toLowerCase().trim();
+    
+    // Check make (handle undefined/null)
+    const make = vehicle.make?.toLowerCase() || '';
+    if (make.includes(search)) return true;
+    
+    // Check model (handle undefined/null)
+    const model = vehicle.model?.toLowerCase() || '';
+    if (model.includes(search)) return true;
+    
+    // Check year (handle undefined/null and convert to string)
+    const year = vehicle.year?.toString() || '';
+    if (year.includes(search)) return true;
+    
+    // Check vehicle ID (handle undefined/null)
+    const vehicleId = vehicle.vehicleId?.toLowerCase() || '';
+    if (vehicleId.includes(search)) return true;
+    
+    // Check license plate (handle undefined/null)
+    const licensePlate = vehicle.licensePlate?.toLowerCase() || '';
+    if (licensePlate.includes(search)) return true;
+    
+    return false;
+  });
 
   const handleAddVehicle = () => {
     onNavigate('intake');
@@ -79,7 +99,7 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
-                placeholder="Search by make, model, year, or Vehicle ID..."
+                placeholder="Search by make, model, year, Vehicle ID, or license plate..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -96,7 +116,9 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
       {/* Vehicle List */}
       <Card>
         <CardHeader>
-          <CardTitle>Vehicles ({vehicles.length})</CardTitle>
+          <CardTitle>
+            Vehicles ({searchTerm ? `${filteredVehicles.length} of ${vehicles.length}` : vehicles.length})
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {vehicles.length === 0 ? (
@@ -109,6 +131,17 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
               <Button className="gradient-primary" onClick={handleAddVehicle}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add First Vehicle
+              </Button>
+            </div>
+          ) : filteredVehicles.length === 0 ? (
+            <div className="text-center py-12">
+              <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No vehicles found</h3>
+              <p className="text-muted-foreground mb-4">
+                No vehicles match your search criteria. Try adjusting your search terms.
+              </p>
+              <Button variant="outline" onClick={() => setSearchTerm("")}>
+                Clear Search
               </Button>
             </div>
           ) : (
