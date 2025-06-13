@@ -6,7 +6,7 @@ export function Intake() {
     <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Vehicle Intake</h1>
-        <p className="text-muted-foreground">
+        <p className="text-black">
           Add new vehicles to your inventory
         </p>
       </div>

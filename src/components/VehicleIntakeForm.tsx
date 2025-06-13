@@ -166,10 +166,10 @@ export function VehicleIntakeForm() {
 
   return (
     <div className="space-y-6">
-      <Card className="shadow-lg border-slate-200">
-        <CardHeader className="bg-slate-50 border-b border-slate-200">
-          <CardTitle className="flex items-center gap-2 text-slate-800">
-            <Upload className="w-5 h-5 text-blue-600" />
+      <Card className="shadow-business border-border">
+        <CardHeader className="bg-card border-b border-border">
+          <CardTitle className="flex items-center gap-2 text-foreground font-bold">
+            <Upload className="w-5 h-5 text-primary" />
             Vehicle Intake Form
           </CardTitle>
         </CardHeader>
@@ -177,8 +177,8 @@ export function VehicleIntakeForm() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Document Upload */}
             <div className="space-y-4">
-              <Label htmlFor="documents" className="text-slate-700 font-medium">Upload Paperwork (PDF/Image)</Label>
-              <div className="border-2 border-dashed border-slate-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors">
+              <Label htmlFor="documents" className="text-foreground font-medium">Upload Paperwork (PDF/Image)</Label>
+              <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary transition-colors">
                 <input
                   type="file"
                   id="documents"
@@ -188,11 +188,11 @@ export function VehicleIntakeForm() {
                   className="hidden"
                 />
                 <label htmlFor="documents" className="cursor-pointer">
-                  <Upload className="w-8 h-8 mx-auto mb-2 text-slate-400" />
-                  <p className="text-sm text-slate-600">
+                  <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm text-foreground">
                     Click to upload or drag and drop multiple documents
                   </p>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     PDF, JPG, PNG up to 10MB each
                   </p>
                 </label>
@@ -201,14 +201,14 @@ export function VehicleIntakeForm() {
               {/* Display uploaded documents */}
               {uploadedDocuments.length > 0 && (
                 <div className="space-y-3">
-                  <Label className="text-slate-700 font-medium">Uploaded Documents ({uploadedDocuments.length})</Label>
+                  <Label className="text-foreground font-medium">Uploaded Documents ({uploadedDocuments.length})</Label>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {uploadedDocuments.map((document) => (
-                      <div key={document.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
-                        <FileText className="w-6 h-6 text-blue-600 flex-shrink-0" />
+                      <div key={document.id} className="flex items-center gap-3 p-3 bg-card rounded-lg border border-border">
+                        <FileText className="w-6 h-6 text-primary flex-shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-slate-700 truncate">{document.file.name}</p>
-                          <p className="text-xs text-slate-500">{(document.file.size / 1024 / 1024).toFixed(2)} MB</p>
+                          <p className="text-sm font-medium text-foreground truncate">{document.file.name}</p>
+                          <p className="text-xs text-muted-foreground">{(document.file.size / 1024 / 1024).toFixed(2)} MB</p>
                         </div>
                         <div className="flex gap-1">
                           <Button
@@ -216,7 +216,7 @@ export function VehicleIntakeForm() {
                             variant="outline"
                             size="sm"
                             onClick={() => viewDocument(document)}
-                            className="text-blue-600 hover:text-blue-700"
+                            className="text-primary hover:text-primary"
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
@@ -225,7 +225,7 @@ export function VehicleIntakeForm() {
                             variant="outline"
                             size="sm"
                             onClick={() => removeDocument(document.id)}
-                            className="text-red-600 hover:text-red-700"
+                            className="text-destructive hover:text-destructive"
                           >
                             <X className="w-4 h-4" />
                           </Button>
@@ -240,7 +240,7 @@ export function VehicleIntakeForm() {
             {/* Vehicle Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="year" className="text-slate-700 font-medium">Year *</Label>
+                <Label htmlFor="year" className="text-foreground font-medium">Year *</Label>
                 <Input
                   id="year"
                   type="number"
@@ -248,36 +248,36 @@ export function VehicleIntakeForm() {
                   value={formData.year}
                   onChange={(e) => handleInputChange("year", e.target.value)}
                   required
-                  className="border-slate-300 focus:border-blue-500"
+                  className="border-border focus:border-primary text-foreground"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="make" className="text-slate-700 font-medium">Make *</Label>
+                <Label htmlFor="make" className="text-foreground font-medium">Make *</Label>
                 <Input
                   id="make"
                   placeholder="Honda"
                   value={formData.make}
                   onChange={(e) => handleInputChange("make", e.target.value)}
                   required
-                  className="border-slate-300 focus:border-blue-500"
+                  className="border-border focus:border-primary text-foreground"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="model" className="text-slate-700 font-medium">Model *</Label>
+                <Label htmlFor="model" className="text-foreground font-medium">Model *</Label>
                 <Input
                   id="model"
                   placeholder="Civic"
                   value={formData.model}
                   onChange={(e) => handleInputChange("model", e.target.value)}
                   required
-                  className="border-slate-300 focus:border-blue-500"
+                  className="border-border focus:border-primary text-foreground"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="vehicleId" className="text-slate-700 font-medium">Vehicle ID (Last 5 of VIN) *</Label>
+                <Label htmlFor="vehicleId" className="text-foreground font-medium">Vehicle ID (Last 5 of VIN) *</Label>
                 <Input
                   id="vehicleId"
                   placeholder="09186"
@@ -285,17 +285,17 @@ export function VehicleIntakeForm() {
                   onChange={(e) => handleInputChange("vehicleId", e.target.value.toUpperCase())}
                   required
                   maxLength={5}
-                  className="border-slate-300 focus:border-blue-500"
+                  className="border-border focus:border-primary text-foreground"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="licensePlate" className="text-slate-700 font-medium">License Plate</Label>
+                <Label htmlFor="licensePlate" className="text-foreground font-medium">License Plate</Label>
                 <Input
                   id="licensePlate"
                   placeholder="ABC123"
                   value={formData.licensePlate}
                   onChange={(e) => handleInputChange("licensePlate", e.target.value)}
-                  className="border-slate-300 focus:border-blue-500"
+                  className="border-border focus:border-primary text-foreground"
                 />
               </div>
             </div>
@@ -303,62 +303,62 @@ export function VehicleIntakeForm() {
             {/* Purchase Information */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="sellerName" className="text-slate-700 font-medium">Seller Name</Label>
+                <Label htmlFor="sellerName" className="text-foreground font-medium">Seller Name</Label>
                 <Input
                   id="sellerName"
                   placeholder="John Doe"
                   value={formData.sellerName}
                   onChange={(e) => handleInputChange("sellerName", e.target.value)}
-                  className="border-slate-300 focus:border-blue-500"
+                  className="border-border focus:border-primary text-foreground"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="purchaseDate" className="text-slate-700 font-medium">Purchase Date</Label>
+                <Label htmlFor="purchaseDate" className="text-foreground font-medium">Purchase Date</Label>
                 <Input
                   id="purchaseDate"
                   type="date"
                   value={formData.purchaseDate}
                   onChange={(e) => handleInputChange("purchaseDate", e.target.value)}
-                  className="border-slate-300 focus:border-blue-500"
+                  className="border-border focus:border-primary text-foreground"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="purchasePrice" className="text-slate-700 font-medium">Purchase Price</Label>
+                <Label htmlFor="purchasePrice" className="text-foreground font-medium">Purchase Price</Label>
                 <Input
                   id="purchasePrice"
                   type="number"
                   placeholder="500"
                   value={formData.purchasePrice}
                   onChange={(e) => handleInputChange("purchasePrice", e.target.value)}
-                  className="border-slate-300 focus:border-blue-500"
+                  className="border-border focus:border-primary text-foreground"
                 />
               </div>
             </div>
 
             {/* Document Status */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center space-x-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+              <div className="flex items-center space-x-3 p-3 bg-card rounded-lg border border-border">
                 <Switch
                   id="titlePresent"
                   checked={formData.titlePresent}
                   onCheckedChange={(checked) => handleInputChange("titlePresent", checked)}
                 />
-                <Label htmlFor="titlePresent" className="text-slate-700 font-medium">Title Present</Label>
+                <Label htmlFor="titlePresent" className="text-foreground font-medium">Title Present</Label>
               </div>
-              <div className="flex items-center space-x-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+              <div className="flex items-center space-x-3 p-3 bg-card rounded-lg border border-border">
                 <Switch
                   id="billOfSale"
                   checked={formData.billOfSale}
                   onCheckedChange={(checked) => handleInputChange("billOfSale", checked)}
                 />
-                <Label htmlFor="billOfSale" className="text-slate-700 font-medium">Handwritten Bill of Sale</Label>
+                <Label htmlFor="billOfSale" className="text-foreground font-medium">Handwritten Bill of Sale</Label>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="destination" className="text-slate-700 font-medium">Vehicle Destination</Label>
+              <Label htmlFor="destination" className="text-foreground font-medium">Vehicle Destination</Label>
               <Select value={formData.destination} onValueChange={(value) => handleInputChange("destination", value)}>
-                <SelectTrigger className="border-slate-300 focus:border-blue-500">
+                <SelectTrigger className="border-border focus:border-primary text-foreground">
                   <SelectValue placeholder="Select destination" />
                 </SelectTrigger>
                 <SelectContent>
@@ -372,78 +372,78 @@ export function VehicleIntakeForm() {
             </div>
 
             {formData.destination === "buyer" && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-card border border-border rounded-lg">
                 <div className="space-y-2">
-                  <Label htmlFor="buyerName" className="text-slate-700 font-medium">Buyer Name</Label>
+                  <Label htmlFor="buyerName" className="text-foreground font-medium">Buyer Name</Label>
                   <Input
                     id="buyerName"
                     placeholder="Jane Smith"
                     value={formData.buyerName}
                     onChange={(e) => handleInputChange("buyerName", e.target.value)}
-                    className="border-slate-300 focus:border-blue-500"
+                    className="border-border focus:border-primary text-foreground"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="saleDate" className="text-slate-700 font-medium">Date of Sale</Label>
+                  <Label htmlFor="saleDate" className="text-foreground font-medium">Date of Sale</Label>
                   <Input
                     id="saleDate"
                     type="date"
                     value={formData.saleDate}
                     onChange={(e) => handleInputChange("saleDate", e.target.value)}
-                    className="border-slate-300 focus:border-blue-500"
+                    className="border-border focus:border-primary text-foreground"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="salePrice" className="text-slate-700 font-medium">Sale Price</Label>
+                  <Label htmlFor="salePrice" className="text-foreground font-medium">Sale Price</Label>
                   <Input
                     id="salePrice"
                     type="number"
                     placeholder="1500"
                     value={formData.salePrice}
                     onChange={(e) => handleInputChange("salePrice", e.target.value)}
-                    className="border-slate-300 focus:border-blue-500"
+                    className="border-border focus:border-primary text-foreground"
                   />
                 </div>
               </div>
             )}
 
             {formData.destination === "pick-your-part" && (
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-800 font-medium">
+              <div className="p-4 bg-card border border-border rounded-lg">
+                <p className="text-sm text-foreground font-medium">
                   📋 Pick Your Part bill of sale will be auto-generated with vehicle details
                 </p>
               </div>
             )}
 
             {formData.destination === "sa-recycling" && (
-              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-sm text-green-800 font-medium">
+              <div className="p-4 bg-card border border-border rounded-lg">
+                <p className="text-sm text-foreground font-medium">
                   ♻️ SA Recycling paperwork will be prepared with vehicle information
                 </p>
               </div>
             )}
 
             {formData.destination === "blank-bill-sale" && (
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                <p className="text-sm text-amber-800 font-medium">
+              <div className="p-4 bg-card border border-border rounded-lg">
+                <p className="text-sm text-foreground font-medium">
                   📝 Blank bill of sale will be generated for manual completion and handwriting
                 </p>
               </div>
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="notes" className="text-slate-700 font-medium">Additional Notes</Label>
+              <Label htmlFor="notes" className="text-foreground font-medium">Additional Notes</Label>
               <Textarea
                 id="notes"
                 placeholder="Any additional information about the vehicle..."
                 value={formData.notes}
                 onChange={(e) => handleInputChange("notes", e.target.value)}
                 rows={3}
-                className="border-slate-300 focus:border-blue-500"
+                className="border-border focus:border-primary text-foreground"
               />
             </div>
 
-            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+            <Button type="submit" className="w-full">
               <Save className="w-4 h-4 mr-2" />
               Save Vehicle & Generate Forms
             </Button>
