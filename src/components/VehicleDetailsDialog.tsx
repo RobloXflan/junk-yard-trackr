@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -50,10 +49,6 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
   };
 
   const handleSoldDialogClose = (open: boolean) => {
-    if (!open && selectedStatus !== 'sold') {
-      // If dialog is closed without completing, don't change status
-      setSelectedStatus(vehicle.status);
-    }
     setSoldDialogOpen(open);
   };
 
