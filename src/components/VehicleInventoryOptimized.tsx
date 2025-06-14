@@ -25,6 +25,7 @@ interface VehicleInventoryOptimizedProps {
 export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimizedProps) {
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [loadingDocuments, setLoadingDocuments] = useState(false);
   
   const { 
     vehicles, 
@@ -44,10 +45,40 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
   };
 
   const handleEditVehicle = useCallback(async (vehicle: Vehicle) => {
-    // Load documents when editing
-    const documents = await loadVehicleDocuments(vehicle.id);
-    setSelectedVehicle({ ...vehicle, documents });
-    setIsDialogOpen(true);
+    console.log('Loading documents for vehicle:', vehicle.id);
+    setLoadingDocuments(true);
+    
+    try {
+      // Load documents when editing
+      const documents = await loadVehicleDocuments(vehicle.id);
+      console.log('Loaded documents for vehicle dialog:', documents);
+      
+      // Create the vehicle object with documents
+      const vehicleWithDocuments = { 
+        ...vehicle, 
+        documents: documents.map(doc => ({
+          id: doc.id || `doc_${Date.now()}`,
+          name: doc.name || 'Untitled Document',
+          url: doc.url || '',
+          size: doc.size || 0,
+          file: new File([], doc.name || 'document', { 
+            type: doc.name?.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg' 
+          })
+        }))
+      };
+      
+      console.log('Setting selected vehicle with documents:', vehicleWithDocuments);
+      setSelectedVehicle(vehicleWithDocuments);
+      setIsDialogOpen(true);
+    } catch (error) {
+      console.error('Error loading vehicle documents:', error);
+      toast.error("Failed to load vehicle documents");
+      // Still open dialog without documents
+      setSelectedVehicle(vehicle);
+      setIsDialogOpen(true);
+    } finally {
+      setLoadingDocuments(false);
+    }
   }, [loadVehicleDocuments]);
 
   const handleSaveVehicle = async (vehicleId: string, newStatus: Vehicle['status'], soldData?: {
@@ -225,10 +256,10 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
                           variant="ghost" 
                           size="sm"
                           onClick={() => handleEditVehicle(vehicle)}
-                          disabled={isLoading}
+                          disabled={isLoading || loadingDocuments}
                         >
                           <Edit className="w-4 h-4 mr-2" />
-                          Edit
+                          {loadingDocuments ? 'Loading...' : 'Edit'}
                         </Button>
                       </TableCell>
                     </TableRow>

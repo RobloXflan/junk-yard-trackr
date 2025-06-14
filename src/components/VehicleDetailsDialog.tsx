@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Vehicle } from "@/stores/vehicleStore";
-import { Save, X, ExternalLink } from "lucide-react";
+import { Save, X, ExternalLink, FileText } from "lucide-react";
 import { SoldDialog } from "@/components/forms/SoldDialog";
 
 interface VehicleDetailsDialogProps {
@@ -114,7 +114,11 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
   };
 
   const openDocumentInNewTab = (document: any) => {
-    window.open(document.url, '_blank');
+    if (document.url) {
+      window.open(document.url, '_blank');
+    } else {
+      console.error('No URL available for document:', document);
+    }
   };
 
   console.log('Vehicle documents in dialog:', vehicle.documents);
@@ -235,6 +239,18 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
                   {vehicle.documents.map((doc) => {
                     console.log('Rendering document:', doc.id, 'URL:', doc.url, 'Name:', doc.name);
                     
+                    if (!doc.url) {
+                      console.error('Document missing URL:', doc);
+                      return (
+                        <div key={doc.id} className="border rounded-lg p-4 bg-red-50">
+                          <div className="flex items-center gap-2 text-red-600">
+                            <FileText className="w-4 h-4" />
+                            <span className="text-sm">Document unavailable: {doc.name}</span>
+                          </div>
+                        </div>
+                      );
+                    }
+                    
                     if (isPdfDocument(doc)) {
                       return (
                         <div key={doc.id} className="border rounded-lg overflow-hidden">
@@ -251,7 +267,7 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
                           </div>
                           <div className="relative w-full h-96">
                             <iframe
-                              src={doc.url}
+                              src={`${doc.url}#toolbar=1&navpanes=1&scrollbar=1`}
                               className="w-full h-full border-0"
                               title={`PDF: ${doc.name}`}
                               onLoad={() => console.log('PDF loaded successfully:', doc.url)}
@@ -302,6 +318,7 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
+                  <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>No documents available for this vehicle</p>
                 </div>
               )}
