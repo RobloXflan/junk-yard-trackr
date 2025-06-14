@@ -15,7 +15,7 @@ export function PurchaseInfo({ formData, onInputChange }: PurchaseInfoProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       <div className="space-y-2">
-        <Label htmlFor="sellerName" className="text-foreground font-medium">Seller Name</Label>
+        <Label htmlFor="sellerName" className="text-foreground font-medium">Driver Name</Label>
         <Input
           id="sellerName"
           placeholder="John Doe"
