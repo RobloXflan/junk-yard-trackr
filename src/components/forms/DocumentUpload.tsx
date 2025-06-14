@@ -1,10 +1,10 @@
-
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Upload, FileText, X, Eye } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { ScannerInterface } from "./ScannerInterface";
 
 interface UploadedDocument {
   id: string;
@@ -47,6 +47,55 @@ export function DocumentUpload({ uploadedDocuments, onDocumentsChange }: Documen
     return urlData.publicUrl;
   };
 
+  const processFile = async (file: File): Promise<UploadedDocument | null> => {
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: "Invalid file type",
+        description: `${file.name} - Please upload a PDF or image file (JPG, PNG).`,
+        variant: "destructive",
+      });
+      return null;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: `${file.name} - Please upload a file smaller than 10MB.`,
+        variant: "destructive",
+      });
+      return null;
+    }
+
+    try {
+      const url = await uploadFileToStorage(file);
+      const documentId = `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      const newDocument: UploadedDocument = {
+        id: documentId,
+        file: file,
+        url: url,
+        name: file.name,
+        size: file.size
+      };
+
+      toast({
+        title: "Document uploaded",
+        description: `${file.name} has been uploaded successfully.`,
+      });
+
+      return newDocument;
+    } catch (error) {
+      console.error('Upload failed for file:', file.name, error);
+      toast({
+        title: "Upload failed",
+        description: `Failed to upload ${file.name}. Please try again.`,
+        variant: "destructive",
+      });
+      return null;
+    }
+  };
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files) return;
@@ -54,55 +103,7 @@ export function DocumentUpload({ uploadedDocuments, onDocumentsChange }: Documen
     setUploading(true);
 
     try {
-      const uploadPromises = Array.from(files).map(async (file) => {
-        const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
-        if (!allowedTypes.includes(file.type)) {
-          toast({
-            title: "Invalid file type",
-            description: `${file.name} - Please upload a PDF or image file (JPG, PNG).`,
-            variant: "destructive",
-          });
-          return null;
-        }
-
-        if (file.size > 10 * 1024 * 1024) {
-          toast({
-            title: "File too large",
-            description: `${file.name} - Please upload a file smaller than 10MB.`,
-            variant: "destructive",
-          });
-          return null;
-        }
-
-        try {
-          const url = await uploadFileToStorage(file);
-          const documentId = `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-          
-          const newDocument: UploadedDocument = {
-            id: documentId,
-            file: file,
-            url: url,
-            name: file.name,
-            size: file.size
-          };
-
-          toast({
-            title: "Document uploaded",
-            description: `${file.name} has been uploaded successfully.`,
-          });
-
-          return newDocument;
-        } catch (error) {
-          console.error('Upload failed for file:', file.name, error);
-          toast({
-            title: "Upload failed",
-            description: `Failed to upload ${file.name}. Please try again.`,
-            variant: "destructive",
-          });
-          return null;
-        }
-      });
-
+      const uploadPromises = Array.from(files).map(file => processFile(file));
       const results = await Promise.all(uploadPromises);
       const successfulUploads = results.filter(doc => doc !== null) as UploadedDocument[];
       
@@ -120,6 +121,15 @@ export function DocumentUpload({ uploadedDocuments, onDocumentsChange }: Documen
       setUploading(false);
       event.target.value = '';
     }
+  };
+
+  const handleScanComplete = async (scannedFile: File) => {
+    setUploading(true);
+    const document = await processFile(scannedFile);
+    if (document) {
+      onDocumentsChange([...uploadedDocuments, document]);
+    }
+    setUploading(false);
   };
 
   const removeDocument = async (documentId: string) => {
@@ -170,25 +180,39 @@ export function DocumentUpload({ uploadedDocuments, onDocumentsChange }: Documen
   return (
     <div className="space-y-4">
       <Label htmlFor="documents" className="text-foreground font-medium">Upload Paperwork (PDF/Image)</Label>
-      <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary transition-colors">
-        <input
-          type="file"
-          id="documents"
-          accept=".pdf,.jpg,.jpeg,.png"
-          onChange={handleFileUpload}
-          multiple
-          disabled={uploading}
-          className="hidden"
-        />
-        <label htmlFor="documents" className={`cursor-pointer ${uploading ? 'opacity-50' : ''}`}>
-          <Upload className="w-8 h-8 mx-auto mb-2 text-foreground" />
-          <p className="text-sm text-foreground">
-            {uploading ? 'Uploading files...' : 'Click to upload or drag and drop multiple documents'}
-          </p>
-          <p className="text-xs text-foreground mt-1">
-            PDF, JPG, PNG up to 10MB each
-          </p>
-        </label>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* File Upload Area */}
+        <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary transition-colors">
+          <input
+            type="file"
+            id="documents"
+            accept=".pdf,.jpg,.jpeg,.png"
+            onChange={handleFileUpload}
+            multiple
+            disabled={uploading}
+            className="hidden"
+          />
+          <label htmlFor="documents" className={`cursor-pointer ${uploading ? 'opacity-50' : ''}`}>
+            <Upload className="w-8 h-8 mx-auto mb-2 text-foreground" />
+            <p className="text-sm text-foreground">
+              {uploading ? 'Uploading files...' : 'Click to upload documents'}
+            </p>
+            <p className="text-xs text-foreground mt-1">
+              PDF, JPG, PNG up to 10MB each
+            </p>
+          </label>
+        </div>
+
+        {/* Scanner Interface */}
+        <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary transition-colors">
+          <div className="flex flex-col items-center justify-center h-full">
+            <ScannerInterface onScanComplete={handleScanComplete} />
+            <p className="text-xs text-foreground mt-2">
+              Scan documents directly from your scanner or camera
+            </p>
+          </div>
+        </div>
       </div>
 
       {uploadedDocuments.length > 0 && (
