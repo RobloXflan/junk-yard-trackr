@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Vehicle } from '@/stores/vehicleStore';
@@ -50,6 +51,7 @@ export function useVehicleStorePaginated() {
           sale_date,
           sale_price,
           notes,
+          paperwork,
           status,
           created_at,
           updated_at
@@ -99,6 +101,7 @@ export function useVehicleStorePaginated() {
         saleDate: vehicle.sale_date || undefined,
         salePrice: vehicle.sale_price || undefined,
         notes: vehicle.notes || undefined,
+        paperwork: vehicle.paperwork || undefined,
         status: (vehicle.status as Vehicle['status']) || 'yard',
         createdAt: vehicle.created_at,
         documents: [] // Load documents separately when needed
