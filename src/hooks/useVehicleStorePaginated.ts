@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Vehicle } from '@/stores/vehicleStore';
@@ -22,7 +21,10 @@ export function useVehicleStorePaginated() {
   const loadVehicles = async (page: number = 1, search: string = "", append: boolean = false) => {
     setIsLoading(true);
     try {
-      const offset = (page - 1) * ITEMS_PER_PAGE;
+      // When searching, load all results without pagination
+      const isSearching = search.trim().length > 0;
+      const offset = isSearching ? 0 : (page - 1) * ITEMS_PER_PAGE;
+      const limit = isSearching ? 1000 : ITEMS_PER_PAGE; // Use a high limit for search results
       
       // Build the query
       let query = supabase
@@ -50,11 +52,15 @@ export function useVehicleStorePaginated() {
           created_at,
           updated_at
         `, { count: 'exact' })
-        .order('created_at', { ascending: false })
-        .range(offset, offset + ITEMS_PER_PAGE - 1);
+        .order('created_at', { ascending: false });
+
+      // Apply pagination only when not searching
+      if (!isSearching) {
+        query = query.range(offset, offset + ITEMS_PER_PAGE - 1);
+      }
 
       // Apply search filter if provided
-      if (search.trim()) {
+      if (isSearching) {
         const searchPattern = `%${search.toLowerCase()}%`;
         query = query.or(`
           make.ilike.${searchPattern},
@@ -97,14 +103,20 @@ export function useVehicleStorePaginated() {
         documents: [] // Load documents separately when needed
       }));
 
-      if (append) {
+      if (append && !isSearching) {
         setVehicles(prev => [...prev, ...transformedVehicles]);
       } else {
         setVehicles(transformedVehicles);
       }
       
       setTotalCount(count || 0);
-      setHasMore(transformedVehicles.length === ITEMS_PER_PAGE);
+      
+      // Update hasMore logic - when searching, we load all results so no more to load
+      if (isSearching) {
+        setHasMore(false);
+      } else {
+        setHasMore(transformedVehicles.length === ITEMS_PER_PAGE);
+      }
     } catch (error) {
       console.error('Failed to load vehicles:', error);
       if (!append) {
@@ -161,7 +173,8 @@ export function useVehicleStorePaginated() {
   }, []);
 
   const loadMore = () => {
-    if (!isLoading && hasMore) {
+    // Only allow load more when not searching and there are more items
+    if (!isLoading && hasMore && !searchTerm.trim()) {
       const nextPage = currentPage + 1;
       setCurrentPage(nextPage);
       loadVehicles(nextPage, searchTerm, true);

@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -111,6 +110,8 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
     setSelectedVehicle(null);
   };
 
+  const isSearching = searchTerm.trim().length > 0;
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -156,7 +157,11 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
           </div>
           {searchTerm && (
             <div className="mt-2 text-sm text-muted-foreground">
-              Showing {vehicles.length} of {totalCount} vehicles matching "{searchTerm}"
+              {isSearching ? (
+                <>Showing {vehicles.length} vehicle{vehicles.length !== 1 ? 's' : ''} matching "{searchTerm}"</>
+              ) : (
+                <>Showing {vehicles.length} of {totalCount} vehicles matching "{searchTerm}"</>
+              )}
             </div>
           )}
         </CardContent>
@@ -166,7 +171,7 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
       <Card>
         <CardHeader>
           <CardTitle>
-            Vehicles ({vehicles.length}{totalCount > vehicles.length ? ` of ${totalCount}` : ''})
+            Vehicles ({isSearching ? vehicles.length : `${vehicles.length}${totalCount > vehicles.length ? ` of ${totalCount}` : ''}`})
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -267,8 +272,8 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
                 </TableBody>
               </Table>
               
-              {/* Load More Button */}
-              {hasMore && (
+              {/* Load More Button - Only show when not searching and there are more items */}
+              {hasMore && !isSearching && (
                 <div className="flex justify-center mt-6">
                   <Button 
                     variant="outline" 
