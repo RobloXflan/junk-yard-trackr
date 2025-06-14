@@ -1,7 +1,7 @@
 
 import { DashboardStats } from "@/components/DashboardStats";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, TrendingUp, Clock, AlertTriangle } from "lucide-react";
+import { TrendingUp, Plus } from "lucide-react";
 
 export function Dashboard() {
   return (
@@ -54,31 +54,31 @@ export function Dashboard() {
         <Card className="shadow-business">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-black font-bold">
-              <AlertTriangle className="w-5 h-5" />
-              Pending Actions
+              <Plus className="w-5 h-5" />
+              Quick Actions
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center gap-3 p-3 bg-warning/10 border border-warning rounded-lg">
-                <Clock className="w-4 h-4 text-warning" />
+              <div className="flex items-center gap-3 p-3 bg-primary/10 border border-primary rounded-lg">
+                <Plus className="w-4 h-4 text-primary" />
                 <div className="flex-1">
-                  <p className="text-sm font-medium">3 DMV forms need submission</p>
-                  <p className="text-xs text-muted-foreground">Due today</p>
+                  <p className="text-sm font-medium">Add new vehicle to inventory</p>
+                  <p className="text-xs text-muted-foreground">Quick vehicle intake</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 p-3 bg-info/10 border border-info rounded-lg">
-                <BarChart3 className="w-4 h-4 text-info" />
+                <TrendingUp className="w-4 h-4 text-info" />
                 <div className="flex-1">
-                  <p className="text-sm font-medium">5 vehicles ready for PYP</p>
-                  <p className="text-xs text-muted-foreground">Can be processed</p>
+                  <p className="text-sm font-medium">View inventory</p>
+                  <p className="text-xs text-muted-foreground">Manage your vehicles</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 p-3 bg-accent/10 border border-accent rounded-lg">
                 <TrendingUp className="w-4 h-4 text-accent" />
                 <div className="flex-1">
-                  <p className="text-sm font-medium">Monthly report available</p>
-                  <p className="text-xs text-muted-foreground">Ready for review</p>
+                  <p className="text-sm font-medium">Generate reports</p>
+                  <p className="text-xs text-muted-foreground">Monthly summaries</p>
                 </div>
               </div>
             </div>

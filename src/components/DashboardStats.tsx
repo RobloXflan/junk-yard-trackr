@@ -4,12 +4,13 @@ import { Car, DollarSign, FileText, TrendingUp } from "lucide-react";
 import { useVehicleStore } from "@/hooks/useVehicleStore";
 
 export function DashboardStats() {
-  const { getTotalVehicles, getTotalRevenue, getPendingDMV, getAverageProfit } = useVehicleStore();
+  const { getTotalVehicles, getTotalRevenue, getPendingDMV, getAverageProfit, getVehiclesAddedToday } = useVehicleStore();
   
   const totalVehicles = getTotalVehicles();
   const totalRevenue = getTotalRevenue();
   const pendingDMV = getPendingDMV();
   const avgProfit = getAverageProfit();
+  const vehiclesAddedToday = getVehiclesAddedToday();
 
   const stats = [
     {
@@ -34,9 +35,9 @@ export function DashboardStats() {
       color: "text-warning",
     },
     {
-      title: "Avg. Profit",
-      value: avgProfit > 0 ? `$${Math.round(avgProfit).toLocaleString()}` : "$0",
-      change: avgProfit === 0 ? "No data available" : "Per vehicle sold",
+      title: "Added Today",
+      value: vehiclesAddedToday.toString(),
+      change: vehiclesAddedToday === 0 ? "No vehicles added today" : `${vehiclesAddedToday} vehicle${vehiclesAddedToday !== 1 ? 's' : ''} added today`,
       icon: TrendingUp,
       color: "text-info",
     },

@@ -315,6 +315,14 @@ class VehicleStore {
     
     return totalProfit / soldVehicles.length;
   }
+
+  getVehiclesAddedToday(): number {
+    const today = new Date().toDateString();
+    return this.vehicles.filter(vehicle => {
+      const vehicleDate = new Date(vehicle.createdAt).toDateString();
+      return vehicleDate === today;
+    }).length;
+  }
 }
 
 export const vehicleStore = new VehicleStore();

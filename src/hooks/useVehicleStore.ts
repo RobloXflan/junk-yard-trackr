@@ -64,5 +64,6 @@ export function useVehicleStore() {
     getTotalRevenue: vehicleStore.getTotalRevenue.bind(vehicleStore),
     getPendingDMV: vehicleStore.getPendingDMV.bind(vehicleStore),
     getAverageProfit: vehicleStore.getAverageProfit.bind(vehicleStore),
+    getVehiclesAddedToday: vehicleStore.getVehiclesAddedToday.bind(vehicleStore),
   };
 }
