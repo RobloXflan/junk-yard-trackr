@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +12,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useVehicleStorePaginated } from "@/hooks/useVehicleStorePaginated";
 import { VehicleDetailsDialog } from "@/components/VehicleDetailsDialog";
 import { Vehicle } from "@/stores/vehicleStore";
@@ -46,6 +51,7 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loadingDocuments, setLoadingDocuments] = useState(false);
+  const [editingPaperworkId, setEditingPaperworkId] = useState<string | null>(null);
   
   const { 
     vehicles, 
@@ -57,8 +63,28 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
     loadMore, 
     updateVehicleStatus, 
     refreshVehicles,
-    loadVehicleDocuments
+    loadVehicleDocuments,
+    updateVehiclePaperwork
   } = useVehicleStorePaginated();
+
+  const paperworkOptions = [
+    { value: "title", label: "Title" },
+    { value: "registered-owner", label: "Registered Owner" },
+    { value: "lien-sale", label: "Lien Sale" },
+    { value: "no-paperwork", label: "No Paperwork" },
+    { value: "other", label: "Other" }
+  ];
+
+  const handlePaperworkChange = async (vehicleId: string, newPaperwork: string) => {
+    try {
+      await updateVehiclePaperwork(vehicleId, newPaperwork);
+      setEditingPaperworkId(null);
+      toast.success("Paperwork status updated successfully");
+    } catch (error) {
+      console.error('Error updating paperwork:', error);
+      toast.error("Failed to update paperwork status");
+    }
+  };
 
   const handleAddVehicle = () => {
     onNavigate('intake');
@@ -69,11 +95,9 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
     setLoadingDocuments(true);
     
     try {
-      // Load documents when editing
       const documents = await loadVehicleDocuments(vehicle.id);
       console.log('Loaded documents for vehicle dialog:', documents);
       
-      // Create the vehicle object with documents
       const vehicleWithDocuments = { 
         ...vehicle, 
         documents: documents.map(doc => ({
@@ -93,7 +117,6 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
     } catch (error) {
       console.error('Error loading vehicle documents:', error);
       toast.error("Failed to load vehicle documents");
-      // Still open dialog without documents
       setSelectedVehicle(vehicle);
       setIsDialogOpen(true);
     } finally {
@@ -266,9 +289,27 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
                         ) : '-'}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">
-                          {formatPaperworkDisplay(vehicle.paperwork, vehicle.paperworkOther)}
-                        </Badge>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Badge 
+                              variant="outline" 
+                              className="cursor-pointer hover:bg-accent transition-colors"
+                            >
+                              {formatPaperworkDisplay(vehicle.paperwork, vehicle.paperworkOther)}
+                            </Badge>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start">
+                            {paperworkOptions.map((option) => (
+                              <DropdownMenuItem
+                                key={option.value}
+                                onClick={() => handlePaperworkChange(vehicle.id, option.value)}
+                                className="cursor-pointer"
+                              >
+                                {option.label}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                       <TableCell>
                         <Badge variant={

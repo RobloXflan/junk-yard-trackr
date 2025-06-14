@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Vehicle } from '@/stores/vehicleStore';
@@ -22,14 +21,12 @@ export function useVehicleStorePaginated() {
   const loadVehicles = async (page: number = 1, search: string = "", append: boolean = false) => {
     setIsLoading(true);
     try {
-      // When searching, load all results without pagination
       const isSearching = search.trim().length > 0;
       const offset = isSearching ? 0 : (page - 1) * ITEMS_PER_PAGE;
-      const limit = isSearching ? 1000 : ITEMS_PER_PAGE; // Use a high limit for search results
+      const limit = isSearching ? 1000 : ITEMS_PER_PAGE;
       
       console.log('Loading vehicles with search term:', search, 'isSearching:', isSearching);
       
-      // Build the query
       let query = supabase
         .from('vehicles')
         .select(`
@@ -59,16 +56,13 @@ export function useVehicleStorePaginated() {
         `, { count: 'exact' })
         .order('created_at', { ascending: false });
 
-      // Apply search filter if provided
       if (isSearching) {
         const searchPattern = `%${search.toLowerCase()}%`;
         console.log('Applying search pattern:', searchPattern);
         
-        // Fix the search query to use proper single-line syntax
         query = query.or(`make.ilike.${searchPattern},model.ilike.${searchPattern},year.ilike.${searchPattern},vehicle_id.ilike.${searchPattern},license_plate.ilike.${searchPattern}`);
       }
 
-      // Apply pagination only when not searching
       if (!isSearching) {
         query = query.range(offset, offset + ITEMS_PER_PAGE - 1);
       }
@@ -82,7 +76,6 @@ export function useVehicleStorePaginated() {
 
       console.log('Search results:', data?.length, 'vehicles found');
 
-      // Transform data to match Vehicle interface (excluding documents for performance)
       const transformedVehicles: Vehicle[] = (data || []).map(vehicle => ({
         id: vehicle.id,
         year: vehicle.year || '',
@@ -106,7 +99,7 @@ export function useVehicleStorePaginated() {
         paperworkOther: vehicle.paperwork_other || undefined,
         status: (vehicle.status as Vehicle['status']) || 'yard',
         createdAt: vehicle.created_at,
-        documents: [] // Load documents separately when needed
+        documents: []
       }));
 
       if (append && !isSearching) {
@@ -117,7 +110,6 @@ export function useVehicleStorePaginated() {
       
       setTotalCount(count || 0);
       
-      // Update hasMore logic - when searching, we load all results so no more to load
       if (isSearching) {
         setHasMore(false);
       } else {
@@ -134,7 +126,6 @@ export function useVehicleStorePaginated() {
     }
   };
 
-  // Load documents for a specific vehicle when needed
   const loadVehicleDocuments = async (vehicleId: string): Promise<any[]> => {
     try {
       const { data, error } = await supabase
@@ -145,7 +136,6 @@ export function useVehicleStorePaginated() {
 
       if (error) throw error;
       
-      // Safely handle the documents field - it could be null, string, or array
       const documents = data?.documents;
       if (Array.isArray(documents)) {
         return documents;
@@ -160,6 +150,40 @@ export function useVehicleStorePaginated() {
     } catch (error) {
       console.error('Error loading vehicle documents:', error);
       return [];
+    }
+  };
+
+  const updateVehiclePaperwork = async (vehicleId: string, newPaperwork: string) => {
+    try {
+      const updateData: any = {
+        paperwork: newPaperwork,
+        updated_at: new Date().toISOString()
+      };
+
+      if (newPaperwork !== 'other') {
+        updateData.paperwork_other = null;
+      }
+
+      const { error } = await supabase
+        .from('vehicles')
+        .update(updateData)
+        .eq('id', vehicleId);
+
+      if (error) throw error;
+
+      setVehicles(prev => prev.map(vehicle => 
+        vehicle.id === vehicleId 
+          ? { 
+              ...vehicle, 
+              paperwork: newPaperwork,
+              paperworkOther: newPaperwork !== 'other' ? undefined : vehicle.paperworkOther
+            }
+          : vehicle
+      ));
+
+    } catch (error) {
+      console.error('Failed to update vehicle paperwork:', error);
+      throw error;
     }
   };
 
@@ -179,7 +203,6 @@ export function useVehicleStorePaginated() {
   }, []);
 
   const loadMore = () => {
-    // Only allow load more when not searching and there are more items
     if (!isLoading && hasMore && !searchTerm.trim()) {
       const nextPage = currentPage + 1;
       setCurrentPage(nextPage);
@@ -220,7 +243,6 @@ export function useVehicleStorePaginated() {
 
       if (error) throw error;
 
-      // Update local state
       setVehicles(prev => prev.map(vehicle => 
         vehicle.id === vehicleId 
           ? { 
@@ -257,6 +279,7 @@ export function useVehicleStorePaginated() {
     loadMore,
     updateVehicleStatus,
     refreshVehicles,
-    loadVehicleDocuments
+    loadVehicleDocuments,
+    updateVehiclePaperwork
   };
 }
