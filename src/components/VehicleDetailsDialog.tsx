@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Vehicle } from "@/stores/vehicleStore";
-import { Save, X } from "lucide-react";
+import { Save, X, ExternalLink } from "lucide-react";
 import { SoldDialog } from "@/components/forms/SoldDialog";
 
 interface VehicleDetailsDialogProps {
@@ -98,20 +98,39 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
   // Get the current sale price - use pending data if available, otherwise vehicle data
   const currentSalePrice = pendingSoldData?.salePrice || vehicle.salePrice;
 
+  // Helper function to determine if a document is a PDF
+  const isPdfDocument = (document: any) => {
+    return document.name?.toLowerCase().endsWith('.pdf') || 
+           document.url?.toLowerCase().includes('.pdf');
+  };
+
+  // Helper function to determine if a document is an image
+  const isImageDocument = (document: any) => {
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+    return imageExtensions.some(ext => 
+      document.name?.toLowerCase().endsWith(ext) || 
+      document.url?.toLowerCase().includes(ext)
+    );
+  };
+
+  const openDocumentInNewTab = (document: any) => {
+    window.open(document.url, '_blank');
+  };
+
   console.log('Vehicle documents in dialog:', vehicle.documents);
 
   return (
     <>
       <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {vehicle.year} {vehicle.make} {vehicle.model}
             </DialogTitle>
           </DialogHeader>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Vehicle Details */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Vehicle Details - Takes 1 column */}
             <div className="space-y-4">
               <div>
                 <h3 className="text-lg font-semibold mb-3">Vehicle Information</h3>
@@ -208,35 +227,82 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
               )}
             </div>
 
-            {/* Images */}
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Vehicle Images</h3>
+            {/* Documents - Takes 2 columns */}
+            <div className="lg:col-span-2">
+              <h3 className="text-lg font-semibold mb-3">Vehicle Documents</h3>
               {vehicle.documents && vehicle.documents.length > 0 ? (
-                <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-4">
                   {vehicle.documents.map((doc) => {
-                    console.log('Rendering document:', doc.id, 'URL:', doc.url);
-                    return (
-                      <div key={doc.id} className="border rounded-lg overflow-hidden">
-                        <img 
-                          src={doc.url} 
-                          alt={`Vehicle document: ${doc.name}`}
-                          className="w-full h-auto max-h-96 object-contain bg-muted"
-                          onLoad={() => console.log('Image loaded successfully:', doc.url)}
-                          onError={(e) => {
-                            console.error('Image failed to load:', doc.url, e);
-                            console.log('Image error event:', e.currentTarget);
-                          }}
-                        />
-                        <div className="p-2 bg-muted">
-                          <p className="text-sm text-muted-foreground">{doc.name}</p>
+                    console.log('Rendering document:', doc.id, 'URL:', doc.url, 'Name:', doc.name);
+                    
+                    if (isPdfDocument(doc)) {
+                      return (
+                        <div key={doc.id} className="border rounded-lg overflow-hidden">
+                          <div className="p-2 bg-muted flex justify-between items-center">
+                            <p className="text-sm text-muted-foreground">{doc.name}</p>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openDocumentInNewTab(doc)}
+                            >
+                              <ExternalLink className="w-4 h-4 mr-2" />
+                              Open PDF
+                            </Button>
+                          </div>
+                          <div className="relative w-full h-96">
+                            <iframe
+                              src={doc.url}
+                              className="w-full h-full border-0"
+                              title={`PDF: ${doc.name}`}
+                              onLoad={() => console.log('PDF loaded successfully:', doc.url)}
+                              onError={(e) => {
+                                console.error('PDF failed to load:', doc.url, e);
+                              }}
+                            />
+                          </div>
                         </div>
-                      </div>
-                    );
+                      );
+                    } else if (isImageDocument(doc)) {
+                      return (
+                        <div key={doc.id} className="border rounded-lg overflow-hidden">
+                          <img 
+                            src={doc.url} 
+                            alt={`Vehicle document: ${doc.name}`}
+                            className="w-full h-auto max-h-96 object-contain bg-muted"
+                            onLoad={() => console.log('Image loaded successfully:', doc.url)}
+                            onError={(e) => {
+                              console.error('Image failed to load:', doc.url, e);
+                              console.log('Image error event:', e.currentTarget);
+                            }}
+                          />
+                          <div className="p-2 bg-muted">
+                            <p className="text-sm text-muted-foreground">{doc.name}</p>
+                          </div>
+                        </div>
+                      );
+                    } else {
+                      // Unknown document type - provide download link
+                      return (
+                        <div key={doc.id} className="border rounded-lg p-4">
+                          <div className="flex justify-between items-center">
+                            <p className="text-sm text-muted-foreground">{doc.name}</p>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openDocumentInNewTab(doc)}
+                            >
+                              <ExternalLink className="w-4 h-4 mr-2" />
+                              Open Document
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    }
                   })}
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
-                  <p>No images available for this vehicle</p>
+                  <p>No documents available for this vehicle</p>
                 </div>
               )}
             </div>
