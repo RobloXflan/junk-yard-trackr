@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,16 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
   }, [vehicle, isOpen]);
 
   if (!vehicle) return null;
+
+  const getStatusLabel = (status: Vehicle['status']) => {
+    switch (status) {
+      case 'yard': return 'In Yard';
+      case 'sold': return 'Sold';
+      case 'pick-your-part': return 'Pick Your Part';
+      case 'sa-recycling': return 'SA Recycling';
+      default: return status;
+    }
+  };
 
   const handleStatusChange = (newStatus: Vehicle['status']) => {
     console.log('VehicleDetailsDialog: Status change requested to:', newStatus);
