@@ -127,7 +127,18 @@ export function useVehicleStorePaginated() {
 
       if (error) throw error;
       
-      return data?.documents || [];
+      // Safely handle the documents field - it could be null, string, or array
+      const documents = data?.documents;
+      if (Array.isArray(documents)) {
+        return documents;
+      } else if (typeof documents === 'string') {
+        try {
+          return JSON.parse(documents);
+        } catch {
+          return [];
+        }
+      }
+      return [];
     } catch (error) {
       console.error('Error loading vehicle documents:', error);
       return [];

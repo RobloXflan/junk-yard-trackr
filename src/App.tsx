@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -18,13 +19,13 @@ const App = () => {
   const renderPage = () => {
     switch (currentPage) {
       case 'dashboard':
-        return <Dashboard onNavigate={setCurrentPage} />;
+        return <Dashboard />;
       case 'intake':
-        return <Intake onNavigate={setCurrentPage} />;
+        return <Intake />;
       case 'inventory':
         return <InventoryOptimized onNavigate={setCurrentPage} />;
       default:
-        return <Dashboard onNavigate={setCurrentPage} />;
+        return <Dashboard />;
     }
   };
 
