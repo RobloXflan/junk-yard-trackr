@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Vehicle } from '@/stores/vehicleStore';
@@ -54,11 +55,6 @@ export function useVehicleStorePaginated() {
         `, { count: 'exact' })
         .order('created_at', { ascending: false });
 
-      // Apply pagination only when not searching
-      if (!isSearching) {
-        query = query.range(offset, offset + ITEMS_PER_PAGE - 1);
-      }
-
       // Apply search filter if provided
       if (isSearching) {
         const searchPattern = `%${search.toLowerCase()}%`;
@@ -69,6 +65,11 @@ export function useVehicleStorePaginated() {
           vehicle_id.ilike.${searchPattern},
           license_plate.ilike.${searchPattern}
         `);
+      }
+
+      // Apply pagination only when not searching
+      if (!isSearching) {
+        query = query.range(offset, offset + ITEMS_PER_PAGE - 1);
       }
 
       const { data, error, count } = await query;
