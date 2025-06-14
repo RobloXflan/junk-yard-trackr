@@ -7,7 +7,7 @@ import { Mail, FileText, Clock, CheckCircle, XCircle, Eye } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
-import type { PendingIntake, PendingIntakeDocument } from "@/types/pendingIntake";
+import type { PendingIntake, PendingIntakeDocument, ExtractedVehicleInfo } from "@/types/pendingIntake";
 
 interface PendingIntakesProps {
   onNavigate: (page: string, params?: any) => void;

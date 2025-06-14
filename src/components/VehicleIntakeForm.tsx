@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,10 +12,11 @@ import { DocumentUpload, UploadedDocument } from "@/components/forms/DocumentUpl
 import type { PendingIntakeDocument, ExtractedVehicleInfo } from "@/types/pendingIntake";
 
 interface VehicleIntakeFormProps {
-  onNavigate: (page: string) => void;
+  onNavigate?: (page: string) => void;
+  pendingIntakeId?: string;
 }
 
-export function VehicleIntakeForm({ onNavigate }: VehicleIntakeFormProps) {
+export function VehicleIntakeForm({ onNavigate, pendingIntakeId }: VehicleIntakeFormProps) {
   const [year, setYear] = useState("");
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
@@ -36,18 +38,21 @@ export function VehicleIntakeForm({ onNavigate }: VehicleIntakeFormProps) {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { pendingIntakeId } = useParams<{ pendingIntakeId?: string }>();
+  const { pendingIntakeId: urlPendingIntakeId } = useParams<{ pendingIntakeId?: string }>();
+
+  // Use pendingIntakeId from props or URL params
+  const currentPendingIntakeId = pendingIntakeId || urlPendingIntakeId;
 
   useEffect(() => {
     const loadPendingIntake = async () => {
-      if (!pendingIntakeId) return;
+      if (!currentPendingIntakeId) return;
 
       try {
-        setIsLoading(true);
+        setLoading(true);
         const { data, error } = await supabase
           .from('pending_intakes')
           .select('*')
-          .eq('id', pendingIntakeId)
+          .eq('id', currentPendingIntakeId)
           .single();
 
         if (error) {
@@ -109,12 +114,23 @@ export function VehicleIntakeForm({ onNavigate }: VehicleIntakeFormProps) {
           variant: "destructive",
         });
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
 
     loadPendingIntake();
-  }, [pendingIntakeId]);
+  }, [currentPendingIntakeId]);
+
+  // Helper function to serialize documents for Supabase storage
+  const serializeDocuments = (documents: UploadedDocument[]) => {
+    return documents.map(doc => ({
+      id: doc.id,
+      name: doc.name,
+      size: doc.size,
+      url: doc.url,
+      // Don't store the File object, just the essential data
+    }));
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -125,49 +141,26 @@ export function VehicleIntakeForm({ onNavigate }: VehicleIntakeFormProps) {
         year,
         make,
         model,
-        vehicleId,
-        licensePlate,
-        sellerName,
-        purchaseDate,
-        purchasePrice,
-        titlePresent,
-        billOfSale,
+        vehicle_id: vehicleId,
+        license_plate: licensePlate,
+        seller_name: sellerName,
+        purchase_date: purchaseDate,
+        purchase_price: purchasePrice,
+        title_present: titlePresent,
+        bill_of_sale: billOfSale,
         destination,
-        buyerName,
-        buyerFirstName,
-        buyerLastName,
-        saleDate,
-        salePrice,
+        buyer_name: buyerName,
+        buyer_first_name: buyerFirstName,
+        buyer_last_name: buyerLastName,
+        sale_date: saleDate,
+        sale_price: salePrice,
         notes,
-        documents: uploadedDocuments,
+        documents: serializeDocuments(uploadedDocuments),
       };
 
-      // Call the addVehicle function from the store
-      // await addVehicle(vehicleData);
       const { data, error } = await supabase
         .from('vehicles')
-        .insert([
-          {
-            year: vehicleData.year,
-            make: vehicleData.make,
-            model: vehicleData.model,
-            vehicle_id: vehicleData.vehicleId,
-            license_plate: vehicleData.licensePlate,
-            seller_name: vehicleData.sellerName,
-            purchase_date: vehicleData.purchaseDate,
-            purchase_price: vehicleData.purchasePrice,
-            title_present: vehicleData.titlePresent,
-            bill_of_sale: vehicleData.billOfSale,
-            destination: vehicleData.destination,
-            buyer_name: vehicleData.buyerName,
-            buyer_first_name: vehicleData.buyerFirstName,
-            buyer_last_name: vehicleData.buyerLastName,
-            sale_date: vehicleData.saleDate,
-            sale_price: vehicleData.salePrice,
-            notes: vehicleData.notes,
-            documents: vehicleData.documents ? vehicleData.documents : []
-          },
-        ])
+        .insert([vehicleData])
         .select();
 
       if (error) {
@@ -180,19 +173,19 @@ export function VehicleIntakeForm({ onNavigate }: VehicleIntakeFormProps) {
         return;
       }
 
-      // If pendingIntakeId is present, update the pending intake status to 'completed'
-      if (pendingIntakeId) {
+      // If currentPendingIntakeId is present, update the pending intake status to 'completed'
+      if (currentPendingIntakeId) {
         const { error: updateError } = await supabase
           .from('pending_intakes')
           .update({ status: 'completed' })
-          .eq('id', pendingIntakeId);
+          .eq('id', currentPendingIntakeId);
 
         if (updateError) {
           console.error('Error updating pending intake status:', updateError);
           toast({
             title: "Warning",
             description: "Vehicle added, but failed to update pending intake status.",
-            variant: "warning",
+            variant: "destructive",
           });
         } else {
           toast({
