@@ -209,7 +209,7 @@ export function DocumentUpload({ uploadedDocuments, onDocumentsChange }: Documen
           <div className="flex flex-col items-center justify-center h-full">
             <ScannerInterface onScanComplete={handleScanComplete} />
             <p className="text-xs text-foreground mt-2">
-              Scan documents directly from your scanner or camera
+              Scan documents directly from your Epson ES-580W scanner
             </p>
           </div>
         </div>
