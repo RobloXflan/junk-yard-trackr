@@ -30,58 +30,87 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
     salePrice: string;
     saleDate: string;
   } | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Reset state when vehicle changes or dialog opens/closes
   useEffect(() => {
     if (vehicle && isOpen) {
+      console.log('VehicleDetailsDialog: Setting initial state for vehicle:', vehicle.id);
       setSelectedStatus(vehicle.status);
       setPendingSoldData(null);
       setSoldDialogOpen(false);
+      setIsSaving(false);
     }
   }, [vehicle, isOpen]);
 
   if (!vehicle) return null;
 
   const handleStatusChange = (newStatus: Vehicle['status']) => {
+    console.log('VehicleDetailsDialog: Status change requested to:', newStatus);
+    
     if (newStatus === 'sold') {
+      console.log('VehicleDetailsDialog: Opening sold dialog');
       setSoldDialogOpen(true);
       // Don't update selectedStatus yet, wait for sold dialog completion
     } else {
+      console.log('VehicleDetailsDialog: Setting non-sold status:', newStatus);
       setSelectedStatus(newStatus);
       setPendingSoldData(null); // Clear sold data if not sold
     }
   };
 
-  const handleSoldConfirm = (data: { buyerFirstName: string; buyerLastName: string; salePrice: string; saleDate: string }) => {
+  const handleSoldConfirm = async (data: { buyerFirstName: string; buyerLastName: string; salePrice: string; saleDate: string }) => {
+    console.log('VehicleDetailsDialog: Sold dialog confirmed with data:', data);
     setPendingSoldData(data);
     setSelectedStatus('sold'); // Set the status to sold when confirmed
     setSoldDialogOpen(false);
   };
 
   const handleSoldDialogClose = (open: boolean) => {
-    if (!open) {
-      // Only reset if we don't have pending sold data (meaning it was cancelled, not confirmed)
-      if (!pendingSoldData) {
-        setSelectedStatus(vehicle.status); // Reset to original status only if cancelled
-      }
+    console.log('VehicleDetailsDialog: Sold dialog close requested, open:', open);
+    if (!open && !pendingSoldData) {
+      // Only reset if we don't have pending sold data (meaning it was cancelled)
+      console.log('VehicleDetailsDialog: Resetting status due to cancelled sold dialog');
+      setSelectedStatus(vehicle.status);
     }
     setSoldDialogOpen(open);
   };
 
-  const handleSave = () => {
-    if (selectedStatus === 'sold' && pendingSoldData) {
-      onSave(vehicle.id, selectedStatus, pendingSoldData);
-    } else {
-      onSave(vehicle.id, selectedStatus);
+  const handleSave = async () => {
+    console.log('VehicleDetailsDialog: Save requested with status:', selectedStatus, 'and sold data:', pendingSoldData);
+    
+    if (isSaving) {
+      console.log('VehicleDetailsDialog: Save already in progress, ignoring');
+      return;
     }
-    onClose();
+
+    setIsSaving(true);
+    
+    try {
+      if (selectedStatus === 'sold' && pendingSoldData) {
+        console.log('VehicleDetailsDialog: Saving sold status with data');
+        await onSave(vehicle.id, selectedStatus, pendingSoldData);
+      } else {
+        console.log('VehicleDetailsDialog: Saving non-sold status');
+        await onSave(vehicle.id, selectedStatus);
+      }
+      console.log('VehicleDetailsDialog: Save completed successfully');
+      onClose();
+    } catch (error) {
+      console.error('VehicleDetailsDialog: Save failed:', error);
+      // Don't close the dialog on error, let user try again
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleClose = () => {
+    console.log('VehicleDetailsDialog: Close requested');
     // Reset state when closing
     setSelectedStatus(vehicle.status);
     setPendingSoldData(null);
     setSoldDialogOpen(false);
+    setIsSaving(false);
     onClose();
   };
 
@@ -121,7 +150,7 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
     }
   };
 
-  console.log('Vehicle documents in dialog:', vehicle.documents);
+  console.log('VehicleDetailsDialog: Vehicle documents:', vehicle.documents);
 
   return (
     <>
@@ -182,7 +211,7 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
                 <div className="space-y-3">
                   <div>
                     <Label htmlFor="status">New Status</Label>
-                    <Select value={selectedStatus} onValueChange={handleStatusChange}>
+                    <Select value={selectedStatus} onValueChange={handleStatusChange} disabled={isSaving}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -208,11 +237,11 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
                   )}
                   
                   <div className="flex gap-2">
-                    <Button onClick={handleSave} className="flex-1">
+                    <Button onClick={handleSave} className="flex-1" disabled={isSaving}>
                       <Save className="w-4 h-4 mr-2" />
-                      Save Status
+                      {isSaving ? 'Saving...' : 'Save Status'}
                     </Button>
-                    <Button variant="outline" onClick={handleClose}>
+                    <Button variant="outline" onClick={handleClose} disabled={isSaving}>
                       <X className="w-4 h-4 mr-2" />
                       Cancel
                     </Button>
