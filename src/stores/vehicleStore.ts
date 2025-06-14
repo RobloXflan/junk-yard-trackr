@@ -27,6 +27,8 @@ export interface Vehicle {
   saleDate?: string;
   salePrice?: string;
   notes?: string;
+  paperwork?: string;
+  paperworkOther?: string;
   status: 'yard' | 'sold' | 'pick-your-part' | 'sa-recycling';
   createdAt: string;
   documents?: UploadedDocument[];
@@ -133,6 +135,8 @@ class VehicleStore {
           saleDate: vehicle.sale_date || undefined,
           salePrice: vehicle.sale_price || undefined,
           notes: vehicle.notes || undefined,
+          paperwork: vehicle.paperwork || undefined,
+          paperworkOther: vehicle.paperwork_other || undefined,
           status: (vehicle.status as Vehicle['status']) || 'yard',
           createdAt: vehicle.created_at,
           documents: this.deserializeDocuments(vehicle.documents)
@@ -175,6 +179,8 @@ class VehicleStore {
         sale_date: vehicleData.saleDate,
         sale_price: vehicleData.salePrice,
         notes: vehicleData.notes,
+        paperwork: vehicleData.paperwork,
+        paperwork_other: vehicleData.paperworkOther,
         status: vehicleData.destination === 'sold' || vehicleData.destination === 'buyer' ? 'sold' : 'yard',
         documents: vehicleData.documents ? this.serializeDocuments(vehicleData.documents) : []
       };

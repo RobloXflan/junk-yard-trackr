@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,26 @@ import { toast } from "sonner";
 interface VehicleInventoryOptimizedProps {
   onNavigate: (page: string) => void;
 }
+
+// Helper function to format paperwork display text
+const formatPaperworkDisplay = (paperwork?: string, paperworkOther?: string): string => {
+  if (!paperwork) return "-";
+  
+  switch (paperwork) {
+    case "title":
+      return "Title";
+    case "registered-owner":
+      return "Registered Owner";
+    case "lien-sale":
+      return "Lien Sale";
+    case "no-paperwork":
+      return "No Paperwork";
+    case "other":
+      return paperworkOther || "Other";
+    default:
+      return paperwork;
+  }
+};
 
 export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimizedProps) {
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
@@ -204,6 +225,7 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
                     <TableHead>Purchase Price</TableHead>
                     <TableHead>Sale Price</TableHead>
                     <TableHead>Sold To</TableHead>
+                    <TableHead>Paperwork</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -242,6 +264,11 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
                             )}
                           </div>
                         ) : '-'}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {formatPaperworkDisplay(vehicle.paperwork, vehicle.paperworkOther)}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge variant={

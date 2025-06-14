@@ -174,6 +174,8 @@ export type Database = {
           make: string
           model: string
           notes: string | null
+          paperwork: string | null
+          paperwork_other: string | null
           purchase_date: string | null
           purchase_price: string | null
           sale_date: string | null
@@ -198,6 +200,8 @@ export type Database = {
           make: string
           model: string
           notes?: string | null
+          paperwork?: string | null
+          paperwork_other?: string | null
           purchase_date?: string | null
           purchase_price?: string | null
           sale_date?: string | null
@@ -222,6 +226,8 @@ export type Database = {
           make?: string
           model?: string
           notes?: string | null
+          paperwork?: string | null
+          paperwork_other?: string | null
           purchase_date?: string | null
           purchase_price?: string | null
           sale_date?: string | null
