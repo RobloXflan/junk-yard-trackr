@@ -7,17 +7,7 @@ import { Mail, FileText, Clock, CheckCircle, XCircle, Eye } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
-
-interface PendingIntake {
-  id: string;
-  email_from: string;
-  email_subject: string;
-  email_received_at: string;
-  confidence_score: number;
-  status: string;
-  documents: any[];
-  extracted_info: any;
-}
+import type { PendingIntake, PendingIntakeDocument } from "@/types/pendingIntake";
 
 interface PendingIntakesProps {
   onNavigate: (page: string, params?: any) => void;
@@ -48,7 +38,19 @@ export function PendingIntakes({ onNavigate }: PendingIntakesProps) {
         return;
       }
 
-      setPendingIntakes(data || []);
+      // Transform the data to match our interface with proper type casting
+      const transformedData: PendingIntake[] = (data || []).map(item => ({
+        id: item.id,
+        email_from: item.email_from,
+        email_subject: item.email_subject || "",
+        email_received_at: item.email_received_at,
+        confidence_score: item.confidence_score || 0,
+        status: item.status || "pending",
+        documents: Array.isArray(item.documents) ? item.documents as PendingIntakeDocument[] : [],
+        extracted_info: (item.extracted_info as any) || {}
+      }));
+
+      setPendingIntakes(transformedData);
     } catch (error) {
       console.error('Error loading pending intakes:', error);
     } finally {
@@ -136,7 +138,7 @@ export function PendingIntakes({ onNavigate }: PendingIntakesProps) {
             <Mail className="w-12 h-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No Pending Intakes</h3>
             <p className="text-muted-foreground text-center">
-              When emails with vehicle documents are received, they'll appear here for processing.
+              When emails with vehicle documents are received at vehicleintake101@gmail.com, they'll appear here for processing.
             </p>
           </CardContent>
         </Card>
@@ -177,7 +179,7 @@ export function PendingIntakes({ onNavigate }: PendingIntakesProps) {
                       Documents ({intake.documents.length})
                     </h4>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                      {intake.documents.map((doc: any, index: number) => (
+                      {intake.documents.map((doc: PendingIntakeDocument, index: number) => (
                         <div key={index} className="p-2 border rounded-lg text-xs">
                           <div className="flex items-center gap-1 mb-1">
                             <FileText className="w-3 h-3" />

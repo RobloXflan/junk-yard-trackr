@@ -13,6 +13,7 @@ import { PurchaseInfo } from "./forms/PurchaseInfo";
 import { DocumentStatus } from "./forms/DocumentStatus";
 import { DestinationSelector } from "./forms/DestinationSelector";
 import { supabase } from "@/integrations/supabase/client";
+import type { ExtractedVehicleInfo, PendingIntakeDocument } from "@/types/pendingIntake";
 
 interface VehicleIntakeFormProps {
   pendingIntakeId?: string;
@@ -74,22 +75,23 @@ export function VehicleIntakeForm({ pendingIntakeId }: VehicleIntakeFormProps) {
 
       setPendingIntake(data);
       
-      // Pre-populate form with extracted info
+      // Pre-populate form with extracted info - properly handle JSON type
       if (data.extracted_info) {
+        const extractedInfo = data.extracted_info as ExtractedVehicleInfo;
         setFormData(prev => ({
           ...prev,
-          year: data.extracted_info.year || "",
-          make: data.extracted_info.make || "",
-          model: data.extracted_info.model || "",
-          vehicleId: data.extracted_info.vehicleId || "",
+          year: extractedInfo.year || "",
+          make: extractedInfo.make || "",
+          model: extractedInfo.model || "",
+          vehicleId: extractedInfo.vehicleId || "",
           sellerName: data.email_from || "",
           notes: `Email processed from: ${data.email_from}\nSubject: ${data.email_subject || 'N/A'}\nReceived: ${new Date(data.email_received_at).toLocaleString()}`
         }));
       }
 
-      // Convert email documents to uploaded documents format
-      if (data.documents && data.documents.length > 0) {
-        const convertedDocs: UploadedDocument[] = data.documents.map((doc: any) => ({
+      // Convert email documents to uploaded documents format - properly handle JSON array
+      if (data.documents && Array.isArray(data.documents) && data.documents.length > 0) {
+        const convertedDocs: UploadedDocument[] = (data.documents as PendingIntakeDocument[]).map((doc: PendingIntakeDocument) => ({
           id: doc.id,
           file: new File([], doc.name, { type: doc.contentType || 'application/octet-stream' }),
           url: doc.url,
@@ -252,7 +254,7 @@ export function VehicleIntakeForm({ pendingIntakeId }: VehicleIntakeFormProps) {
                 <span className="font-medium">Received:</span> {new Date(pendingIntake.email_received_at).toLocaleString()}
               </div>
               <div>
-                <span className="font-medium">Documents:</span> {pendingIntake.documents?.length || 0} attached
+                <span className="font-medium">Documents:</span> {Array.isArray(pendingIntake.documents) ? pendingIntake.documents.length : 0} attached
               </div>
             </div>
           </CardContent>
