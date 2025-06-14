@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Vehicle } from '@/stores/vehicleStore';
@@ -26,6 +25,8 @@ export function useVehicleStorePaginated() {
       const isSearching = search.trim().length > 0;
       const offset = isSearching ? 0 : (page - 1) * ITEMS_PER_PAGE;
       const limit = isSearching ? 1000 : ITEMS_PER_PAGE; // Use a high limit for search results
+      
+      console.log('Loading vehicles with search term:', search, 'isSearching:', isSearching);
       
       // Build the query
       let query = supabase
@@ -58,13 +59,10 @@ export function useVehicleStorePaginated() {
       // Apply search filter if provided
       if (isSearching) {
         const searchPattern = `%${search.toLowerCase()}%`;
-        query = query.or(`
-          make.ilike.${searchPattern},
-          model.ilike.${searchPattern},
-          year.ilike.${searchPattern},
-          vehicle_id.ilike.${searchPattern},
-          license_plate.ilike.${searchPattern}
-        `);
+        console.log('Applying search pattern:', searchPattern);
+        
+        // Fix the search query to use proper single-line syntax
+        query = query.or(`make.ilike.${searchPattern},model.ilike.${searchPattern},year.ilike.${searchPattern},vehicle_id.ilike.${searchPattern},license_plate.ilike.${searchPattern}`);
       }
 
       // Apply pagination only when not searching
@@ -78,6 +76,8 @@ export function useVehicleStorePaginated() {
         console.error('Error loading vehicles:', error);
         throw error;
       }
+
+      console.log('Search results:', data?.length, 'vehicles found');
 
       // Transform data to match Vehicle interface (excluding documents for performance)
       const transformedVehicles: Vehicle[] = (data || []).map(vehicle => ({
