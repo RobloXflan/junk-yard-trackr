@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -113,21 +112,6 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
 
   const isSearching = searchTerm.trim().length > 0;
 
-  const getPaperworkDisplay = (paperwork?: string) => {
-    if (!paperwork) return '-';
-    
-    // Map database values to display labels
-    const paperworkLabels: { [key: string]: string } = {
-      'title': 'Title',
-      'registered-owner': 'Registered Owner',
-      'lien-sale': 'Lien Sale',
-      'no-paperwork': 'No Paperwork',
-      'other': 'Other'
-    };
-    
-    return paperworkLabels[paperwork] || paperwork;
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -220,7 +204,6 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
                     <TableHead>Purchase Price</TableHead>
                     <TableHead>Sale Price</TableHead>
                     <TableHead>Sold To</TableHead>
-                    <TableHead>Paperwork</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -259,11 +242,6 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
                             )}
                           </div>
                         ) : '-'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-xs">
-                          {getPaperworkDisplay(vehicle.paperwork)}
-                        </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge variant={

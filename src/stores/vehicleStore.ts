@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface UploadedDocument {
@@ -28,7 +27,6 @@ export interface Vehicle {
   saleDate?: string;
   salePrice?: string;
   notes?: string;
-  paperwork?: string;
   status: 'yard' | 'sold' | 'pick-your-part' | 'sa-recycling';
   createdAt: string;
   documents?: UploadedDocument[];

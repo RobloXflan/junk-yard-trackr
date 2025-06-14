@@ -72,13 +72,11 @@ export function VehicleIntakeForm() {
       ? `${formData.buyerFirstName} ${formData.buyerLastName}` 
       : formData.buyerName;
 
-    // Add vehicle to store with paperwork information
+    // Add vehicle to store
     addVehicle({
       ...formData,
       buyerName: combinedBuyerName,
-      documents: uploadedDocuments,
-      // Store the final paperwork value - if "other" is selected, use the paperworkOther value
-      paperwork: formData.paperwork === "other" ? formData.paperworkOther : formData.paperwork
+      documents: uploadedDocuments
     });
     
     let successMessage = "Vehicle has been added to inventory.";
