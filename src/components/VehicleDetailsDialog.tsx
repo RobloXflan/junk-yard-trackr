@@ -98,6 +98,8 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
   // Get the current sale price - use pending data if available, otherwise vehicle data
   const currentSalePrice = pendingSoldData?.salePrice || vehicle.salePrice;
 
+  console.log('Vehicle documents in dialog:', vehicle.documents);
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -211,19 +213,26 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
               <h3 className="text-lg font-semibold mb-3">Vehicle Images</h3>
               {vehicle.documents && vehicle.documents.length > 0 ? (
                 <div className="grid grid-cols-1 gap-4">
-                  {vehicle.documents.map((doc) => (
-                    <div key={doc.id} className="border rounded-lg overflow-hidden">
-                      <img 
-                        src={doc.url} 
-                        alt="Vehicle document"
-                        className="w-full h-auto max-h-96 object-contain bg-muted"
-                        onError={(e) => {
-                          console.log('Image failed to load:', doc.url);
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    </div>
-                  ))}
+                  {vehicle.documents.map((doc) => {
+                    console.log('Rendering document:', doc.id, 'URL:', doc.url);
+                    return (
+                      <div key={doc.id} className="border rounded-lg overflow-hidden">
+                        <img 
+                          src={doc.url} 
+                          alt={`Vehicle document: ${doc.name}`}
+                          className="w-full h-auto max-h-96 object-contain bg-muted"
+                          onLoad={() => console.log('Image loaded successfully:', doc.url)}
+                          onError={(e) => {
+                            console.error('Image failed to load:', doc.url, e);
+                            console.log('Image error event:', e.currentTarget);
+                          }}
+                        />
+                        <div className="p-2 bg-muted">
+                          <p className="text-sm text-muted-foreground">{doc.name}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">

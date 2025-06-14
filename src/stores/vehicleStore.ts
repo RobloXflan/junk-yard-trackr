@@ -66,16 +66,24 @@ class VehicleStore {
 
   // Helper function to convert documents back from storage
   private deserializeDocuments(documentsData: any): UploadedDocument[] {
-    if (!documentsData || !Array.isArray(documentsData)) return [];
+    if (!documentsData || !Array.isArray(documentsData)) {
+      console.log('No documents data or not an array:', documentsData);
+      return [];
+    }
     
-    return documentsData.map(doc => ({
-      id: doc.id,
-      name: doc.name,
-      size: doc.size,
-      url: doc.url,
-      // Create a placeholder File object since we can't serialize the original
-      file: new File([], doc.name, { type: this.getFileTypeFromName(doc.name) })
-    }));
+    console.log('Deserializing documents:', documentsData);
+    
+    return documentsData.map(doc => {
+      console.log('Processing document:', doc);
+      return {
+        id: doc.id,
+        name: doc.name,
+        size: doc.size,
+        url: doc.url,
+        // Create a placeholder File object since we can't serialize the original
+        file: new File([], doc.name, { type: this.getFileTypeFromName(doc.name) })
+      };
+    });
   }
 
   private getFileTypeFromName(fileName: string): string {
@@ -103,29 +111,36 @@ class VehicleStore {
       }
 
       // Create completely new vehicle objects to prevent any reference sharing
-      this.vehicles = (data || []).map(vehicle => ({
-        id: vehicle.id,
-        year: vehicle.year || '',
-        make: vehicle.make || '',
-        model: vehicle.model || '',
-        vehicleId: vehicle.vehicle_id || '',
-        licensePlate: vehicle.license_plate || undefined,
-        sellerName: vehicle.seller_name || undefined,
-        purchaseDate: vehicle.purchase_date || undefined,
-        purchasePrice: vehicle.purchase_price || undefined,
-        titlePresent: Boolean(vehicle.title_present),
-        billOfSale: Boolean(vehicle.bill_of_sale),
-        destination: vehicle.destination || undefined,
-        buyerName: vehicle.buyer_name || undefined,
-        buyerFirstName: vehicle.buyer_first_name || undefined,
-        buyerLastName: vehicle.buyer_last_name || undefined,
-        saleDate: vehicle.sale_date || undefined,
-        salePrice: vehicle.sale_price || undefined,
-        notes: vehicle.notes || undefined,
-        status: (vehicle.status as Vehicle['status']) || 'yard',
-        createdAt: vehicle.created_at,
-        documents: this.deserializeDocuments(vehicle.documents)
-      }));
+      this.vehicles = (data || []).map(vehicle => {
+        console.log('Processing vehicle:', vehicle.id, 'documents:', vehicle.documents);
+        
+        const processedVehicle = {
+          id: vehicle.id,
+          year: vehicle.year || '',
+          make: vehicle.make || '',
+          model: vehicle.model || '',
+          vehicleId: vehicle.vehicle_id || '',
+          licensePlate: vehicle.license_plate || undefined,
+          sellerName: vehicle.seller_name || undefined,
+          purchaseDate: vehicle.purchase_date || undefined,
+          purchasePrice: vehicle.purchase_price || undefined,
+          titlePresent: Boolean(vehicle.title_present),
+          billOfSale: Boolean(vehicle.bill_of_sale),
+          destination: vehicle.destination || undefined,
+          buyerName: vehicle.buyer_name || undefined,
+          buyerFirstName: vehicle.buyer_first_name || undefined,
+          buyerLastName: vehicle.buyer_last_name || undefined,
+          saleDate: vehicle.sale_date || undefined,
+          salePrice: vehicle.sale_price || undefined,
+          notes: vehicle.notes || undefined,
+          status: (vehicle.status as Vehicle['status']) || 'yard',
+          createdAt: vehicle.created_at,
+          documents: this.deserializeDocuments(vehicle.documents)
+        };
+        
+        console.log('Processed vehicle documents:', processedVehicle.documents);
+        return processedVehicle;
+      });
 
       this.isLoaded = true;
       console.log('Vehicles successfully loaded from Supabase:', this.vehicles.length);
@@ -140,6 +155,8 @@ class VehicleStore {
 
   async addVehicle(vehicleData: Omit<Vehicle, 'id' | 'createdAt' | 'status'>) {
     try {
+      console.log('Adding vehicle with documents:', vehicleData.documents);
+      
       const newVehicle = {
         year: vehicleData.year,
         make: vehicleData.make,
@@ -162,6 +179,8 @@ class VehicleStore {
         documents: vehicleData.documents ? this.serializeDocuments(vehicleData.documents) : []
       };
 
+      console.log('Serialized documents for storage:', newVehicle.documents);
+
       const { data, error } = await supabase
         .from('vehicles')
         .insert([newVehicle])
@@ -172,6 +191,8 @@ class VehicleStore {
         console.error('Error adding vehicle:', error);
         throw error;
       }
+
+      console.log('Vehicle added to database:', data);
 
       // Reload all vehicles from database to ensure consistency
       await this.loadVehicles();
