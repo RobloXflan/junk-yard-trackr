@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,46 +19,21 @@ interface SoldDialogProps {
 
 export function SoldDialog({ open, onOpenChange, onConfirm, initialData }: SoldDialogProps) {
   const [formData, setFormData] = useState({
-    buyerFirstName: "",
-    buyerLastName: "",
-    salePrice: "",
-    saleDate: new Date().toISOString().split('T')[0]
+    buyerFirstName: initialData?.buyerFirstName || "",
+    buyerLastName: initialData?.buyerLastName || "",
+    salePrice: initialData?.salePrice || "",
+    saleDate: initialData?.saleDate || new Date().toISOString().split('T')[0]
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Update form data when dialog opens or initialData changes
-  useEffect(() => {
-    if (open) {
-      console.log('SoldDialog opened with initialData:', initialData);
-      setFormData({
-        buyerFirstName: initialData?.buyerFirstName || "",
-        buyerLastName: initialData?.buyerLastName || "",
-        salePrice: initialData?.salePrice || "",
-        saleDate: initialData?.saleDate || new Date().toISOString().split('T')[0]
-      });
-    }
-  }, [open, initialData]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('SoldDialog form submitted with data:', formData);
-    
     if (formData.buyerFirstName && formData.buyerLastName && formData.salePrice) {
-      setIsSubmitting(true);
-      try {
-        await onConfirm(formData);
-        console.log('SoldDialog confirmed successfully');
-        onOpenChange(false);
-      } catch (error) {
-        console.error('Error confirming sale:', error);
-      } finally {
-        setIsSubmitting(false);
-      }
+      onConfirm(formData);
+      onOpenChange(false);
     }
   };
 
   const handleCancel = () => {
-    console.log('SoldDialog cancelled');
     setFormData({
       buyerFirstName: "",
       buyerLastName: "",
@@ -84,7 +59,6 @@ export function SoldDialog({ open, onOpenChange, onConfirm, initialData }: SoldD
                 value={formData.buyerFirstName}
                 onChange={(e) => setFormData(prev => ({ ...prev, buyerFirstName: e.target.value }))}
                 required
-                disabled={isSubmitting}
               />
             </div>
             <div className="space-y-2">
@@ -95,7 +69,6 @@ export function SoldDialog({ open, onOpenChange, onConfirm, initialData }: SoldD
                 value={formData.buyerLastName}
                 onChange={(e) => setFormData(prev => ({ ...prev, buyerLastName: e.target.value }))}
                 required
-                disabled={isSubmitting}
               />
             </div>
           </div>
@@ -107,7 +80,6 @@ export function SoldDialog({ open, onOpenChange, onConfirm, initialData }: SoldD
               type="date"
               value={formData.saleDate}
               onChange={(e) => setFormData(prev => ({ ...prev, saleDate: e.target.value }))}
-              disabled={isSubmitting}
             />
           </div>
           
@@ -120,16 +92,15 @@ export function SoldDialog({ open, onOpenChange, onConfirm, initialData }: SoldD
               value={formData.salePrice}
               onChange={(e) => setFormData(prev => ({ ...prev, salePrice: e.target.value }))}
               required
-              disabled={isSubmitting}
             />
           </div>
           
           <div className="flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={handleCancel} disabled={isSubmitting}>
+            <Button type="button" variant="outline" onClick={handleCancel}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Confirming...' : 'Confirm Sale'}
+            <Button type="submit">
+              Confirm Sale
             </Button>
           </div>
         </form>
