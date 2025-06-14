@@ -60,9 +60,6 @@ export function DestinationSelector({ formData, onInputChange }: DestinationSele
           <SelectContent>
             <SelectItem value="yard">Still in Yard</SelectItem>
             <SelectItem value="sold">Sold to Buyer</SelectItem>
-            <SelectItem value="pick-your-part">Send to Pick Your Part</SelectItem>
-            <SelectItem value="sa-recycling">SA Recycling</SelectItem>
-            <SelectItem value="blank-bill-sale">Blank Bill of Sale</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -75,30 +72,6 @@ export function DestinationSelector({ formData, onInputChange }: DestinationSele
             <p className="text-sm text-foreground">Sale Price: ${formData.salePrice}</p>
             {formData.saleDate && <p className="text-sm text-foreground">Date: {formData.saleDate}</p>}
           </div>
-        </div>
-      )}
-
-      {formData.destination === "pick-your-part" && (
-        <div className="p-4 bg-card border border-border rounded-lg">
-          <p className="text-sm text-foreground font-medium">
-            📋 Pick Your Part bill of sale will be auto-generated with vehicle details
-          </p>
-        </div>
-      )}
-
-      {formData.destination === "sa-recycling" && (
-        <div className="p-4 bg-card border border-border rounded-lg">
-          <p className="text-sm text-foreground font-medium">
-            ♻️ SA Recycling paperwork will be prepared with vehicle information
-          </p>
-        </div>
-      )}
-
-      {formData.destination === "blank-bill-sale" && (
-        <div className="p-4 bg-card border border-border rounded-lg">
-          <p className="text-sm text-foreground font-medium">
-            📝 Blank bill of sale will be generated for manual completion and handwriting
-          </p>
         </div>
       )}
 
