@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,7 +6,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Dashboard } from "@/pages/Dashboard";
 import { Intake } from "@/pages/Intake";
-import { Inventory } from "@/pages/Inventory";
+import { InventoryOptimized } from "@/pages/InventoryOptimized";
 import { Menu } from "lucide-react";
 import { useState } from "react";
 
@@ -18,14 +17,14 @@ const App = () => {
 
   const renderPage = () => {
     switch (currentPage) {
-      case "dashboard":
-        return <Dashboard />;
-      case "intake":
-        return <Intake />;
-      case "inventory":
-        return <Inventory onNavigate={setCurrentPage} />;
+      case 'dashboard':
+        return <Dashboard onNavigate={setCurrentPage} />;
+      case 'intake':
+        return <Intake onNavigate={setCurrentPage} />;
+      case 'inventory':
+        return <InventoryOptimized onNavigate={setCurrentPage} />;
       default:
-        return <Dashboard />;
+        return <Dashboard onNavigate={setCurrentPage} />;
     }
   };
 
