@@ -8,7 +8,6 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { Dashboard } from "@/pages/Dashboard";
 import { Intake } from "@/pages/Intake";
 import { Inventory } from "@/pages/Inventory";
-import { PendingIntakes } from "@/pages/PendingIntakes";
 import { Menu } from "lucide-react";
 import { useState } from "react";
 
@@ -16,23 +15,15 @@ const queryClient = new QueryClient();
 
 const App = () => {
   const [currentPage, setCurrentPage] = useState("dashboard");
-  const [pageParams, setPageParams] = useState<any>(null);
-
-  const handleNavigate = (page: string, params?: any) => {
-    setCurrentPage(page);
-    setPageParams(params);
-  };
 
   const renderPage = () => {
     switch (currentPage) {
       case "dashboard":
         return <Dashboard />;
       case "intake":
-        return <Intake pendingIntakeId={pageParams?.pendingIntakeId} />;
+        return <Intake />;
       case "inventory":
-        return <Inventory onNavigate={handleNavigate} />;
-      case "pending-intakes":
-        return <PendingIntakes onNavigate={handleNavigate} />;
+        return <Inventory onNavigate={setCurrentPage} />;
       default:
         return <Dashboard />;
     }
@@ -45,7 +36,7 @@ const App = () => {
         <Sonner />
         <SidebarProvider>
           <div className="min-h-screen flex w-full bg-background">
-            <AppSidebar currentPage={currentPage} onNavigate={handleNavigate} />
+            <AppSidebar currentPage={currentPage} onNavigate={setCurrentPage} />
             <main className="flex-1 flex flex-col">
               <header className="border-b bg-card px-4 py-3 lg:px-6">
                 <div className="flex items-center gap-4">
@@ -54,7 +45,7 @@ const App = () => {
                   </SidebarTrigger>
                   <nav className="hidden lg:flex items-center space-x-4">
                     <button
-                      onClick={() => handleNavigate("dashboard")}
+                      onClick={() => setCurrentPage("dashboard")}
                       className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                         currentPage === "dashboard"
                           ? "bg-primary text-primary-foreground"
@@ -64,17 +55,7 @@ const App = () => {
                       Dashboard
                     </button>
                     <button
-                      onClick={() => handleNavigate("pending-intakes")}
-                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                        currentPage === "pending-intakes"
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                      }`}
-                    >
-                      Pending Intakes
-                    </button>
-                    <button
-                      onClick={() => handleNavigate("intake")}
+                      onClick={() => setCurrentPage("intake")}
                       className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                         currentPage === "intake"
                           ? "bg-primary text-primary-foreground"
@@ -84,7 +65,7 @@ const App = () => {
                       Vehicle Intake
                     </button>
                     <button
-                      onClick={() => handleNavigate("inventory")}
+                      onClick={() => setCurrentPage("inventory")}
                       className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                         currentPage === "inventory"
                           ? "bg-primary text-primary-foreground"

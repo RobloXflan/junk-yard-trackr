@@ -1,21 +1,17 @@
 
 import { VehicleIntakeForm } from "@/components/VehicleIntakeForm";
 
-interface IntakeProps {
-  pendingIntakeId?: string;
-}
-
-export function Intake({ pendingIntakeId }: IntakeProps) {
+export function Intake() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Vehicle Intake</h1>
         <p className="text-black">
-          {pendingIntakeId ? "Process email intake with pre-loaded documents" : "Add new vehicles to your inventory"}
+          Add new vehicles to your inventory
         </p>
       </div>
 
-      <VehicleIntakeForm pendingIntakeId={pendingIntakeId} />
+      <VehicleIntakeForm />
     </div>
   );
 }

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -210,39 +211,23 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
               <h3 className="text-lg font-semibold mb-3">Vehicle Images</h3>
               {vehicle.documents && vehicle.documents.length > 0 ? (
                 <div className="grid grid-cols-1 gap-4">
-                  {vehicle.documents.map((doc) => {
-                    console.log('Rendering document:', doc.name, 'URL:', doc.url);
-                    return (
-                      <div key={doc.id} className="border rounded-lg overflow-hidden">
-                        {doc.url ? (
-                          <img 
-                            src={doc.url} 
-                            alt={`Vehicle document: ${doc.name}`}
-                            className="w-full h-auto max-h-96 object-contain bg-muted"
-                            onLoad={() => console.log('Image loaded successfully:', doc.url)}
-                            onError={(e) => {
-                              console.error('Image failed to load:', doc.url, 'Error:', e);
-                              e.currentTarget.style.display = 'none';
-                              // Show a fallback message
-                              const fallback = document.createElement('div');
-                              fallback.className = 'p-4 text-center text-muted-foreground';
-                              fallback.textContent = `Failed to load image: ${doc.name}`;
-                              e.currentTarget.parentNode?.appendChild(fallback);
-                            }}
-                          />
-                        ) : (
-                          <div className="p-4 text-center text-muted-foreground">
-                            No image URL available for: {doc.name}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {vehicle.documents.map((doc) => (
+                    <div key={doc.id} className="border rounded-lg overflow-hidden">
+                      <img 
+                        src={doc.url} 
+                        alt="Vehicle document"
+                        className="w-full h-auto max-h-96 object-contain bg-muted"
+                        onError={(e) => {
+                          console.log('Image failed to load:', doc.url);
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <p>No images available for this vehicle</p>
-                  <p className="text-xs mt-2">Documents count: {vehicle.documents?.length || 0}</p>
                 </div>
               )}
             </div>
