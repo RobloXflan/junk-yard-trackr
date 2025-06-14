@@ -148,7 +148,7 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
                     <span>{vehicle.licensePlate || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Seller:</span>
+                    <span className="text-muted-foreground">Driver:</span>
                     <span>{vehicle.sellerName || '-'}</span>
                   </div>
                   <div className="flex justify-between">
