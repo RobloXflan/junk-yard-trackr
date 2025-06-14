@@ -39,16 +39,36 @@ export function PendingIntakes({ onNavigate }: PendingIntakesProps) {
       }
 
       // Transform the data to match our interface with proper type casting
-      const transformedData: PendingIntake[] = (data || []).map(item => ({
-        id: item.id,
-        email_from: item.email_from,
-        email_subject: item.email_subject || "",
-        email_received_at: item.email_received_at,
-        confidence_score: item.confidence_score || 0,
-        status: item.status || "pending",
-        documents: Array.isArray(item.documents) ? item.documents as PendingIntakeDocument[] : [],
-        extracted_info: (item.extracted_info as any) || {}
-      }));
+      const transformedData: PendingIntake[] = (data || []).map(item => {
+        // Safely parse documents JSON
+        let documents: PendingIntakeDocument[] = [];
+        if (item.documents && Array.isArray(item.documents)) {
+          documents = (item.documents as any[]).filter(doc => 
+            doc && typeof doc === 'object' && 
+            doc.id && doc.name && doc.size && doc.url
+          ).map(doc => ({
+            id: doc.id,
+            name: doc.name,
+            size: doc.size,
+            url: doc.url,
+            contentType: doc.contentType
+          }));
+        }
+
+        // Safely parse extracted_info JSON
+        const extractedInfo = (item.extracted_info as ExtractedVehicleInfo) || {};
+
+        return {
+          id: item.id,
+          email_from: item.email_from,
+          email_subject: item.email_subject || "",
+          email_received_at: item.email_received_at,
+          confidence_score: item.confidence_score || 0,
+          status: item.status || "pending",
+          documents: documents,
+          extracted_info: extractedInfo
+        };
+      });
 
       setPendingIntakes(transformedData);
     } catch (error) {
