@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter, Car, Plus, Edit, RefreshCw, ChevronDown } from "lucide-react";
+import { Search, Filter, Car, Plus, Edit, RefreshCw, ChevronDown, FileText, Send } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -52,6 +52,8 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loadingDocuments, setLoadingDocuments] = useState(false);
   const [editingPaperworkId, setEditingPaperworkId] = useState<string | null>(null);
+  const [selectedVehicles, setSelectedVehicles] = useState<Set<string>>(new Set());
+  const [submittingToDMV, setSubmittingToDMV] = useState(false);
   
   const { 
     vehicles, 
@@ -64,7 +66,8 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
     updateVehicleStatus, 
     refreshVehicles,
     loadVehicleDocuments,
-    updateVehiclePaperwork
+    updateVehiclePaperwork,
+    submitToDMV
   } = useVehicleStorePaginated();
 
   const paperworkOptions = [
@@ -154,7 +157,85 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
     setSelectedVehicle(null);
   };
 
+  const handleSelectVehicle = (vehicleId: string, checked: boolean) => {
+    const newSelected = new Set(selectedVehicles);
+    if (checked) {
+      newSelected.add(vehicleId);
+    } else {
+      newSelected.delete(vehicleId);
+    }
+    setSelectedVehicles(newSelected);
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const eligibleVehicles = vehicles.filter(v => 
+        v.status === 'sold' && 
+        v.buyerFirstName && 
+        v.buyerLastName &&
+        v.dmvStatus === 'pending'
+      );
+      setSelectedVehicles(new Set(eligibleVehicles.map(v => v.id)));
+    } else {
+      setSelectedVehicles(new Set());
+    }
+  };
+
+  const handleSubmitToDMV = async () => {
+    if (selectedVehicles.size === 0) {
+      toast.error("Please select vehicles to submit to DMV");
+      return;
+    }
+
+    setSubmittingToDMV(true);
+    try {
+      const result = await submitToDMV(Array.from(selectedVehicles));
+      
+      if (result.success) {
+        const successCount = result.results?.filter((r: any) => r.success).length || 0;
+        const failedCount = result.results?.filter((r: any) => !r.success).length || 0;
+        
+        if (successCount > 0) {
+          toast.success(`Successfully submitted ${successCount} vehicle${successCount !== 1 ? 's' : ''} to DMV`);
+        }
+        if (failedCount > 0) {
+          toast.error(`Failed to submit ${failedCount} vehicle${failedCount !== 1 ? 's' : ''}`);
+        }
+        
+        setSelectedVehicles(new Set());
+      } else {
+        toast.error("Failed to submit vehicles to DMV");
+      }
+    } catch (error) {
+      console.error('Error submitting to DMV:', error);
+      toast.error("Failed to submit vehicles to DMV");
+    } finally {
+      setSubmittingToDMV(false);
+    }
+  };
+
+  const eligibleVehicles = vehicles.filter(v => 
+    v.status === 'sold' && 
+    v.buyerFirstName && 
+    v.buyerLastName &&
+    v.dmvStatus === 'pending'
+  );
+
   const isSearching = searchTerm.trim().length > 0;
+
+  const getDMVStatusBadge = (dmvStatus?: string) => {
+    switch (dmvStatus) {
+      case 'submitted':
+        return <Badge variant="default" className="bg-green-500">Submitted</Badge>;
+      case 'processing':
+        return <Badge variant="secondary">Processing</Badge>;
+      case 'failed':
+        return <Badge variant="destructive">Failed</Badge>;
+      case 'pending':
+      default:
+        return <Badge variant="outline">Pending</Badge>;
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -166,6 +247,18 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
           </p>
         </div>
         <div className="flex gap-2">
+          {eligibleVehicles.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline"
+                onClick={handleSubmitToDMV}
+                disabled={selectedVehicles.size === 0 || submittingToDMV}
+              >
+                <Send className="w-4 h-4 mr-2" />
+                {submittingToDMV ? 'Submitting...' : `Submit to DMV (${selectedVehicles.size})`}
+              </Button>
+            </div>
+          )}
           <Button 
             variant="outline" 
             onClick={handleRefresh}
@@ -216,6 +309,11 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
         <CardHeader>
           <CardTitle>
             Vehicles ({isSearching ? vehicles.length : `${vehicles.length}${totalCount > vehicles.length ? ` of ${totalCount}` : ''}`})
+            {eligibleVehicles.length > 0 && (
+              <span className="text-sm font-normal text-muted-foreground ml-2">
+                ({eligibleVehicles.length} eligible for DMV)
+              </span>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -242,6 +340,16 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
               <Table>
                 <TableHeader>
                   <TableRow>
+                    {eligibleVehicles.length > 0 && (
+                      <TableHead className="w-12">
+                        <input
+                          type="checkbox"
+                          checked={selectedVehicles.size > 0 && selectedVehicles.size === eligibleVehicles.length}
+                          onChange={(e) => handleSelectAll(e.target.checked)}
+                          className="rounded"
+                        />
+                      </TableHead>
+                    )}
                     <TableHead>Vehicle</TableHead>
                     <TableHead>Vehicle ID</TableHead>
                     <TableHead>Purchase Date</TableHead>
@@ -250,93 +358,123 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
                     <TableHead>Sold To</TableHead>
                     <TableHead>Paperwork</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>DMV Status</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {vehicles.map((vehicle) => (
-                    <TableRow key={vehicle.id}>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">
-                            {vehicle.year} {vehicle.make} {vehicle.model}
+                  {vehicles.map((vehicle) => {
+                    const isEligibleForDMV = vehicle.status === 'sold' && 
+                      vehicle.buyerFirstName && 
+                      vehicle.buyerLastName &&
+                      vehicle.dmvStatus === 'pending';
+                    
+                    return (
+                      <TableRow key={vehicle.id}>
+                        {eligibleVehicles.length > 0 && (
+                          <TableCell>
+                            {isEligibleForDMV && (
+                              <input
+                                type="checkbox"
+                                checked={selectedVehicles.has(vehicle.id)}
+                                onChange={(e) => handleSelectVehicle(vehicle.id, e.target.checked)}
+                                className="rounded"
+                              />
+                            )}
+                          </TableCell>
+                        )}
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">
+                              {vehicle.year} {vehicle.make} {vehicle.model}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {vehicle.licensePlate && `Plate: ${vehicle.licensePlate}`}
+                            </div>
                           </div>
-                          <div className="text-sm text-muted-foreground">
-                            {vehicle.licensePlate && `Plate: ${vehicle.licensePlate}`}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {vehicle.vehicleId}
-                      </TableCell>
-                      <TableCell>
-                        {vehicle.purchaseDate || '-'}
-                      </TableCell>
-                      <TableCell>
-                        {vehicle.purchasePrice ? `$${parseFloat(vehicle.purchasePrice).toLocaleString()}` : '-'}
-                      </TableCell>
-                      <TableCell>
-                        {vehicle.salePrice ? `$${parseFloat(vehicle.salePrice).toLocaleString()}` : '-'}
-                      </TableCell>
-                      <TableCell>
-                        {vehicle.status === 'sold' && vehicle.buyerFirstName && vehicle.buyerLastName ? (
-                          <div className="text-sm">
-                            <div>{vehicle.buyerFirstName} {vehicle.buyerLastName}</div>
-                            {vehicle.saleDate && (
-                              <div className="text-muted-foreground">{vehicle.saleDate}</div>
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {vehicle.vehicleId}
+                        </TableCell>
+                        <TableCell>
+                          {vehicle.purchaseDate || '-'}
+                        </TableCell>
+                        <TableCell>
+                          {vehicle.purchasePrice ? `$${parseFloat(vehicle.purchasePrice).toLocaleString()}` : '-'}
+                        </TableCell>
+                        <TableCell>
+                          {vehicle.salePrice ? `$${parseFloat(vehicle.salePrice).toLocaleString()}` : '-'}
+                        </TableCell>
+                        <TableCell>
+                          {vehicle.status === 'sold' && vehicle.buyerFirstName && vehicle.buyerLastName ? (
+                            <div className="text-sm">
+                              <div>{vehicle.buyerFirstName} {vehicle.buyerLastName}</div>
+                              {vehicle.saleDate && (
+                                <div className="text-muted-foreground">{vehicle.saleDate}</div>
+                              )}
+                            </div>
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Badge 
+                                variant="outline" 
+                                className="cursor-pointer hover:bg-accent transition-colors"
+                              >
+                                {formatPaperworkDisplay(vehicle.paperwork, vehicle.paperworkOther)}
+                              </Badge>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start">
+                              {paperworkOptions.map((option) => (
+                                <DropdownMenuItem
+                                  key={option.value}
+                                  onClick={() => handlePaperworkChange(vehicle.id, option.value)}
+                                  className="cursor-pointer"
+                                >
+                                  {option.label}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={
+                            vehicle.status === 'sold' ? 'default' :
+                            vehicle.status === 'yard' ? 'secondary' :
+                            'outline'
+                          }>
+                            {vehicle.status === 'yard' ? 'In Yard' : 
+                             vehicle.status === 'sold' ? 'Sold' :
+                             vehicle.status === 'pick-your-part' ? 'Pick Your Part' :
+                             vehicle.status === 'sa-recycling' ? 'SA Recycling' :
+                             vehicle.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            {getDMVStatusBadge(vehicle.dmvStatus)}
+                            {vehicle.dmvConfirmationNumber && (
+                              <span className="text-xs text-muted-foreground font-mono">
+                                {vehicle.dmvConfirmationNumber}
+                              </span>
                             )}
                           </div>
-                        ) : '-'}
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Badge 
-                              variant="outline" 
-                              className="cursor-pointer hover:bg-accent transition-colors"
-                            >
-                              {formatPaperworkDisplay(vehicle.paperwork, vehicle.paperworkOther)}
-                            </Badge>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start">
-                            {paperworkOptions.map((option) => (
-                              <DropdownMenuItem
-                                key={option.value}
-                                onClick={() => handlePaperworkChange(vehicle.id, option.value)}
-                                className="cursor-pointer"
-                              >
-                                {option.label}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={
-                          vehicle.status === 'sold' ? 'default' :
-                          vehicle.status === 'yard' ? 'secondary' :
-                          'outline'
-                        }>
-                          {vehicle.status === 'yard' ? 'In Yard' : 
-                           vehicle.status === 'sold' ? 'Sold' :
-                           vehicle.status === 'pick-your-part' ? 'Pick Your Part' :
-                           vehicle.status === 'sa-recycling' ? 'SA Recycling' :
-                           vehicle.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleEditVehicle(vehicle)}
-                          disabled={isLoading || loadingDocuments}
-                        >
-                          <Edit className="w-4 h-4 mr-2" />
-                          {loadingDocuments ? 'Loading...' : 'Edit'}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        </TableCell>
+                        <TableCell>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleEditVehicle(vehicle)}
+                            disabled={isLoading || loadingDocuments}
+                          >
+                            <Edit className="w-4 h-4 mr-2" />
+                            {loadingDocuments ? 'Loading...' : 'Edit'}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
               

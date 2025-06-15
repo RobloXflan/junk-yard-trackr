@@ -30,6 +30,9 @@ export interface Vehicle {
   paperwork?: string;
   paperworkOther?: string;
   status: 'yard' | 'sold' | 'pick-your-part' | 'sa-recycling';
+  dmvStatus?: 'pending' | 'processing' | 'submitted' | 'failed';
+  dmvConfirmationNumber?: string;
+  dmvSubmittedAt?: string;
   createdAt: string;
   documents?: UploadedDocument[];
 }
@@ -138,6 +141,9 @@ class VehicleStore {
           paperwork: vehicle.paperwork || undefined,
           paperworkOther: vehicle.paperwork_other || undefined,
           status: (vehicle.status as Vehicle['status']) || 'yard',
+          dmvStatus: vehicle.dmv_status as Vehicle['dmvStatus'] || 'pending',
+          dmvConfirmationNumber: vehicle.dmv_confirmation_number || undefined,
+          dmvSubmittedAt: vehicle.dmv_submitted_at || undefined,
           createdAt: vehicle.created_at,
           documents: this.deserializeDocuments(vehicle.documents)
         };
@@ -275,7 +281,40 @@ class VehicleStore {
     }
   }
 
-  // Force refresh from database - useful for manual sync
+  async submitToDMV(vehicleIds: string[]) {
+    try {
+      console.log('Submitting vehicles to DMV:', vehicleIds);
+      
+      const { data, error } = await supabase.functions.invoke('dmv-automation', {
+        body: { vehicleIds }
+      });
+
+      if (error) {
+        console.error('Error submitting to DMV:', error);
+        throw error;
+      }
+
+      console.log('DMV submission result:', data);
+
+      // Reload vehicles to get updated DMV status
+      await this.loadVehicles();
+      
+      return data;
+    } catch (error) {
+      console.error('Failed to submit to DMV:', error);
+      throw error;
+    }
+  }
+
+  getVehiclesEligibleForDMV(): Vehicle[] {
+    return this.vehicles.filter(vehicle => 
+      vehicle.status === 'sold' && 
+      vehicle.buyerFirstName && 
+      vehicle.buyerLastName &&
+      vehicle.dmvStatus === 'pending'
+    );
+  }
+
   async refreshVehicles() {
     console.log('Manually refreshing vehicles from database...');
     await this.loadVehicles();

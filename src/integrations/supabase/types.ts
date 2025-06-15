@@ -168,6 +168,9 @@ export type Database = {
           buyer_name: string | null
           created_at: string
           destination: string | null
+          dmv_confirmation_number: string | null
+          dmv_status: string | null
+          dmv_submitted_at: string | null
           documents: Json | null
           id: string
           license_plate: string | null
@@ -194,6 +197,9 @@ export type Database = {
           buyer_name?: string | null
           created_at?: string
           destination?: string | null
+          dmv_confirmation_number?: string | null
+          dmv_status?: string | null
+          dmv_submitted_at?: string | null
           documents?: Json | null
           id?: string
           license_plate?: string | null
@@ -220,6 +226,9 @@ export type Database = {
           buyer_name?: string | null
           created_at?: string
           destination?: string | null
+          dmv_confirmation_number?: string | null
+          dmv_status?: string | null
+          dmv_submitted_at?: string | null
           documents?: Json | null
           id?: string
           license_plate?: string | null

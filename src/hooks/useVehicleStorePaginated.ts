@@ -51,6 +51,9 @@ export function useVehicleStorePaginated() {
           paperwork,
           paperwork_other,
           status,
+          dmv_status,
+          dmv_confirmation_number,
+          dmv_submitted_at,
           created_at,
           updated_at
         `, { count: 'exact' })
@@ -98,6 +101,9 @@ export function useVehicleStorePaginated() {
         paperwork: vehicle.paperwork || undefined,
         paperworkOther: vehicle.paperwork_other || undefined,
         status: (vehicle.status as Vehicle['status']) || 'yard',
+        dmvStatus: vehicle.dmv_status as Vehicle['dmvStatus'] || 'pending',
+        dmvConfirmationNumber: vehicle.dmv_confirmation_number || undefined,
+        dmvSubmittedAt: vehicle.dmv_submitted_at || undefined,
         createdAt: vehicle.created_at,
         documents: []
       }));
@@ -269,6 +275,24 @@ export function useVehicleStorePaginated() {
     await loadVehicles(1, searchTerm, false);
   };
 
+  const submitToDMV = async (vehicleIds: string[]) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('dmv-automation', {
+        body: { vehicleIds }
+      });
+
+      if (error) throw error;
+
+      // Refresh vehicles to get updated DMV status
+      await refreshVehicles();
+      
+      return data;
+    } catch (error) {
+      console.error('Failed to submit to DMV:', error);
+      throw error;
+    }
+  };
+
   return {
     vehicles,
     totalCount,
@@ -280,6 +304,7 @@ export function useVehicleStorePaginated() {
     updateVehicleStatus,
     refreshVehicles,
     loadVehicleDocuments,
-    updateVehiclePaperwork
+    updateVehiclePaperwork,
+    submitToDMV
   };
 }
