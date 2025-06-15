@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -239,6 +238,16 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
     }
   };
 
+  const handlePreviewDMVSubmission = () => {
+    if (selectedVehicles.size === 0) {
+      toast.error("Please select vehicles to preview DMV submission");
+      return;
+    }
+
+    const vehicleIds = Array.from(selectedVehicles).join(',');
+    window.location.href = `/dmv-preview?vehicles=${vehicleIds}`;
+  };
+
   const eligibleVehicles = vehicles.filter(v => 
     v.status === 'sold' && 
     v.buyerFirstName && 
@@ -296,6 +305,14 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
         <div className="flex gap-2">
           {eligibleVehicles.length > 0 && (
             <div className="flex items-center gap-2">
+              <Button 
+                variant="outline"
+                onClick={handlePreviewDMVSubmission}
+                disabled={selectedVehicles.size === 0}
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Preview DMV Submission ({selectedVehicles.size})
+              </Button>
               <Button 
                 variant="outline"
                 onClick={handleSubmitToDMV}
