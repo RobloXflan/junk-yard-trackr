@@ -13,6 +13,9 @@ interface SoldDialogProps {
     buyerFirstName: string; 
     buyerLastName: string; 
     buyerAddress: string;
+    buyerCity?: string;
+    buyerState?: string;
+    buyerZipCode?: string;
     salePrice: string; 
     saleDate: string 
   }) => void;
@@ -20,6 +23,9 @@ interface SoldDialogProps {
     buyerFirstName: string;
     buyerLastName: string;
     buyerAddress?: string;
+    buyerCity?: string;
+    buyerState?: string;
+    buyerZipCode?: string;
     salePrice: string;
     saleDate: string;
   };
@@ -30,6 +36,9 @@ export function SoldDialog({ open, onOpenChange, onConfirm, initialData }: SoldD
     buyerFirstName: initialData?.buyerFirstName || "",
     buyerLastName: initialData?.buyerLastName || "",
     buyerAddress: initialData?.buyerAddress || "",
+    buyerCity: initialData?.buyerCity || "",
+    buyerState: initialData?.buyerState || "",
+    buyerZipCode: initialData?.buyerZipCode || "",
     salePrice: initialData?.salePrice || "",
     saleDate: initialData?.saleDate || new Date().toISOString().split('T')[0]
   });
@@ -38,6 +47,9 @@ export function SoldDialog({ open, onOpenChange, onConfirm, initialData }: SoldD
     first_name: string;
     last_name: string;
     address: string;
+    city?: string;
+    state?: string;
+    zip_code?: string;
   } | null>(null);
 
   // Initialize selected buyer from initial data
@@ -46,7 +58,10 @@ export function SoldDialog({ open, onOpenChange, onConfirm, initialData }: SoldD
       setSelectedBuyer({
         first_name: initialData.buyerFirstName,
         last_name: initialData.buyerLastName,
-        address: initialData.buyerAddress || ""
+        address: initialData.buyerAddress || "",
+        city: initialData.buyerCity,
+        state: initialData.buyerState,
+        zip_code: initialData.buyerZipCode
       });
     }
   }, [initialData]);
@@ -58,12 +73,22 @@ export function SoldDialog({ open, onOpenChange, onConfirm, initialData }: SoldD
         ...prev,
         buyerFirstName: selectedBuyer.first_name,
         buyerLastName: selectedBuyer.last_name,
-        buyerAddress: selectedBuyer.address
+        buyerAddress: selectedBuyer.address,
+        buyerCity: selectedBuyer.city || "",
+        buyerState: selectedBuyer.state || "",
+        buyerZipCode: selectedBuyer.zip_code || ""
       }));
     }
   }, [selectedBuyer]);
 
-  const handleBuyerSelect = (buyer: { first_name: string; last_name: string; address: string }) => {
+  const handleBuyerSelect = (buyer: { 
+    first_name: string; 
+    last_name: string; 
+    address: string;
+    city?: string;
+    state?: string;
+    zip_code?: string;
+  }) => {
     setSelectedBuyer(buyer);
   };
 
@@ -74,6 +99,9 @@ export function SoldDialog({ open, onOpenChange, onConfirm, initialData }: SoldD
         buyerFirstName: formData.buyerFirstName,
         buyerLastName: formData.buyerLastName,
         buyerAddress: formData.buyerAddress,
+        buyerCity: formData.buyerCity,
+        buyerState: formData.buyerState,
+        buyerZipCode: formData.buyerZipCode,
         salePrice: formData.salePrice,
         saleDate: formData.saleDate
       });
@@ -86,11 +114,23 @@ export function SoldDialog({ open, onOpenChange, onConfirm, initialData }: SoldD
       buyerFirstName: "",
       buyerLastName: "",
       buyerAddress: "",
+      buyerCity: "",
+      buyerState: "",
+      buyerZipCode: "",
       salePrice: "",
       saleDate: new Date().toISOString().split('T')[0]
     });
     setSelectedBuyer(null);
     onOpenChange(false);
+  };
+
+  const formatFullAddress = () => {
+    if (!selectedBuyer) return "";
+    const parts = [selectedBuyer.address];
+    if (selectedBuyer.city) parts.push(selectedBuyer.city);
+    if (selectedBuyer.state) parts.push(selectedBuyer.state);
+    if (selectedBuyer.zip_code) parts.push(selectedBuyer.zip_code);
+    return parts.join(', ');
   };
 
   return (
@@ -109,8 +149,8 @@ export function SoldDialog({ open, onOpenChange, onConfirm, initialData }: SoldD
             <div className="bg-muted p-4 rounded-lg">
               <h4 className="font-medium text-sm mb-2">Selected Buyer:</h4>
               <p className="text-sm">{selectedBuyer.first_name} {selectedBuyer.last_name}</p>
-              {selectedBuyer.address && (
-                <p className="text-xs text-muted-foreground mt-1">{selectedBuyer.address}</p>
+              {formatFullAddress() && (
+                <p className="text-xs text-muted-foreground mt-1">{formatFullAddress()}</p>
               )}
             </div>
           )}
