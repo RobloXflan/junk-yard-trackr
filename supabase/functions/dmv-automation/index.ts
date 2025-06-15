@@ -1,11 +1,12 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { chromium } from "https://deno.land/x/playwright@1.41.2/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+};
 
 interface VehicleData {
   id: string;
@@ -19,11 +20,15 @@ interface VehicleData {
   salePrice: string;
   saleDate: string;
   purchasePrice?: string;
+  buyerAddress?: string;
+  buyerCity?: string;
+  buyerState?: string;
+  buyerZip?: string;
 }
 
 serve(async (req) => {
   console.log('DMV automation function called');
-  
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -38,7 +43,7 @@ serve(async (req) => {
 
   try {
     const { vehicleIds } = await req.json();
-    
+
     if (!vehicleIds || !Array.isArray(vehicleIds) || vehicleIds.length === 0) {
       return new Response(
         JSON.stringify({ error: 'Vehicle IDs are required' }),
@@ -51,10 +56,15 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch vehicle data
+    // Fetch vehicle data with buyer address details
     const { data: vehicles, error: fetchError } = await supabase
       .from('vehicles')
-      .select('*')
+      .select(`
+        id, year, make, model, vehicle_id, license_plate, 
+        buyer_first_name, buyer_last_name, sale_price, sale_date, purchase_price,
+        status, dmv_status,
+        buyer_address, buyer_city, buyer_state, buyer_zip
+      `)
       .in('id', vehicleIds)
       .eq('status', 'sold')
       .not('buyer_first_name', 'is', null)
@@ -74,90 +84,111 @@ serve(async (req) => {
 
     const results = [];
 
-    // Process each vehicle
+    // Main DMV Automation for all vehicles
     for (const vehicle of vehicles) {
-      console.log(`Processing vehicle ${vehicle.id}: ${vehicle.year} ${vehicle.make} ${vehicle.model}`);
-      
+      const progress = [];
       try {
-        // Update status to processing
-        await supabase
-          .from('vehicles')
-          .update({ dmv_status: 'processing' })
-          .eq('id', vehicle.id);
+        progress.push("Marking vehicle 'processing' in DB");
+        await supabase.from('vehicles').update({ dmv_status: 'processing' }).eq('id', vehicle.id);
 
-        // Simulate DMV form submission (replace with actual Playwright automation)
-        const dmvResult = await submitToDMV({
-          id: vehicle.id,
-          year: vehicle.year,
-          make: vehicle.make,
-          model: vehicle.model,
-          vehicleId: vehicle.vehicle_id,
-          licensePlate: vehicle.license_plate,
-          buyerFirstName: vehicle.buyer_first_name,
-          buyerLastName: vehicle.buyer_last_name,
-          salePrice: vehicle.sale_price,
-          saleDate: vehicle.sale_date,
-          purchasePrice: vehicle.purchase_price
-        });
+        progress.push("Launching browser for DMV automation...");
+        const browser = await chromium.launch({ headless: true });
+        const page = await browser.newPage();
 
-        if (dmvResult.success) {
-          // Update with success
-          await supabase
-            .from('vehicles')
-            .update({
-              dmv_status: 'submitted',
-              dmv_confirmation_number: dmvResult.confirmationNumber,
-              dmv_submitted_at: new Date().toISOString()
-            })
-            .eq('id', vehicle.id);
-
-          results.push({
-            vehicleId: vehicle.id,
-            success: true,
-            confirmationNumber: dmvResult.confirmationNumber
-          });
-        } else {
-          // Update with failure
-          await supabase
-            .from('vehicles')
-            .update({ dmv_status: 'failed' })
-            .eq('id', vehicle.id);
-
-          results.push({
-            vehicleId: vehicle.id,
-            success: false,
-            error: dmvResult.error
-          });
-        }
-      } catch (error) {
-        console.error(`Error processing vehicle ${vehicle.id}:`, error);
+        progress.push("Navigating to DMV NRL form page...");
+        await page.goto("https://www.dmv.ca.gov/wasapp/nrl/nrlApplication.do");
+        await page.waitForLoadState("domcontentloaded");
         
-        // Update with failure
+        progress.push("Filling in form: Seller (Americas Auto Towing)");
+        await page.fill('input[name="Company"]', "Americas Auto Towing");
+        await page.fill('input[name="companyAddress"]', "4735 Cecilia St");
+        await page.fill('input[name="companyCity"]', "Cudahy");
+        await page.selectOption('select[name="companyState"]', "CA");
+        await page.fill('input[name="companyZip"]', "90201");
+        await page.check('input[name="c1"]'); // Seller is Company
+        await page.uncheck('input[name="o1"]'); // Seller is not person
+
+        progress.push("Filling in form: Buyer");
+        await page.fill('input[name="buyerFName"]', vehicle.buyer_first_name);
+        await page.fill('input[name="buyerLName"]', vehicle.buyer_last_name);
+        await page.check('input[name="bc1"]'); // Buyer is NOT Company
+        if (vehicle.buyer_address) await page.fill('input[name="buyerAddress"]', vehicle.buyer_address);
+        if (vehicle.buyer_city) await page.fill('input[name="buyerCity"]', vehicle.buyer_city);
+        if (vehicle.buyer_state) await page.selectOption('select[name="buyerState"]', vehicle.buyer_state);
+        if (vehicle.buyer_zip) await page.fill('input[name="buyerZip"]', vehicle.buyer_zip);
+
+        progress.push("Filling in form: Vehicle details");
+        await page.fill('input[name="vehicleYear"]', vehicle.year);
+        await page.fill('input[name="vehicleMake"]', vehicle.make);
+        await page.fill('input[name="vehicleModel"]', vehicle.model);
+        await page.fill('input[name="vehicleId"]', vehicle.vehicle_id);
+        await page.fill('input[name="licensePlate"]', vehicle.license_plate ?? "");
+
+        progress.push("Filling Sale Information");
+        await page.fill('input[name="salePrice"]', vehicle.sale_price ?? "");
+        await page.fill('input[name="saleDate"]', vehicle.sale_date ?? "");
+
+        progress.push("Submitting DMV Form...");
+        await page.click('input[type="submit"]');
+
+        // Wait for confirmation page to load
+        await page.waitForLoadState("networkidle");
+        progress.push("Parsing DMV confirmation number...");
+        const confirmationText = await page.textContent('body');
+        let confirmationNumber: string | undefined = undefined;
+        if (confirmationText && confirmationText.includes("Number")) {
+          // Extract from confirmation page
+          const match = confirmationText.match(/Number[:\s]+([A-Za-z0-9\-]+)/);
+          if (match) confirmationNumber = match[1];
+        } else {
+          confirmationNumber = "UNKNOWN-" + Date.now();
+        }
+        
+        await browser.close();
+
+        // Update vehicle in DB
+        progress.push("Updating DB: Set dmv_status to 'submitted' with confirmation number");
         await supabase
           .from('vehicles')
-          .update({ dmv_status: 'failed' })
+          .update({
+            dmv_status: 'submitted',
+            dmv_confirmation_number: confirmationNumber,
+            dmv_submitted_at: new Date().toISOString()
+          })
           .eq('id', vehicle.id);
+
+        progress.push("DMV submission complete.");
 
         results.push({
           vehicleId: vehicle.id,
+          success: true,
+          confirmationNumber,
+          progress
+        });
+
+      } catch (error) {
+        progress.push("Error: " + (error?.message || String(error)));
+        await supabase.from('vehicles').update({ dmv_status: 'failed' }).eq('id', vehicle.id);
+        results.push({
+          vehicleId: vehicle.id,
           success: false,
-          error: error.message
+          error: (error && error.message) || String(error),
+          progress
         });
       }
     }
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         results,
         processed: results.length
       }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
-
   } catch (error) {
     console.error('DMV automation error:', error);
     return new Response(
@@ -166,75 +197,3 @@ serve(async (req) => {
     );
   }
 });
-
-async function submitToDMV(vehicleData: VehicleData): Promise<{ success: boolean; confirmationNumber?: string; error?: string }> {
-  try {
-    console.log(`Submitting DMV form for vehicle: ${vehicleData.year} ${vehicleData.make} ${vehicleData.model}`);
-    
-    // This is where the actual Playwright automation would go
-    // For now, simulating the DMV form submission
-    
-    // Calculate the sale price (purchase price + $100 or use provided sale price)
-    let calculatedSalePrice = vehicleData.salePrice;
-    if (vehicleData.purchasePrice && !vehicleData.salePrice) {
-      const purchaseAmount = parseFloat(vehicleData.purchasePrice);
-      calculatedSalePrice = (purchaseAmount + 100).toString();
-    }
-
-    // Simulate form data that would be submitted
-    const formData = {
-      // Seller Information (Americas Auto Towing)
-      sellerIsCompany: 'Y',
-      sellerCompanyName: 'Americas Auto Towing',
-      sellerAddress: '4735 Cecilia St',
-      sellerCity: 'Cudahy',
-      sellerState: 'CA',
-      sellerZip: '90201',
-      
-      // Buyer Information
-      buyerIsCompany: 'N',
-      buyerFirstName: vehicleData.buyerFirstName,
-      buyerLastName: vehicleData.buyerLastName,
-      
-      // Vehicle Information
-      vehicleYear: vehicleData.year,
-      vehicleMake: vehicleData.make,
-      vehicleModel: vehicleData.model,
-      vehicleId: vehicleData.vehicleId,
-      licensePlate: vehicleData.licensePlate || '',
-      
-      // Sale Information
-      salePrice: calculatedSalePrice,
-      saleDate: vehicleData.saleDate
-    };
-
-    console.log('Form data prepared:', formData);
-
-    // TODO: Replace this simulation with actual Playwright automation
-    // Here's where you would:
-    // 1. Launch Playwright browser
-    // 2. Navigate to https://www.dmv.ca.gov/wasapp/nrl/nrlApplication.do
-    // 3. Fill out the form with the data above
-    // 4. Submit the form
-    // 5. Capture the confirmation number
-    
-    // For now, simulate a successful submission
-    await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate processing time
-    
-    const confirmationNumber = `NRL${Date.now()}${Math.floor(Math.random() * 1000)}`;
-    
-    console.log(`DMV submission successful for vehicle ${vehicleData.id}, confirmation: ${confirmationNumber}`);
-    
-    return {
-      success: true,
-      confirmationNumber
-    };
-
-  } catch (error) {
-    console.error('DMV submission failed:', error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
-}
