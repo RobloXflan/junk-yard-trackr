@@ -12,36 +12,27 @@ export type Database = {
       buyers: {
         Row: {
           address: string
-          city: string | null
           created_at: string
           first_name: string
           id: string
           last_name: string
-          state: string | null
           updated_at: string
-          zip_code: string | null
         }
         Insert: {
           address: string
-          city?: string | null
           created_at?: string
           first_name: string
           id?: string
           last_name: string
-          state?: string | null
           updated_at?: string
-          zip_code?: string | null
         }
         Update: {
           address?: string
-          city?: string | null
           created_at?: string
           first_name?: string
           id?: string
           last_name?: string
-          state?: string | null
           updated_at?: string
-          zip_code?: string | null
         }
         Relationships: []
       }

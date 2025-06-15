@@ -7,9 +7,6 @@ export interface Buyer {
   first_name: string;
   last_name: string;
   address: string;
-  city: string | null;
-  state: string | null;
-  zip_code: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -35,14 +32,7 @@ export function useBuyers() {
     }
   };
 
-  const addBuyer = async (buyerData: { 
-    first_name: string; 
-    last_name: string; 
-    address: string;
-    city?: string;
-    state?: string;
-    zip_code?: string;
-  }) => {
+  const addBuyer = async (buyerData: { first_name: string; last_name: string; address: string }) => {
     try {
       const { data, error } = await supabase
         .from('buyers')
@@ -60,14 +50,7 @@ export function useBuyers() {
     }
   };
 
-  const updateBuyer = async (buyerId: string, buyerData: { 
-    first_name: string; 
-    last_name: string; 
-    address: string;
-    city?: string;
-    state?: string;
-    zip_code?: string;
-  }) => {
+  const updateBuyer = async (buyerId: string, buyerData: { first_name: string; last_name: string; address: string }) => {
     try {
       const { data, error } = await supabase
         .from('buyers')

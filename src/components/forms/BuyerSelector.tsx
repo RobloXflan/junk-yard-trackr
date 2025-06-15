@@ -9,22 +9,8 @@ import { Plus, User, MapPin, Edit2, Check, X } from "lucide-react";
 import { useBuyers, Buyer } from "@/hooks/useBuyers";
 
 interface BuyerSelectorProps {
-  onBuyerSelect: (buyer: { 
-    first_name: string; 
-    last_name: string; 
-    address: string;
-    city?: string;
-    state?: string;
-    zip_code?: string;
-  }) => void;
-  selectedBuyer?: { 
-    first_name: string; 
-    last_name: string; 
-    address: string;
-    city?: string;
-    state?: string;
-    zip_code?: string;
-  } | null;
+  onBuyerSelect: (buyer: { first_name: string; last_name: string; address: string }) => void;
+  selectedBuyer?: { first_name: string; last_name: string; address: string } | null;
 }
 
 export function BuyerSelector({ onBuyerSelect, selectedBuyer }: BuyerSelectorProps) {
@@ -34,18 +20,12 @@ export function BuyerSelector({ onBuyerSelect, selectedBuyer }: BuyerSelectorPro
   const [newBuyerData, setNewBuyerData] = useState({
     first_name: '',
     last_name: '',
-    address: '',
-    city: '',
-    state: '',
-    zip_code: ''
+    address: ''
   });
   const [editBuyerData, setEditBuyerData] = useState({
     first_name: '',
     last_name: '',
-    address: '',
-    city: '',
-    state: '',
-    zip_code: ''
+    address: ''
   });
 
   const handleBuyerClick = (buyer: Buyer) => {
@@ -54,10 +34,7 @@ export function BuyerSelector({ onBuyerSelect, selectedBuyer }: BuyerSelectorPro
     onBuyerSelect({
       first_name: buyer.first_name,
       last_name: buyer.last_name,
-      address: buyer.address,
-      city: buyer.city || undefined,
-      state: buyer.state || undefined,
-      zip_code: buyer.zip_code || undefined
+      address: buyer.address
     });
   };
 
@@ -67,25 +44,13 @@ export function BuyerSelector({ onBuyerSelect, selectedBuyer }: BuyerSelectorPro
     }
 
     try {
-      const newBuyer = await addBuyer({
-        first_name: newBuyerData.first_name,
-        last_name: newBuyerData.last_name,
-        address: newBuyerData.address,
-        city: newBuyerData.city || undefined,
-        state: newBuyerData.state || undefined,
-        zip_code: newBuyerData.zip_code || undefined
-      });
-      
+      const newBuyer = await addBuyer(newBuyerData);
       onBuyerSelect({
         first_name: newBuyer.first_name,
         last_name: newBuyer.last_name,
-        address: newBuyer.address,
-        city: newBuyer.city || undefined,
-        state: newBuyer.state || undefined,
-        zip_code: newBuyer.zip_code || undefined
+        address: newBuyer.address
       });
-      
-      setNewBuyerData({ first_name: '', last_name: '', address: '', city: '', state: '', zip_code: '' });
+      setNewBuyerData({ first_name: '', last_name: '', address: '' });
       setShowNewBuyerForm(false);
     } catch (error) {
       console.error('Error adding buyer:', error);
@@ -97,10 +62,7 @@ export function BuyerSelector({ onBuyerSelect, selectedBuyer }: BuyerSelectorPro
     setEditBuyerData({
       first_name: buyer.first_name,
       last_name: buyer.last_name,
-      address: buyer.address,
-      city: buyer.city || '',
-      state: buyer.state || '',
-      zip_code: buyer.zip_code || ''
+      address: buyer.address
     });
   };
 
@@ -110,14 +72,7 @@ export function BuyerSelector({ onBuyerSelect, selectedBuyer }: BuyerSelectorPro
     }
 
     try {
-      await updateBuyer(buyerId, {
-        first_name: editBuyerData.first_name,
-        last_name: editBuyerData.last_name,
-        address: editBuyerData.address,
-        city: editBuyerData.city || undefined,
-        state: editBuyerData.state || undefined,
-        zip_code: editBuyerData.zip_code || undefined
-      });
+      await updateBuyer(buyerId, editBuyerData);
       setEditingBuyerId(null);
     } catch (error) {
       console.error('Error updating buyer:', error);
@@ -126,25 +81,14 @@ export function BuyerSelector({ onBuyerSelect, selectedBuyer }: BuyerSelectorPro
 
   const handleCancelEdit = () => {
     setEditingBuyerId(null);
-    setEditBuyerData({ first_name: '', last_name: '', address: '', city: '', state: '', zip_code: '' });
+    setEditBuyerData({ first_name: '', last_name: '', address: '' });
   };
 
   const isSelected = (buyer: Buyer) => {
     return selectedBuyer && 
            selectedBuyer.first_name === buyer.first_name &&
            selectedBuyer.last_name === buyer.last_name &&
-           selectedBuyer.address === buyer.address &&
-           selectedBuyer.city === buyer.city &&
-           selectedBuyer.state === buyer.state &&
-           selectedBuyer.zip_code === buyer.zip_code;
-  };
-
-  const formatAddress = (buyer: Buyer) => {
-    const parts = [buyer.address];
-    if (buyer.city) parts.push(buyer.city);
-    if (buyer.state) parts.push(buyer.state);
-    if (buyer.zip_code) parts.push(buyer.zip_code);
-    return parts.join(', ');
+           selectedBuyer.address === buyer.address;
   };
 
   return (
@@ -191,46 +135,14 @@ export function BuyerSelector({ onBuyerSelect, selectedBuyer }: BuyerSelectorPro
               </div>
             </div>
             <div>
-              <Label htmlFor="new-address" className="text-xs">Street Address</Label>
+              <Label htmlFor="new-address" className="text-xs">Address</Label>
               <Input
                 id="new-address"
-                placeholder="123 Main St"
+                placeholder="123 Main St, City, State, ZIP"
                 value={newBuyerData.address}
                 onChange={(e) => setNewBuyerData(prev => ({ ...prev, address: e.target.value }))}
                 className="h-8"
               />
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <Label htmlFor="new-city" className="text-xs">City</Label>
-                <Input
-                  id="new-city"
-                  placeholder="City"
-                  value={newBuyerData.city}
-                  onChange={(e) => setNewBuyerData(prev => ({ ...prev, city: e.target.value }))}
-                  className="h-8"
-                />
-              </div>
-              <div>
-                <Label htmlFor="new-state" className="text-xs">State</Label>
-                <Input
-                  id="new-state"
-                  placeholder="CA"
-                  value={newBuyerData.state}
-                  onChange={(e) => setNewBuyerData(prev => ({ ...prev, state: e.target.value }))}
-                  className="h-8"
-                />
-              </div>
-              <div>
-                <Label htmlFor="new-zip" className="text-xs">ZIP Code</Label>
-                <Input
-                  id="new-zip"
-                  placeholder="12345"
-                  value={newBuyerData.zip_code}
-                  onChange={(e) => setNewBuyerData(prev => ({ ...prev, zip_code: e.target.value }))}
-                  className="h-8"
-                />
-              </div>
             </div>
             <div className="flex gap-2 pt-2">
               <Button
@@ -295,38 +207,12 @@ export function BuyerSelector({ onBuyerSelect, selectedBuyer }: BuyerSelectorPro
                         </div>
                       </div>
                       <div>
-                        <Label className="text-xs">Street Address</Label>
+                        <Label className="text-xs">Address</Label>
                         <Input
                           value={editBuyerData.address}
                           onChange={(e) => setEditBuyerData(prev => ({ ...prev, address: e.target.value }))}
                           className="h-7 text-xs"
                         />
-                      </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        <div>
-                          <Label className="text-xs">City</Label>
-                          <Input
-                            value={editBuyerData.city}
-                            onChange={(e) => setEditBuyerData(prev => ({ ...prev, city: e.target.value }))}
-                            className="h-7 text-xs"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs">State</Label>
-                          <Input
-                            value={editBuyerData.state}
-                            onChange={(e) => setEditBuyerData(prev => ({ ...prev, state: e.target.value }))}
-                            className="h-7 text-xs"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs">ZIP</Label>
-                          <Input
-                            value={editBuyerData.zip_code}
-                            onChange={(e) => setEditBuyerData(prev => ({ ...prev, zip_code: e.target.value }))}
-                            className="h-7 text-xs"
-                          />
-                        </div>
                       </div>
                       <div className="flex gap-2">
                         <Button
@@ -357,7 +243,7 @@ export function BuyerSelector({ onBuyerSelect, selectedBuyer }: BuyerSelectorPro
                         <div className="flex items-start gap-1 mt-1">
                           <MapPin className="w-3 h-3 mt-0.5 text-muted-foreground flex-shrink-0" />
                           <div className="text-xs text-muted-foreground break-words">
-                            {formatAddress(buyer)}
+                            {buyer.address}
                           </div>
                         </div>
                       </div>
