@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -10,6 +9,7 @@ import { Dashboard } from "@/pages/Dashboard";
 import { Intake } from "@/pages/Intake";
 import { InventoryOptimized } from "@/pages/InventoryOptimized";
 import { Menu } from "lucide-react";
+import { DMVPreviewPage } from "@/pages/DMVPreviewPage";
 
 const queryClient = new QueryClient();
 
@@ -78,7 +78,9 @@ const App = () => {
                 </div>
               </header>
               <div className="flex-1 p-4 lg:p-6">
-                {renderPage()}
+                {(window.location.pathname === '/dmv-preview')
+                  ? (<DMVPreviewPage />)
+                  : renderPage()}
               </div>
             </main>
           </div>

@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +22,7 @@ import { useVehicleStorePaginated } from "@/hooks/useVehicleStorePaginated";
 import { VehicleDetailsDialog } from "@/components/VehicleDetailsDialog";
 import { Vehicle } from "@/stores/vehicleStore";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 interface VehicleInventoryOptimizedProps {
   onNavigate: (page: string) => void;
@@ -183,6 +183,18 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
     }
   };
 
+  const handleGoToDMVPreview = () => {
+    if (selectedVehicles.size === 0) {
+      toast.error("Please select vehicles to submit to DMV");
+      return;
+    }
+    navigate("/dmv-preview", {
+      state: {
+        selectedVehicles: Array.from(selectedVehicles),
+      },
+    });
+  };
+
   const handleSubmitToDMV = async () => {
     if (selectedVehicles.size === 0) {
       toast.error("Please select vehicles to submit to DMV");
@@ -298,7 +310,7 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
             <div className="flex items-center gap-2">
               <Button 
                 variant="outline"
-                onClick={handleSubmitToDMV}
+                onClick={handleGoToDMVPreview}
                 disabled={selectedVehicles.size === 0 || submittingToDMV}
               >
                 <Send className="w-4 h-4 mr-2" />
