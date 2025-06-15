@@ -1,26 +1,24 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { Send } from "lucide-react";
 import { useVehicleStorePaginated } from "@/hooks/useVehicleStorePaginated";
 import { useState } from "react";
 
-export function DMVPreviewPage() {
-  const location = useLocation();
-  const navigate = useNavigate();
+// Modified to accept `state` and `onNavigate` as props
+export function DMVPreviewPage({ state, onNavigate }: { state: any, onNavigate: (page: string) => void }) {
   const { vehicles, submitToDMV, refreshVehicles } = useVehicleStorePaginated();
   const [submitting, setSubmitting] = useState(false);
 
-  // Location state from link (selected vehicle IDs)
-  const selectedIds: string[] = (location.state && location.state.selectedVehicles) || [];
+  // selectedIds are passed in state from VehicleInventoryOptimized
+  const selectedIds: string[] = (state && state.selectedVehicles) || [];
 
   // Collect full vehicle data for those IDs
   const vehiclesToSubmit = vehicles.filter(v => selectedIds.includes(v.id));
 
   const handleBack = () => {
-    navigate(-1); // Go back to inventory page
+    onNavigate("inventory");
   };
 
   const handleConfirm = async () => {
@@ -32,7 +30,7 @@ export function DMVPreviewPage() {
       if (successCount) toast.success(`Submitted ${successCount} vehicle${successCount > 1 ? "s" : ""} to DMV`);
       if (failCount) toast.error(`Failed to submit ${failCount} vehicle${failCount > 1 ? "s" : ""}`);
       await refreshVehicles();
-      navigate("/inventory"); // or your inventory route
+      onNavigate("inventory");
     } catch (error) {
       toast.error("Submission failed.");
     }

@@ -5,8 +5,9 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Upload, List } from "lucide-react";
 
+// New type: now allows passing state
 interface InventoryOptimizedProps {
-  onNavigate: (page: string) => void;
+  onNavigate: (page: string, state?: any) => void;
 }
 
 export function InventoryOptimized({ onNavigate }: InventoryOptimizedProps) {
@@ -42,6 +43,7 @@ export function InventoryOptimized({ onNavigate }: InventoryOptimizedProps) {
       {showImporter ? (
         <DataImporter />
       ) : (
+        // pass the onNavigate function down (with state propagation)
         <VehicleInventoryOptimized onNavigate={onNavigate} />
       )}
     </div>

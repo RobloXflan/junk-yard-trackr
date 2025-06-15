@@ -25,7 +25,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
 interface VehicleInventoryOptimizedProps {
-  onNavigate: (page: string) => void;
+  onNavigate: (page: string, state?: any) => void; // allow optional state
 }
 
 // Helper function to format paperwork display text
@@ -188,10 +188,9 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
       toast.error("Please select vehicles to submit to DMV");
       return;
     }
-    navigate("/dmv-preview", {
-      state: {
-        selectedVehicles: Array.from(selectedVehicles),
-      },
+    // Use onNavigate to go to the DMV preview page, pass the selected vehicles as state
+    onNavigate("dmv-preview", {
+      selectedVehicles: Array.from(selectedVehicles),
     });
   };
 

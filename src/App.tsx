@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -15,6 +16,14 @@ const queryClient = new QueryClient();
 
 const App = () => {
   const [currentPage, setCurrentPage] = useState("dashboard");
+  const [dmvPreviewState, setDmvPreviewState] = useState<any>(null);
+
+  const handleNavigate = (page: string, state?: any) => {
+    setCurrentPage(page);
+    if (page === "dmv-preview") {
+      setDmvPreviewState(state);
+    }
+  };
 
   const renderPage = () => {
     switch (currentPage) {
@@ -23,7 +32,9 @@ const App = () => {
       case 'intake':
         return <Intake />;
       case 'inventory':
-        return <InventoryOptimized onNavigate={setCurrentPage} />;
+        return <InventoryOptimized onNavigate={handleNavigate} />;
+      case 'dmv-preview':
+        return <DMVPreviewPage state={dmvPreviewState} onNavigate={handleNavigate} />;
       default:
         return <Dashboard />;
     }
@@ -36,7 +47,7 @@ const App = () => {
         <Sonner />
         <SidebarProvider>
           <div className="min-h-screen flex w-full bg-background">
-            <AppSidebar currentPage={currentPage} onNavigate={setCurrentPage} />
+            <AppSidebar currentPage={currentPage} onNavigate={handleNavigate} />
             <main className="flex-1 flex flex-col">
               <header className="border-b bg-card px-4 py-3 lg:px-6">
                 <div className="flex items-center gap-4">
@@ -45,7 +56,7 @@ const App = () => {
                   </SidebarTrigger>
                   <nav className="hidden lg:flex items-center space-x-4">
                     <button
-                      onClick={() => setCurrentPage("dashboard")}
+                      onClick={() => handleNavigate("dashboard")}
                       className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                         currentPage === "dashboard"
                           ? "bg-primary text-primary-foreground"
@@ -55,7 +66,7 @@ const App = () => {
                       Dashboard
                     </button>
                     <button
-                      onClick={() => setCurrentPage("intake")}
+                      onClick={() => handleNavigate("intake")}
                       className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                         currentPage === "intake"
                           ? "bg-primary text-primary-foreground"
@@ -65,7 +76,7 @@ const App = () => {
                       Vehicle Intake
                     </button>
                     <button
-                      onClick={() => setCurrentPage("inventory")}
+                      onClick={() => handleNavigate("inventory")}
                       className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                         currentPage === "inventory"
                           ? "bg-primary text-primary-foreground"
@@ -78,9 +89,7 @@ const App = () => {
                 </div>
               </header>
               <div className="flex-1 p-4 lg:p-6">
-                {(window.location.pathname === '/dmv-preview')
-                  ? (<DMVPreviewPage />)
-                  : renderPage()}
+                {renderPage()}
               </div>
             </main>
           </div>
