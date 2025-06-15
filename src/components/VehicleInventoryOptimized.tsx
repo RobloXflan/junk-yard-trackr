@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,7 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
   const [editingPaperworkId, setEditingPaperworkId] = useState<string | null>(null);
   const [selectedVehicles, setSelectedVehicles] = useState<Set<string>>(new Set());
   const [submittingToDMV, setSubmittingToDMV] = useState(false);
+  const [submittingIndividual, setSubmittingIndividual] = useState<Set<string>>(new Set());
   
   const { 
     vehicles, 
@@ -214,6 +216,29 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
     }
   };
 
+  const handleIndividualDMVSubmit = async (vehicleId: string) => {
+    setSubmittingIndividual(prev => new Set(prev).add(vehicleId));
+    
+    try {
+      const result = await submitToDMV([vehicleId]);
+      
+      if (result.success && result.results?.[0]?.success) {
+        toast.success("Vehicle successfully submitted to DMV");
+      } else {
+        toast.error("Failed to submit vehicle to DMV");
+      }
+    } catch (error) {
+      console.error('Error submitting vehicle to DMV:', error);
+      toast.error("Failed to submit vehicle to DMV");
+    } finally {
+      setSubmittingIndividual(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(vehicleId);
+        return newSet;
+      });
+    }
+  };
+
   const eligibleVehicles = vehicles.filter(v => 
     v.status === 'sold' && 
     v.buyerFirstName && 
@@ -223,17 +248,39 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
 
   const isSearching = searchTerm.trim().length > 0;
 
-  const getDMVStatusBadge = (dmvStatus?: string) => {
-    switch (dmvStatus) {
+  const getDMVStatusDisplay = (vehicle: Vehicle) => {
+    const isEligibleForSubmission = vehicle.status === 'sold' && 
+      vehicle.buyerFirstName && 
+      vehicle.buyerLastName && 
+      vehicle.dmvStatus === 'pending';
+    
+    const isSubmitting = submittingIndividual.has(vehicle.id);
+
+    if (isEligibleForSubmission) {
+      return (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => handleIndividualDMVSubmit(vehicle.id)}
+          disabled={isSubmitting}
+          className="h-6 px-2 text-xs"
+        >
+          <Send className="w-3 h-3 mr-1" />
+          {isSubmitting ? 'Submitting...' : 'Submit to DMV'}
+        </Button>
+      );
+    }
+
+    // Show badges for other statuses
+    switch (vehicle.dmvStatus) {
       case 'submitted':
         return <Badge variant="default" className="bg-green-500">Submitted</Badge>;
       case 'processing':
         return <Badge variant="secondary">Processing</Badge>;
       case 'failed':
         return <Badge variant="destructive">Failed</Badge>;
-      case 'pending':
       default:
-        return <Badge variant="outline">Pending</Badge>;
+        return <Badge variant="outline">Not Eligible</Badge>;
     }
   };
 
@@ -453,7 +500,7 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col gap-1">
-                            {getDMVStatusBadge(vehicle.dmvStatus)}
+                            {getDMVStatusDisplay(vehicle)}
                             {vehicle.dmvConfirmationNumber && (
                               <span className="text-xs text-muted-foreground font-mono">
                                 {vehicle.dmvConfirmationNumber}
