@@ -50,6 +50,27 @@ export function useBuyers() {
     }
   };
 
+  const updateBuyer = async (buyerId: string, buyerData: { first_name: string; last_name: string; address: string }) => {
+    try {
+      const { data, error } = await supabase
+        .from('buyers')
+        .update(buyerData)
+        .eq('id', buyerId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      setBuyers(prev => prev.map(buyer => 
+        buyer.id === buyerId ? data : buyer
+      ));
+      return data;
+    } catch (error) {
+      console.error('Error updating buyer:', error);
+      throw error;
+    }
+  };
+
   useEffect(() => {
     loadBuyers();
   }, []);
@@ -58,6 +79,7 @@ export function useBuyers() {
     buyers,
     isLoading,
     addBuyer,
+    updateBuyer,
     refreshBuyers: loadBuyers
   };
 }

@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, User, MapPin } from "lucide-react";
+import { Plus, User, MapPin, Edit2, Check, X } from "lucide-react";
 import { useBuyers, Buyer } from "@/hooks/useBuyers";
 
 interface BuyerSelectorProps {
@@ -14,15 +14,23 @@ interface BuyerSelectorProps {
 }
 
 export function BuyerSelector({ onBuyerSelect, selectedBuyer }: BuyerSelectorProps) {
-  const { buyers, isLoading, addBuyer } = useBuyers();
+  const { buyers, isLoading, addBuyer, updateBuyer } = useBuyers();
   const [showNewBuyerForm, setShowNewBuyerForm] = useState(false);
+  const [editingBuyerId, setEditingBuyerId] = useState<string | null>(null);
   const [newBuyerData, setNewBuyerData] = useState({
+    first_name: '',
+    last_name: '',
+    address: ''
+  });
+  const [editBuyerData, setEditBuyerData] = useState({
     first_name: '',
     last_name: '',
     address: ''
   });
 
   const handleBuyerClick = (buyer: Buyer) => {
+    if (editingBuyerId === buyer.id) return; // Don't select if editing
+    
     onBuyerSelect({
       first_name: buyer.first_name,
       last_name: buyer.last_name,
@@ -47,6 +55,33 @@ export function BuyerSelector({ onBuyerSelect, selectedBuyer }: BuyerSelectorPro
     } catch (error) {
       console.error('Error adding buyer:', error);
     }
+  };
+
+  const handleEditBuyer = (buyer: Buyer) => {
+    setEditingBuyerId(buyer.id);
+    setEditBuyerData({
+      first_name: buyer.first_name,
+      last_name: buyer.last_name,
+      address: buyer.address
+    });
+  };
+
+  const handleSaveEdit = async (buyerId: string) => {
+    if (!editBuyerData.first_name || !editBuyerData.last_name || !editBuyerData.address) {
+      return;
+    }
+
+    try {
+      await updateBuyer(buyerId, editBuyerData);
+      setEditingBuyerId(null);
+    } catch (error) {
+      console.error('Error updating buyer:', error);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingBuyerId(null);
+    setEditBuyerData({ first_name: '', last_name: '', address: '' });
   };
 
   const isSelected = (buyer: Buyer) => {
@@ -146,25 +181,85 @@ export function BuyerSelector({ onBuyerSelect, selectedBuyer }: BuyerSelectorPro
               <Card 
                 key={buyer.id} 
                 className={`cursor-pointer transition-colors hover:bg-accent ${
-                  isSelected(buyer) ? 'ring-2 ring-primary bg-accent' : ''
-                }`}
+                  isSelected(buyer) && editingBuyerId !== buyer.id ? 'ring-2 ring-primary bg-accent' : ''
+                } ${editingBuyerId === buyer.id ? 'ring-2 ring-blue-500' : ''}`}
                 onClick={() => handleBuyerClick(buyer)}
               >
                 <CardContent className="p-3">
-                  <div className="flex items-start gap-2">
-                    <User className="w-4 h-4 mt-0.5 text-muted-foreground" />
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm">
-                        {buyer.first_name} {buyer.last_name}
-                      </div>
-                      <div className="flex items-start gap-1 mt-1">
-                        <MapPin className="w-3 h-3 mt-0.5 text-muted-foreground flex-shrink-0" />
-                        <div className="text-xs text-muted-foreground break-words">
-                          {buyer.address}
+                  {editingBuyerId === buyer.id ? (
+                    <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-xs">First Name</Label>
+                          <Input
+                            value={editBuyerData.first_name}
+                            onChange={(e) => setEditBuyerData(prev => ({ ...prev, first_name: e.target.value }))}
+                            className="h-7 text-xs"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Last Name</Label>
+                          <Input
+                            value={editBuyerData.last_name}
+                            onChange={(e) => setEditBuyerData(prev => ({ ...prev, last_name: e.target.value }))}
+                            className="h-7 text-xs"
+                          />
                         </div>
                       </div>
+                      <div>
+                        <Label className="text-xs">Address</Label>
+                        <Input
+                          value={editBuyerData.address}
+                          onChange={(e) => setEditBuyerData(prev => ({ ...prev, address: e.target.value }))}
+                          className="h-7 text-xs"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => handleSaveEdit(buyer.id)}
+                          disabled={!editBuyerData.first_name || !editBuyerData.last_name || !editBuyerData.address}
+                          className="h-6 px-2 text-xs"
+                        >
+                          <Check className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleCancelEdit}
+                          className="h-6 px-2 text-xs"
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="flex items-start gap-2">
+                      <User className="w-4 h-4 mt-0.5 text-muted-foreground" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm">
+                          {buyer.first_name} {buyer.last_name}
+                        </div>
+                        <div className="flex items-start gap-1 mt-1">
+                          <MapPin className="w-3 h-3 mt-0.5 text-muted-foreground flex-shrink-0" />
+                          <div className="text-xs text-muted-foreground break-words">
+                            {buyer.address}
+                          </div>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditBuyer(buyer);
+                        }}
+                        className="h-6 w-6 p-0 hover:bg-muted"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))
