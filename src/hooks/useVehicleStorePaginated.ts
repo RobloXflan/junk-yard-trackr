@@ -219,6 +219,7 @@ export function useVehicleStorePaginated() {
   const updateVehicleStatus = async (vehicleId: string, newStatus: Vehicle['status'], soldData?: {
     buyerFirstName: string;
     buyerLastName: string;
+    buyerAddress?: string;
     salePrice: string;
     saleDate: string;
   }) => {
