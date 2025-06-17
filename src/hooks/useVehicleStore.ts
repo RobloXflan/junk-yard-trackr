@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { vehicleStore, Vehicle } from '@/stores/vehicleStore';
+import { vehicleStore, Vehicle, CarImage } from '@/stores/vehicleStore';
 
 export function useVehicleStore() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -45,6 +45,17 @@ export function useVehicleStore() {
         await vehicleStore.updateVehicleStatus(vehicleId, newStatus, soldData);
       } catch (error) {
         console.error('Error updating vehicle status:', error);
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    updateVehicleCarImages: async (vehicleId: string, carImages: CarImage[]) => {
+      setIsLoading(true);
+      try {
+        await vehicleStore.updateVehicleCarImages(vehicleId, carImages);
+      } catch (error) {
+        console.error('Error updating car images:', error);
         throw error;
       } finally {
         setIsLoading(false);

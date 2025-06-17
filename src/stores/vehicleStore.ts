@@ -79,6 +79,17 @@ class VehicleStore {
     }));
   }
 
+  // Helper function to convert car images for storage
+  private serializeCarImages(carImages: CarImage[]) {
+    return carImages.map(img => ({
+      id: img.id,
+      name: img.name,
+      size: img.size,
+      url: img.url,
+      uploadedAt: img.uploadedAt
+    }));
+  }
+
   // Helper function to convert documents back from storage
   private deserializeDocuments(documentsData: any): UploadedDocument[] {
     if (!documentsData || !Array.isArray(documentsData)) {
@@ -97,6 +108,27 @@ class VehicleStore {
         url: doc.url,
         // Create a placeholder File object since we can't serialize the original
         file: new File([], doc.name, { type: this.getFileTypeFromName(doc.name) })
+      };
+    });
+  }
+
+  // Helper function to convert car images back from storage
+  private deserializeCarImages(carImagesData: any): CarImage[] {
+    if (!carImagesData || !Array.isArray(carImagesData)) {
+      console.log('No car images data or not an array:', carImagesData);
+      return [];
+    }
+    
+    console.log('Deserializing car images:', carImagesData);
+    
+    return carImagesData.map(img => {
+      console.log('Processing car image:', img);
+      return {
+        id: img.id,
+        name: img.name,
+        size: img.size,
+        url: img.url,
+        uploadedAt: img.uploadedAt
       };
     });
   }
@@ -127,7 +159,7 @@ class VehicleStore {
 
       // Create completely new vehicle objects to prevent any reference sharing
       this.vehicles = (data || []).map(vehicle => {
-        console.log('Processing vehicle:', vehicle.id, 'documents:', vehicle.documents);
+        console.log('Processing vehicle:', vehicle.id, 'documents:', vehicle.documents, 'car_images:', vehicle.car_images);
         
         const processedVehicle = {
           id: vehicle.id,
@@ -153,10 +185,11 @@ class VehicleStore {
           status: (vehicle.status as Vehicle['status']) || 'yard',
           createdAt: vehicle.created_at,
           documents: this.deserializeDocuments(vehicle.documents),
-          carImages: vehicle.car_images ? this.deserializeDocuments(vehicle.car_images) : []
+          carImages: this.deserializeCarImages(vehicle.car_images)
         };
         
         console.log('Processed vehicle documents:', processedVehicle.documents);
+        console.log('Processed vehicle car images:', processedVehicle.carImages);
         return processedVehicle;
       });
 
@@ -173,7 +206,7 @@ class VehicleStore {
 
   async addVehicle(vehicleData: Omit<Vehicle, 'id' | 'createdAt' | 'status'>) {
     try {
-      console.log('Adding vehicle with documents:', vehicleData.documents);
+      console.log('Adding vehicle with documents:', vehicleData.documents, 'and car images:', vehicleData.carImages);
       
       const newVehicle = {
         year: vehicleData.year,
@@ -197,10 +230,11 @@ class VehicleStore {
         paperwork_other: vehicleData.paperworkOther,
         status: vehicleData.destination === 'sold' || vehicleData.destination === 'buyer' ? 'sold' : 'yard',
         documents: vehicleData.documents ? this.serializeDocuments(vehicleData.documents) : [],
-        carImages: vehicleData.carImages ? this.serializeDocuments(vehicleData.carImages) : []
+        car_images: vehicleData.carImages ? this.serializeCarImages(vehicleData.carImages) : []
       };
 
       console.log('Serialized documents for storage:', newVehicle.documents);
+      console.log('Serialized car images for storage:', newVehicle.car_images);
 
       const { data, error } = await supabase
         .from('vehicles')
@@ -219,6 +253,33 @@ class VehicleStore {
       await this.loadVehicles();
     } catch (error) {
       console.error('Failed to add vehicle:', error);
+      throw error;
+    }
+  }
+
+  async updateVehicleCarImages(vehicleId: string, carImages: CarImage[]) {
+    try {
+      console.log('Updating car images for vehicle:', vehicleId, carImages);
+      
+      const updateData = {
+        car_images: this.serializeCarImages(carImages),
+        updated_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase
+        .from('vehicles')
+        .update(updateData)
+        .eq('id', vehicleId);
+
+      if (error) {
+        console.error('Error updating car images:', error);
+        throw error;
+      }
+
+      console.log('Car images updated successfully');
+      await this.loadVehicles();
+    } catch (error) {
+      console.error('Failed to update car images:', error);
       throw error;
     }
   }

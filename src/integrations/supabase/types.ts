@@ -206,6 +206,7 @@ export type Database = {
           buyer_name: string | null
           buyer_state: string | null
           buyer_zip: string | null
+          car_images: Json | null
           created_at: string
           destination: string | null
           documents: Json | null
@@ -236,6 +237,7 @@ export type Database = {
           buyer_name?: string | null
           buyer_state?: string | null
           buyer_zip?: string | null
+          car_images?: Json | null
           created_at?: string
           destination?: string | null
           documents?: Json | null
@@ -266,6 +268,7 @@ export type Database = {
           buyer_name?: string | null
           buyer_state?: string | null
           buyer_zip?: string | null
+          car_images?: Json | null
           created_at?: string
           destination?: string | null
           documents?: Json | null

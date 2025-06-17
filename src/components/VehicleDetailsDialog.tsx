@@ -1,435 +1,306 @@
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Vehicle } from "@/stores/vehicleStore";
-import { Save, X, ExternalLink, FileText } from "lucide-react";
-import { BuyerSelector } from "@/components/forms/BuyerSelector";
-import { Buyer } from "@/hooks/useBuyers";
-import { toast } from "sonner";
-import { CarImagesUpload } from "@/components/CarImagesUpload";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { 
+  Car, 
+  Calendar, 
+  DollarSign, 
+  FileText, 
+  MapPin, 
+  User,
+  Phone,
+  Mail,
+  CreditCard,
+  Package
+} from 'lucide-react';
+import { Vehicle, CarImage } from '@/stores/vehicleStore';
+import { useVehicleStore } from '@/hooks/useVehicleStore';
+import { CarImagesUpload } from '@/components/CarImagesUpload';
+import { toast } from 'sonner';
 
 interface VehicleDetailsDialogProps {
   vehicle: Vehicle | null;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (vehicleId: string, newStatus: Vehicle['status'], soldData?: {
-    buyerFirstName: string;
-    buyerLastName: string;
-    salePrice: string;
-    saleDate: string;
-    buyerAddress?: string;
-    buyerCity?: string;
-    buyerState?: string;
-    buyerZip?: string;
-  }) => void;
+  onStatusUpdate?: (vehicleId: string, newStatus: Vehicle['status'], soldData?: any) => void;
+  isViewOnly?: boolean;
 }
 
-export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: VehicleDetailsDialogProps) {
-  const [selectedStatus, setSelectedStatus] = useState<Vehicle['status']>('yard');
-  const [buyerSelectorOpen, setBuyerSelectorOpen] = useState(false);
-  const [pendingSoldData, setPendingSoldData] = useState<{
-    buyerFirstName: string;
-    buyerLastName: string;
-    salePrice: string;
-    saleDate: string;
-    buyerAddress?: string;
-    buyerCity?: string;
-    buyerState?: string;
-    buyerZip?: string;
-  } | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [carImages, setCarImages] = useState(vehicle?.carImages || []);
-
-  // Reset state when vehicle changes or dialog opens/closes
-  useEffect(() => {
-    if (vehicle && isOpen) {
-      setSelectedStatus(vehicle.status);
-      setPendingSoldData(null);
-      setBuyerSelectorOpen(false);
-      setIsSaving(false);
-      setCarImages(vehicle.carImages || []);
-    }
-  }, [vehicle, isOpen]);
+export function VehicleDetailsDialog({ 
+  vehicle, 
+  isOpen, 
+  onClose, 
+  onStatusUpdate,
+  isViewOnly = false 
+}: VehicleDetailsDialogProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const { updateVehicleCarImages } = useVehicleStore();
 
   if (!vehicle) return null;
 
-  const statusOptions = [
-    { value: 'yard', label: 'In Yard', color: 'bg-blue-100 text-blue-800 hover:bg-blue-200' },
-    { value: 'sold', label: 'Sold', color: 'bg-green-100 text-green-800 hover:bg-green-200' },
-    { value: 'pick-your-part', label: 'Pick Your Part', color: 'bg-orange-100 text-orange-800 hover:bg-orange-200' },
-    { value: 'sa-recycling', label: 'SA Recycling', color: 'bg-purple-100 text-purple-800 hover:bg-purple-200' }
-  ] as const;
-
-  const handleStatusChange = (newStatus: Vehicle['status']) => {
-    if (newStatus === 'sold') {
-      setBuyerSelectorOpen(true);
-      // Don't update selectedStatus yet, wait for buyer selection
-    } else {
-      setSelectedStatus(newStatus);
-      setPendingSoldData(null); // Clear sold data if not sold
-    }
-  };
-
-  const handleBuyerSelect = async (buyer: Buyer, salePrice: string, saleDate: string) => {
-    console.log('Buyer selected in dialog:', buyer);
-    
-    const soldData = {
-      buyerFirstName: buyer.first_name,
-      buyerLastName: buyer.last_name,
-      salePrice,
-      saleDate,
-      buyerAddress: buyer.address,
-      buyerCity: buyer.city || undefined,
-      buyerState: buyer.state || undefined,
-      buyerZip: buyer.zip_code || undefined
-    };
-
-    try {
-      setIsSaving(true);
-      setBuyerSelectorOpen(false);
-      
-      // Immediately update the local state to show the sold status
-      setSelectedStatus('sold');
-      setPendingSoldData(soldData);
-      
-      console.log('Calling onSave with sold data:', soldData);
-      
-      // Call the parent's save function
-      await onSave(vehicle.id, 'sold', soldData);
-      
-      toast.success("Vehicle marked as sold successfully!");
-      
-    } catch (error) {
-      console.error('Error saving vehicle as sold:', error);
-      // Revert the optimistic update on error
-      setSelectedStatus(vehicle.status);
-      setPendingSoldData(null);
-      toast.error("Failed to mark vehicle as sold. Please try again.");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleBuyerSelectorClose = (open: boolean) => {
-    if (!open && !pendingSoldData) {
-      // Only reset if we don't have pending sold data and we're closing
-      setSelectedStatus(vehicle.status);
-    }
-    setBuyerSelectorOpen(open);
-  };
-
-  const handleSave = async () => {
-    if (isSaving) return; // Prevent double-clicking
-    
-    console.log('Saving vehicle with data:', { selectedStatus, pendingSoldData });
-    
-    try {
-      setIsSaving(true);
-      
-      if (selectedStatus === 'sold' && pendingSoldData) {
-        await onSave(vehicle.id, selectedStatus, pendingSoldData);
-      } else {
-        await onSave(vehicle.id, selectedStatus);
-      }
-      
-      toast.success("Vehicle status updated successfully!");
-      onClose();
-    } catch (error) {
-      console.error('Error saving vehicle:', error);
-      toast.error("Failed to update vehicle status. Please try again.");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleClose = () => {
-    if (isSaving) return; // Don't allow closing while saving
-    
-    // Reset state when closing
-    setSelectedStatus(vehicle.status);
-    setPendingSoldData(null);
-    setBuyerSelectorOpen(false);
-    setIsSaving(false);
-    onClose();
-  };
-
-  const getStatusLabel = (status: Vehicle['status']) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
-      case 'yard': return 'In Yard';
-      case 'sold': return 'Sold';
-      case 'pick-your-part': return 'Pick Your Part';
-      case 'sa-recycling': return 'SA Recycling';
-      default: return status;
+      case 'yard': return 'bg-blue-500';
+      case 'sold': return 'bg-green-500';
+      case 'pick-your-part': return 'bg-orange-500';
+      case 'sa-recycling': return 'bg-purple-500';
+      default: return 'bg-gray-500';
     }
   };
 
-  // Get the current sale price - use pending data if available, otherwise vehicle data
-  const currentSalePrice = pendingSoldData?.salePrice || vehicle.salePrice;
-
-  // Helper function to determine if a document is a PDF
-  const isPdfDocument = (document: any) => {
-    return document.name?.toLowerCase().endsWith('.pdf') || 
-           document.url?.toLowerCase().includes('.pdf');
-  };
-
-  // Helper function to determine if a document is an image
-  const isImageDocument = (document: any) => {
-    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
-    return imageExtensions.some(ext => 
-      document.name?.toLowerCase().endsWith(ext) || 
-      document.url?.toLowerCase().includes(ext)
-    );
-  };
-
-  const openDocumentInNewTab = (document: any) => {
-    if (document.url) {
-      window.open(document.url, '_blank');
-    } else {
-      console.error('No URL available for document:', document);
+  const handleCarImagesUpdate = async (images: CarImage[]) => {
+    try {
+      await updateVehicleCarImages(vehicle.id, images);
+      toast.success('Car images updated successfully');
+    } catch (error) {
+      console.error('Error updating car images:', error);
+      toast.error('Failed to update car images');
     }
   };
-
-  console.log('Vehicle documents in dialog:', vehicle.documents);
 
   return (
-    <>
-      <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center gap-2">
+              <Car className="w-5 h-5" />
               {vehicle.year} {vehicle.make} {vehicle.model}
             </DialogTitle>
-          </DialogHeader>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* Vehicle Details - Takes 1 column */}
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-lg font-semibold mb-3">Vehicle Information</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Vehicle ID:</span>
-                    <span className="font-mono">{vehicle.vehicleId}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">License Plate:</span>
-                    <span>{vehicle.licensePlate || '-'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Driver:</span>
-                    <span>{vehicle.sellerName || '-'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Purchase Date:</span>
-                    <span>{vehicle.purchaseDate || '-'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Purchase Price:</span>
-                    <span>{vehicle.purchasePrice ? `$${parseFloat(vehicle.purchasePrice).toLocaleString()}` : '-'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Sale Price:</span>
-                    <span>{currentSalePrice ? `$${parseFloat(currentSalePrice).toLocaleString()}` : '-'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Current Status:</span>
-                    <Badge variant={
-                      selectedStatus === 'sold' ? 'default' :
-                      selectedStatus === 'yard' ? 'secondary' :
-                      'outline'
-                    }>
-                      {getStatusLabel(selectedStatus)}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-
-              {/* Status Editor with Bubble Format */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3">Update Status</h3>
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-3">Select new status:</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {statusOptions.map((option) => (
-                        <button
-                          key={option.value}
-                          onClick={() => handleStatusChange(option.value)}
-                          disabled={isSaving}
-                          className={`
-                            px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 border-2 disabled:opacity-50
-                            ${selectedStatus === option.value 
-                              ? 'border-primary shadow-md scale-105' 
-                              : 'border-transparent hover:scale-102'
-                            }
-                            ${option.color}
-                          `}
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Show sold details if status is sold and we have pending data */}
-                  {selectedStatus === 'sold' && pendingSoldData && (
-                    <div className="p-4 bg-card border border-border rounded-lg">
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium">Sale Details:</p>
-                        <p className="text-sm">Buyer: {pendingSoldData.buyerFirstName} {pendingSoldData.buyerLastName}</p>
-                        <p className="text-sm">Sale Price: ${pendingSoldData.salePrice}</p>
-                        <p className="text-sm">Date: {pendingSoldData.saleDate}</p>
-                        {pendingSoldData.buyerAddress && (
-                          <p className="text-sm">Address: {pendingSoldData.buyerAddress}
-                            {pendingSoldData.buyerCity && `, ${pendingSoldData.buyerCity}`}
-                            {pendingSoldData.buyerState && `, ${pendingSoldData.buyerState}`}
-                            {pendingSoldData.buyerZip && ` ${pendingSoldData.buyerZip}`}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div className="flex gap-2">
-                    <Button 
-                      onClick={handleSave} 
-                      className="flex-1"
-                      disabled={isSaving || (selectedStatus === vehicle.status && !pendingSoldData)}
-                    >
-                      <Save className="w-4 h-4 mr-2" />
-                      {isSaving ? 'Saving...' : 'Save Status'}
-                    </Button>
-                    <Button variant="outline" onClick={handleClose} disabled={isSaving}>
-                      <X className="w-4 h-4 mr-2" />
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Notes */}
-              {vehicle.notes && (
-                <div>
-                  <h3 className="text-lg font-semibold mb-2">Notes</h3>
-                  <p className="text-sm text-muted-foreground bg-muted p-3 rounded">
-                    {vehicle.notes}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Car Images - Takes 1 column */}
-            <div className="space-y-4">
-              <CarImagesUpload
-                vehicleId={vehicle.id}
-                currentImages={carImages}
-                onImagesUpdate={setCarImages}
-                disabled={isSaving}
-              />
-            </div>
-
-            {/* Documents - Takes 2 columns */}
-            <div className="lg:col-span-2">
-              <h3 className="text-lg font-semibold mb-3">Vehicle Documents</h3>
-              {vehicle.documents && vehicle.documents.length > 0 ? (
-                <div className="space-y-4">
-                  {vehicle.documents.map((doc) => {
-                    console.log('Rendering document:', doc.id, 'URL:', doc.url, 'Name:', doc.name);
-                    
-                    if (!doc.url) {
-                      console.error('Document missing URL:', doc);
-                      return (
-                        <div key={doc.id} className="border rounded-lg p-4 bg-red-50">
-                          <div className="flex items-center gap-2 text-red-600">
-                            <FileText className="w-4 h-4" />
-                            <span className="text-sm">Document unavailable: {doc.name}</span>
-                          </div>
-                        </div>
-                      );
-                    }
-                    
-                    if (isPdfDocument(doc)) {
-                      return (
-                        <div key={doc.id} className="border rounded-lg overflow-hidden">
-                          <div className="p-2 bg-muted flex justify-between items-center">
-                            <p className="text-sm text-muted-foreground">{doc.name}</p>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openDocumentInNewTab(doc)}
-                            >
-                              <ExternalLink className="w-4 h-4 mr-2" />
-                              Open PDF
-                            </Button>
-                          </div>
-                          <div className="relative w-full h-96">
-                            <iframe
-                              src={`${doc.url}#toolbar=1&navpanes=1&scrollbar=1`}
-                              className="w-full h-full border-0"
-                              title={`PDF: ${doc.name}`}
-                              onLoad={() => console.log('PDF loaded successfully:', doc.url)}
-                              onError={(e) => {
-                                console.error('PDF failed to load:', doc.url, e);
-                              }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    } else if (isImageDocument(doc)) {
-                      return (
-                        <div key={doc.id} className="border rounded-lg overflow-hidden">
-                          <img 
-                            src={doc.url} 
-                            alt={`Vehicle document: ${doc.name}`}
-                            className="w-full h-auto max-h-96 object-contain bg-muted"
-                            onLoad={() => console.log('Image loaded successfully:', doc.url)}
-                            onError={(e) => {
-                              console.error('Image failed to load:', doc.url, e);
-                              console.log('Image error event:', e.currentTarget);
-                            }}
-                          />
-                          <div className="p-2 bg-muted">
-                            <p className="text-sm text-muted-foreground">{doc.name}</p>
-                          </div>
-                        </div>
-                      );
-                    } else {
-                      // Unknown document type - provide download link
-                      return (
-                        <div key={doc.id} className="border rounded-lg p-4">
-                          <div className="flex justify-between items-center">
-                            <p className="text-sm text-muted-foreground">{doc.name}</p>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openDocumentInNewTab(doc)}
-                            >
-                              <ExternalLink className="w-4 h-4 mr-2" />
-                              Open Document
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    }
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>No documents available for this vehicle</p>
-                </div>
+            <div className="flex items-center gap-2">
+              <Badge className={`${getStatusColor(vehicle.status)} text-white`}>
+                {vehicle.status.toUpperCase()}
+              </Badge>
+              {!isViewOnly && (
+                <Button 
+                  variant={isEditing ? "secondary" : "outline"}
+                  onClick={() => setIsEditing(!isEditing)}
+                >
+                  {isEditing ? 'View Mode' : 'Edit Mode'}
+                </Button>
               )}
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </DialogHeader>
 
-      <BuyerSelector
-        open={buyerSelectorOpen}
-        onOpenChange={handleBuyerSelectorClose}
-        onSelectBuyer={handleBuyerSelect}
-      />
-    </>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Vehicle Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Car className="w-4 h-4" />
+                Vehicle Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Vehicle ID</p>
+                  <p className="font-medium">{vehicle.vehicleId}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">License Plate</p>
+                  <p className="font-medium">{vehicle.licensePlate || 'N/A'}</p>
+                </div>
+              </div>
+              <Separator />
+              <div>
+                <p className="text-sm text-muted-foreground">Make/Model/Year</p>
+                <p className="font-medium">{vehicle.year} {vehicle.make} {vehicle.model}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Purchase Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="w-4 h-4" />
+                Purchase Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Seller</p>
+                  <p className="font-medium">{vehicle.sellerName || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Purchase Price</p>
+                  <p className="font-medium">${vehicle.purchasePrice || 'N/A'}</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Purchase Date</p>
+                <p className="font-medium">{vehicle.purchaseDate || 'N/A'}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Documentation Status */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Documentation
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center gap-2">
+                  <div className={`w-3 h-3 rounded-full ${vehicle.titlePresent ? 'bg-green-500' : 'bg-red-500'}`} />
+                  <span className="text-sm">Title Present</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className={`w-3 h-3 rounded-full ${vehicle.billOfSale ? 'bg-green-500' : 'bg-red-500'}`} />
+                  <span className="text-sm">Bill of Sale</span>
+                </div>
+              </div>
+              {vehicle.paperwork && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Paperwork Status</p>
+                  <p className="font-medium">{vehicle.paperwork}</p>
+                </div>
+              )}
+              {vehicle.paperworkOther && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Other Paperwork</p>
+                  <p className="font-medium">{vehicle.paperworkOther}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Sale Information (if sold) */}
+          {vehicle.status === 'sold' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  Sale Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Buyer</p>
+                    <p className="font-medium">{vehicle.buyerName || `${vehicle.buyerFirstName} ${vehicle.buyerLastName}` || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Sale Price</p>
+                    <p className="font-medium">${vehicle.salePrice || 'N/A'}</p>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Sale Date</p>
+                  <p className="font-medium">{vehicle.saleDate || 'N/A'}</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Notes */}
+          {vehicle.notes && (
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Notes
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm whitespace-pre-wrap">{vehicle.notes}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Documents */}
+          {vehicle.documents && vehicle.documents.length > 0 && (
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="w-4 h-4" />
+                  Documents
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {vehicle.documents.map((doc) => (
+                    <div key={doc.id} className="border rounded-lg p-3">
+                      <p className="font-medium text-sm truncate">{doc.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {(doc.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full mt-2"
+                        onClick={() => window.open(doc.url, '_blank')}
+                      >
+                        View
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Car Images - Only show in edit mode for non-view-only users */}
+          {isEditing && !isViewOnly && (
+            <div className="lg:col-span-2">
+              <CarImagesUpload
+                vehicleId={vehicle.id}
+                currentImages={vehicle.carImages || []}
+                onImagesUpdate={handleCarImagesUpdate}
+              />
+            </div>
+          )}
+
+          {/* Car Images Display - Always show if images exist */}
+          {vehicle.carImages && vehicle.carImages.length > 0 && !isEditing && (
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Car className="w-4 h-4" />
+                  Car Images
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {vehicle.carImages.map((image) => (
+                    <div key={image.id} className="relative group">
+                      <div className="aspect-square overflow-hidden rounded-lg border bg-muted">
+                        <img
+                          src={image.url}
+                          alt={image.name}
+                          className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                          onClick={() => window.open(image.url, '_blank')}
+                          onError={(e) => {
+                            console.error('Error loading image:', image.url);
+                            e.currentTarget.src = '/placeholder.svg';
+                          }}
+                        />
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground truncate">
+                        {image.name}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
