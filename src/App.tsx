@@ -10,16 +10,33 @@ import { Intake } from "@/pages/Intake";
 import { InventoryOptimized } from "@/pages/InventoryOptimized";
 import { PendingReleases } from "@/pages/PendingReleases";
 import { PublicInventory } from "@/pages/PublicInventory";
+import { SiteAuth } from "@/components/SiteAuth";
+import { ViewOnlyInventory } from "@/components/ViewOnlyInventory";
 import { Menu } from "lucide-react";
 import { useState } from "react";
 
 const queryClient = new QueryClient();
 
+type UserType = 'admin' | 'viewer' | null;
+
 const App = () => {
   const [currentPage, setCurrentPage] = useState("dashboard");
+  const [userType, setUserType] = useState<UserType>(null);
+  const [username, setUsername] = useState("");
 
   // Check if we're on the public inventory route
   const isPublicInventory = window.location.pathname === "/public-inventory";
+
+  const handleAuthentication = (type: UserType, user?: string) => {
+    setUserType(type);
+    if (user) setUsername(user);
+  };
+
+  const handleLogout = () => {
+    setUserType(null);
+    setUsername("");
+    setCurrentPage("dashboard");
+  };
 
   const renderPage = () => {
     switch (currentPage) {
@@ -51,6 +68,35 @@ const App = () => {
     );
   }
 
+  // Show login if not authenticated
+  if (!userType) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <SiteAuth onAuthenticated={(type) => {
+            handleAuthentication(type, type === 'admin' ? 'America Main' : 'ChocoXflan');
+          }} />
+        </TooltipProvider>
+      </QueryClientProvider>
+    );
+  }
+
+  // Show view-only inventory for viewer users
+  if (userType === 'viewer') {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <ViewOnlyInventory onLogout={handleLogout} username={username} />
+        </TooltipProvider>
+      </QueryClientProvider>
+    );
+  }
+
+  // Show full admin interface for admin users
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -107,6 +153,17 @@ const App = () => {
                       Pending Releases
                     </button>
                   </nav>
+                  <div className="ml-auto flex items-center gap-4">
+                    <span className="text-sm text-muted-foreground">
+                      Welcome, {username}
+                    </span>
+                    <button
+                      onClick={handleLogout}
+                      className="text-sm text-muted-foreground hover:text-foreground"
+                    >
+                      Logout
+                    </button>
+                  </div>
                 </div>
               </header>
               <div className="flex-1 p-4 lg:p-6">
