@@ -5,19 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { CheckCircle, XCircle, FileText, Eye, X } from "lucide-react";
-
-interface Vehicle {
-  id: string;
-  year: string;
-  make: string;
-  model: string;
-  vehicle_id: string;
-  status: string;
-  paperwork: string;
-  title_present: boolean;
-  bill_of_sale: boolean;
-  documents: any[];
-}
+import { Vehicle } from "@/stores/vehicleStore";
 
 interface ViewOnlyVehicleDialogProps {
   vehicle: Vehicle | null;
@@ -91,14 +79,14 @@ export const ViewOnlyVehicleDialog = ({ vehicle, open, onOpenChange }: ViewOnlyV
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-gray-600">Vehicle ID</p>
-                    <p className="font-semibold">{vehicle.vehicle_id}</p>
+                    <p className="font-semibold">{vehicle.vehicleId}</p>
                   </div>
                   
                   <div className="flex flex-wrap gap-2">
                     <Badge className={getStatusColor(vehicle.status)}>
                       {vehicle.status || "Unknown"}
                     </Badge>
-                    <Badge className={getPaperworkColor(vehicle.paperwork)}>
+                    <Badge className={getPaperworkColor(vehicle.paperwork || '')}>
                       {vehicle.paperwork || "Unknown"} Paperwork
                     </Badge>
                   </div>
@@ -106,7 +94,7 @@ export const ViewOnlyVehicleDialog = ({ vehicle, open, onOpenChange }: ViewOnlyV
 
                 <div className="flex items-center justify-between mt-4">
                   <div className="flex items-center gap-2">
-                    {vehicle.title_present ? (
+                    {vehicle.titlePresent ? (
                       <CheckCircle className="w-4 h-4 text-green-600" />
                     ) : (
                       <XCircle className="w-4 h-4 text-red-600" />
@@ -114,7 +102,7 @@ export const ViewOnlyVehicleDialog = ({ vehicle, open, onOpenChange }: ViewOnlyV
                     <span className="text-sm">Title Present</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    {vehicle.bill_of_sale ? (
+                    {vehicle.billOfSale ? (
                       <CheckCircle className="w-4 h-4 text-green-600" />
                     ) : (
                       <XCircle className="w-4 h-4 text-red-600" />
