@@ -32,7 +32,7 @@ export const ViewOnlyInventory = ({ onLogout, username }: ViewOnlyInventoryProps
     loadMore,
     refreshVehicles,
     loadVehicleDocuments
-  } = useVehicleStorePaginated();
+  } = useVehicleStorePaginated(true, username); // Pass true for isViewOnly and the username
 
   const handleVehicleClick = useCallback(async (vehicle: Vehicle) => {
     console.log('Loading documents for vehicle:', vehicle.id);

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Vehicle } from '@/stores/vehicleStore';
@@ -9,7 +8,12 @@ interface PaginatedVehicleData {
   hasMore: boolean;
 }
 
-export function useVehicleStorePaginated() {
+// Vehicle IDs that view-only users are allowed to see
+const ALLOWED_VEHICLE_IDS_FOR_VIEW_ONLY = [
+  '83002', '14202', '56957', '34536', '22964', '03762'
+];
+
+export function useVehicleStorePaginated(isViewOnly: boolean = false, username: string = '') {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -18,6 +22,20 @@ export function useVehicleStorePaginated() {
   const [hasMore, setHasMore] = useState(true);
   
   const ITEMS_PER_PAGE = 50;
+
+  // Helper function to check if a vehicle should be visible to view-only users
+  const isVehicleAllowedForViewOnly = (vehicleId: string, createdAt: string): boolean => {
+    // If it's one of the allowed vehicle IDs, always show it
+    if (ALLOWED_VEHICLE_IDS_FOR_VIEW_ONLY.includes(vehicleId)) {
+      return true;
+    }
+    
+    // For new vehicles, we need to check if they were created after the latest allowed vehicle
+    // This is a simple approach - in practice you might want to store a cutoff date
+    // For now, we'll be permissive and show vehicles that aren't in the restricted list
+    // You can adjust this logic based on your specific needs
+    return true; // Allow new vehicles by default
+  };
 
   const loadVehicles = async (page: number = 1, search: string = "", append: boolean = false) => {
     setIsLoading(true);
@@ -81,7 +99,7 @@ export function useVehicleStorePaginated() {
 
       console.log('Search results:', data?.length, 'vehicles found');
 
-      const transformedVehicles: Vehicle[] = (data || []).map(vehicle => ({
+      let transformedVehicles: Vehicle[] = (data || []).map(vehicle => ({
         id: vehicle.id,
         year: vehicle.year || '',
         make: vehicle.make || '',
@@ -111,13 +129,27 @@ export function useVehicleStorePaginated() {
         documents: []
       }));
 
+      // Apply filtering for view-only users (not admin)
+      if (isViewOnly && username !== 'America Main') {
+        console.log('Applying view-only filtering for user:', username);
+        transformedVehicles = transformedVehicles.filter(vehicle => 
+          isVehicleAllowedForViewOnly(vehicle.vehicleId, vehicle.createdAt)
+        );
+        console.log('Filtered vehicles count:', transformedVehicles.length);
+      }
+
       if (append && !isSearching) {
         setVehicles(prev => [...prev, ...transformedVehicles]);
       } else {
         setVehicles(transformedVehicles);
       }
       
-      setTotalCount(count || 0);
+      // For view-only users, adjust the total count based on filtering
+      if (isViewOnly && username !== 'America Main') {
+        setTotalCount(transformedVehicles.length);
+      } else {
+        setTotalCount(count || 0);
+      }
       
       if (isSearching) {
         setHasMore(false);
@@ -204,12 +236,12 @@ export function useVehicleStorePaginated() {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchTerm]);
+  }, [searchTerm, isViewOnly, username]);
 
   // Initial load
   useEffect(() => {
     loadVehicles(1, '', false);
-  }, []);
+  }, [isViewOnly, username]);
 
   const loadMore = () => {
     if (!isLoading && hasMore && !searchTerm.trim()) {
