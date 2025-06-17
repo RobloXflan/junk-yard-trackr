@@ -4,11 +4,11 @@ import { Car, DollarSign, FileText, TrendingUp } from "lucide-react";
 import { useVehicleStore } from "@/hooks/useVehicleStore";
 
 export function DashboardStats() {
-  const { getTotalVehicles, getTotalRevenue, getPendingDMV, getAverageProfit, getVehiclesAddedToday } = useVehicleStore();
+  const { getTotalVehicles, getTotalRevenue, getPendingDocuments, getAverageProfit, getVehiclesAddedToday } = useVehicleStore();
   
   const totalVehicles = getTotalVehicles();
   const totalRevenue = getTotalRevenue();
-  const pendingDMV = getPendingDMV();
+  const pendingDocuments = getPendingDocuments();
   const avgProfit = getAverageProfit();
   const vehiclesAddedToday = getVehiclesAddedToday();
 
@@ -28,9 +28,9 @@ export function DashboardStats() {
       color: "text-success",
     },
     {
-      title: "Pending DMV",
-      value: pendingDMV.toString(),
-      change: pendingDMV === 0 ? "No pending documents" : `${pendingDMV} vehicle${pendingDMV !== 1 ? 's' : ''} need paperwork`,
+      title: "Pending Documents",
+      value: pendingDocuments.toString(),
+      change: pendingDocuments === 0 ? "No pending documents" : `${pendingDocuments} vehicle${pendingDocuments !== 1 ? 's' : ''} need paperwork`,
       icon: FileText,
       color: "text-warning",
     },
