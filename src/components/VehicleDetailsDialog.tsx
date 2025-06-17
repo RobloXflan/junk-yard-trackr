@@ -1,5 +1,3 @@
-
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,9 +30,10 @@ interface VehicleDetailsDialogProps {
   vehicle: Vehicle | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onVehicleUpdated?: () => void; // Add callback for when vehicle is updated
 }
 
-export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDetailsDialogProps) {
+export function VehicleDetailsDialog({ vehicle, open, onOpenChange, onVehicleUpdated }: VehicleDetailsDialogProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<Partial<Vehicle>>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -128,14 +127,16 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
         toast.success(`Vehicle status updated to ${getStatusDisplay(newStatus)}`);
         console.log('Status updated successfully');
         
-        // Refresh the vehicle data and close dialog
+        // Refresh the vehicle data
         await refreshVehicles();
-        onOpenChange(false);
         
-        // Small delay to ensure the refresh completes
-        setTimeout(() => {
-          console.log('Dialog closed after status update');
-        }, 100);
+        // Call the parent callback to refresh the inventory
+        if (onVehicleUpdated) {
+          onVehicleUpdated();
+        }
+        
+        // Close dialog
+        onOpenChange(false);
         
       } catch (error) {
         console.error('Error updating vehicle status:', error);
@@ -170,14 +171,16 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
       toast.success("Vehicle marked as sold");
       console.log('Vehicle marked as sold successfully');
       
-      // Refresh the vehicle data and close dialog
+      // Refresh the vehicle data
       await refreshVehicles();
-      onOpenChange(false);
       
-      // Small delay to ensure the refresh completes
-      setTimeout(() => {
-        console.log('Dialog closed after sold update');
-      }, 100);
+      // Call the parent callback to refresh the inventory
+      if (onVehicleUpdated) {
+        onVehicleUpdated();
+      }
+      
+      // Close dialog
+      onOpenChange(false);
       
     } catch (error) {
       console.error('Error marking vehicle as sold:', error);
@@ -644,4 +647,3 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
     </>
   );
 }
-
