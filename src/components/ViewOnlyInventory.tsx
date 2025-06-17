@@ -203,9 +203,16 @@ export const ViewOnlyInventory = ({ onLogout, username }: ViewOnlyInventoryProps
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <div>
-                      <p className="text-sm text-gray-600">Vehicle ID</p>
-                      <p className="font-semibold">{vehicle.vehicleId}</p>
+                    <div className="grid grid-cols-1 gap-2">
+                      <div>
+                        <p className="text-sm text-gray-600">Vehicle ID</p>
+                        <p className="font-semibold">{vehicle.vehicleId}</p>
+                      </div>
+                      
+                      <div>
+                        <p className="text-sm text-gray-600">License Plate</p>
+                        <p className="font-semibold">{vehicle.licensePlate || 'Not specified'}</p>
+                      </div>
                     </div>
                     
                     <div className="flex items-center justify-between">
