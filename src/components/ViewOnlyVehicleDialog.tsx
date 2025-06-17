@@ -164,7 +164,7 @@ export function ViewOnlyVehicleDialog({ vehicle, open, onOpenChange }: ViewOnlyV
             <CardContent className="space-y-3">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Seller</p>
+                  <p className="text-sm text-muted-foreground">Driver</p>
                   <p className="font-medium">{vehicle.sellerName || 'N/A'}</p>
                 </div>
                 <div>
