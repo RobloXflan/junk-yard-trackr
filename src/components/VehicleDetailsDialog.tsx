@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Vehicle } from "@/stores/vehicleStore";
 import { Save, X, ExternalLink, FileText } from "lucide-react";
-import { SoldDialog } from "@/components/forms/SoldDialog";
+import { BuyerSelector } from "@/components/forms/BuyerSelector";
+import { Buyer } from "@/hooks/useBuyers";
 
 interface VehicleDetailsDialogProps {
   vehicle: Vehicle | null;
@@ -21,7 +22,7 @@ interface VehicleDetailsDialogProps {
 
 export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: VehicleDetailsDialogProps) {
   const [selectedStatus, setSelectedStatus] = useState<Vehicle['status']>('yard');
-  const [soldDialogOpen, setSoldDialogOpen] = useState(false);
+  const [buyerSelectorOpen, setBuyerSelectorOpen] = useState(false);
   const [pendingSoldData, setPendingSoldData] = useState<{
     buyerFirstName: string;
     buyerLastName: string;
@@ -34,7 +35,7 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
     if (vehicle && isOpen) {
       setSelectedStatus(vehicle.status);
       setPendingSoldData(null);
-      setSoldDialogOpen(false);
+      setBuyerSelectorOpen(false);
     }
   }, [vehicle, isOpen]);
 
@@ -49,28 +50,33 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
 
   const handleStatusChange = (newStatus: Vehicle['status']) => {
     if (newStatus === 'sold') {
-      setSoldDialogOpen(true);
-      // Don't update selectedStatus yet, wait for sold dialog completion
+      setBuyerSelectorOpen(true);
+      // Don't update selectedStatus yet, wait for buyer selection
     } else {
       setSelectedStatus(newStatus);
       setPendingSoldData(null); // Clear sold data if not sold
     }
   };
 
-  const handleSoldConfirm = (data: { buyerFirstName: string; buyerLastName: string; salePrice: string; saleDate: string }) => {
-    setPendingSoldData(data);
-    setSelectedStatus('sold'); // Set the status to sold when confirmed
-    setSoldDialogOpen(false);
+  const handleBuyerSelect = (buyer: Buyer, salePrice: string, saleDate: string) => {
+    setPendingSoldData({
+      buyerFirstName: buyer.first_name,
+      buyerLastName: buyer.last_name,
+      salePrice,
+      saleDate
+    });
+    setSelectedStatus('sold');
+    setBuyerSelectorOpen(false);
   };
 
-  const handleSoldDialogClose = (open: boolean) => {
+  const handleBuyerSelectorClose = (open: boolean) => {
     if (!open) {
       // Only reset if we don't have pending sold data (meaning it was cancelled, not confirmed)
       if (!pendingSoldData) {
         setSelectedStatus(vehicle.status); // Reset to original status only if cancelled
       }
     }
-    setSoldDialogOpen(open);
+    setBuyerSelectorOpen(open);
   };
 
   const handleSave = () => {
@@ -86,7 +92,7 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
     // Reset state when closing
     setSelectedStatus(vehicle.status);
     setPendingSoldData(null);
-    setSoldDialogOpen(false);
+    setBuyerSelectorOpen(false);
     onClose();
   };
 
@@ -343,16 +349,10 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
         </DialogContent>
       </Dialog>
 
-      <SoldDialog
-        open={soldDialogOpen}
-        onOpenChange={handleSoldDialogClose}
-        onConfirm={handleSoldConfirm}
-        initialData={{
-          buyerFirstName: vehicle.buyerFirstName || "",
-          buyerLastName: vehicle.buyerLastName || "",
-          salePrice: vehicle.salePrice || "",
-          saleDate: vehicle.saleDate || new Date().toISOString().split('T')[0]
-        }}
+      <BuyerSelector
+        open={buyerSelectorOpen}
+        onOpenChange={handleBuyerSelectorClose}
+        onSelectBuyer={handleBuyerSelect}
       />
     </>
   );
