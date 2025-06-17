@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface UploadedDocument {
@@ -70,12 +71,14 @@ class VehicleStore {
 
   // Helper function to convert documents for storage
   private serializeDocuments(documents: UploadedDocument[]) {
+    console.log('Serializing documents for storage:', documents);
     return documents.map(doc => ({
       id: doc.id,
       name: doc.name,
       size: doc.size,
       url: doc.url,
-      // Don't store the File object, just the essential data
+      // Store file type info to recreate File object later
+      type: doc.file?.type || this.getFileTypeFromName(doc.name)
     }));
   }
 
@@ -97,18 +100,25 @@ class VehicleStore {
       return [];
     }
     
-    console.log('Deserializing documents:', documentsData);
+    console.log('Deserializing documents from database:', documentsData);
     
     return documentsData.map(doc => {
-      console.log('Processing document:', doc);
-      return {
+      console.log('Processing document from DB:', doc);
+      
+      // Create a proper File object with the stored type
+      const fileType = doc.type || this.getFileTypeFromName(doc.name);
+      const file = new File([], doc.name, { type: fileType });
+      
+      const deserializedDoc = {
         id: doc.id,
         name: doc.name,
         size: doc.size,
         url: doc.url,
-        // Create a placeholder File object since we can't serialize the original
-        file: new File([], doc.name, { type: this.getFileTypeFromName(doc.name) })
+        file: file
       };
+      
+      console.log('Deserialized document:', deserializedDoc);
+      return deserializedDoc;
     });
   }
 
@@ -159,7 +169,9 @@ class VehicleStore {
 
       // Create completely new vehicle objects to prevent any reference sharing
       this.vehicles = (data || []).map(vehicle => {
-        console.log('Processing vehicle:', vehicle.id, 'documents:', vehicle.documents, 'car_images:', vehicle.car_images);
+        console.log('Processing vehicle from DB:', vehicle.id);
+        console.log('Raw documents from DB:', vehicle.documents);
+        console.log('Raw car_images from DB:', vehicle.car_images);
         
         const processedVehicle = {
           id: vehicle.id,
@@ -188,8 +200,8 @@ class VehicleStore {
           carImages: this.deserializeCarImages(vehicle.car_images)
         };
         
-        console.log('Processed vehicle documents:', processedVehicle.documents);
-        console.log('Processed vehicle car images:', processedVehicle.carImages);
+        console.log('Final processed vehicle documents:', processedVehicle.documents);
+        console.log('Final processed vehicle car images:', processedVehicle.carImages);
         return processedVehicle;
       });
 
@@ -206,7 +218,15 @@ class VehicleStore {
 
   async addVehicle(vehicleData: Omit<Vehicle, 'id' | 'createdAt' | 'status'>) {
     try {
-      console.log('Adding vehicle with documents:', vehicleData.documents, 'and car images:', vehicleData.carImages);
+      console.log('Adding vehicle with documents:', vehicleData.documents);
+      console.log('Adding vehicle with car images:', vehicleData.carImages);
+      
+      // Serialize documents and car images properly
+      const serializedDocuments = vehicleData.documents ? this.serializeDocuments(vehicleData.documents) : [];
+      const serializedCarImages = vehicleData.carImages ? this.serializeCarImages(vehicleData.carImages) : [];
+      
+      console.log('Serialized documents for DB:', serializedDocuments);
+      console.log('Serialized car images for DB:', serializedCarImages);
       
       const newVehicle = {
         year: vehicleData.year,
@@ -229,12 +249,11 @@ class VehicleStore {
         paperwork: vehicleData.paperwork,
         paperwork_other: vehicleData.paperworkOther,
         status: vehicleData.destination === 'sold' || vehicleData.destination === 'buyer' ? 'sold' : 'yard',
-        documents: vehicleData.documents ? this.serializeDocuments(vehicleData.documents) : [],
-        car_images: vehicleData.carImages ? this.serializeCarImages(vehicleData.carImages) : []
+        documents: serializedDocuments,
+        car_images: serializedCarImages
       };
 
-      console.log('Serialized documents for storage:', newVehicle.documents);
-      console.log('Serialized car images for storage:', newVehicle.car_images);
+      console.log('Final data being sent to Supabase:', newVehicle);
 
       const { data, error } = await supabase
         .from('vehicles')
@@ -243,11 +262,11 @@ class VehicleStore {
         .single();
 
       if (error) {
-        console.error('Error adding vehicle:', error);
+        console.error('Error adding vehicle to database:', error);
         throw error;
       }
 
-      console.log('Vehicle added to database:', data);
+      console.log('Vehicle successfully added to database:', data);
 
       // Reload all vehicles from database to ensure consistency
       await this.loadVehicles();
