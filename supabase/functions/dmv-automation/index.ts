@@ -80,145 +80,202 @@ async function uploadScreenshot(supabase: any, vehicleId: string, step: string, 
   }
 }
 
-// Helper function to take screenshot using Browserless
-async function takeScreenshot(browserlessToken: string, url: string): Promise<string | null> {
-  try {
-    const response = await fetch(`https://chrome.browserless.io/screenshot?token=${browserlessToken}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        url: url,
-        options: {
-          fullPage: true,
-          type: 'png'
-        }
-      })
-    });
-
-    if (!response.ok) {
-      console.error('Browserless screenshot failed:', response.status, response.statusText);
-      return null;
-    }
-
-    const screenshotBuffer = await response.arrayBuffer();
-    const base64Screenshot = btoa(String.fromCharCode(...new Uint8Array(screenshotBuffer)));
-    return `data:image/png;base64,${base64Screenshot}`;
-  } catch (error) {
-    console.error('Error taking screenshot:', error);
-    return null;
-  }
-}
-
 // Helper function to run automation script using Browserless
-async function runDMVAutomation(browserlessToken: string, vehicle: any): Promise<{ success: boolean; screenshots: string[]; error?: string }> {
+async function runDMVAutomation(browserlessToken: string, vehicle: any): Promise<{ success: boolean; screenshots: string[]; confirmationNumber?: string; error?: string }> {
   try {
+    console.log('Starting DMV automation for vehicle:', vehicle.vehicle_id);
+    
     // Parse sale date from YYYY-MM-DD to month/day/year format
     const saleDate = new Date(vehicle.sale_date || '');
     const saleMonth = saleDate.toLocaleString('default', { month: 'long' });
     const saleDay = saleDate.getDate().toString();
     const saleYear = saleDate.getFullYear().toString();
 
+    console.log('Parsed sale date:', { saleMonth, saleDay, saleYear });
+
     const automationScript = `
       async function runAutomation() {
+        console.log('Starting DMV automation script');
         const screenshots = [];
         
-        // Navigate to DMV website
-        await page.goto("https://www.dmv.ca.gov/wasapp/nrl/nrlApplication.do", { 
-          waitUntil: 'networkidle2' 
-        });
-        
-        // Take initial screenshot
-        screenshots.push(await page.screenshot({ type: 'png', encoding: 'base64' }));
+        try {
+          // Navigate to DMV website
+          console.log('Navigating to DMV website');
+          await page.goto("https://www.dmv.ca.gov/wasapp/nrl/nrlApplication.do", { 
+            waitUntil: 'networkidle2',
+            timeout: 30000
+          });
+          
+          // Take initial screenshot
+          console.log('Taking initial screenshot');
+          const initialScreenshot = await page.screenshot({ 
+            type: 'png', 
+            encoding: 'base64',
+            fullPage: true
+          });
+          screenshots.push(initialScreenshot);
 
-        // Fill vehicle data dynamically
-        if ('${vehicle.license_plate}') {
-          await page.type('input#licensePlateNumber', '${vehicle.license_plate}');
+          // Fill vehicle data
+          console.log('Filling vehicle information');
+          if ('${vehicle.license_plate}') {
+            await page.waitForSelector('input#licensePlateNumber', { timeout: 10000 });
+            await page.type('input#licensePlateNumber', '${vehicle.license_plate}');
+          }
+          
+          await page.waitForSelector('input#vehicleIdentificationNumber', { timeout: 10000 });
+          await page.type('input#vehicleIdentificationNumber', '${vehicle.vehicle_id}');
+
+          // Fill new owner data
+          await page.waitForSelector('input#newOwnerFname', { timeout: 10000 });
+          await page.type('input#newOwnerFname', '${vehicle.buyer_first_name}');
+          
+          await page.waitForSelector('input#newOwnerLname', { timeout: 10000 });
+          await page.type('input#newOwnerLname', '${vehicle.buyer_last_name}');
+          
+          // Take screenshot after form 1
+          console.log('Taking screenshot after form 1');
+          const form1Screenshot = await page.screenshot({ 
+            type: 'png', 
+            encoding: 'base64',
+            fullPage: true
+          });
+          screenshots.push(form1Screenshot);
+
+          // Submit first page
+          console.log('Submitting first page');
+          await page.click('button[type="submit"]');
+          await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 });
+
+          // Click on the "Yes" label to activate the radio
+          console.log('Clicking Yes option');
+          await page.waitForSelector('label[for="y"]', { timeout: 10000 });
+          await page.click('label[for="y"]');
+          
+          await page.click('button[type="submit"]');
+          await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 });
+
+          // Take screenshot after page 2
+          console.log('Taking screenshot after page 2');
+          const page2Screenshot = await page.screenshot({ 
+            type: 'png', 
+            encoding: 'base64',
+            fullPage: true
+          });
+          screenshots.push(page2Screenshot);
+
+          // Toggle seller is a company
+          console.log('Setting seller as company');
+          await page.waitForSelector('div.toggle-text--left', { timeout: 10000 });
+          await page.click('div.toggle-text--left');
+          
+          // Fill in the company information (FIXED - Americas Towing LLC)
+          await page.waitForSelector('input#seller-company-name', { timeout: 10000 });
+          await page.type('input#seller-company-name', 'Americas Towing LLC');
+          
+          await page.waitForSelector('input#sellerAddress', { timeout: 10000 });
+          await page.type('input#sellerAddress', '4735 Cecilia St');
+          
+          await page.waitForSelector('input#sellerCity', { timeout: 10000 });
+          await page.type('input#sellerCity', 'Cudahy');
+          
+          await page.waitForSelector('input#sellerZip', { timeout: 10000 });
+          await page.type('input#sellerZip', '90201');
+
+          // Fill in the new owner information
+          await page.waitForSelector('input#newOwnerFname', { timeout: 10000 });
+          await page.clear('input#newOwnerFname');
+          await page.type('input#newOwnerFname', '${vehicle.buyer_first_name}');
+          
+          await page.waitForSelector('input#newOwnerLname', { timeout: 10000 });
+          await page.clear('input#newOwnerLname');
+          await page.type('input#newOwnerLname', '${vehicle.buyer_last_name}');
+          
+          if ('${vehicle.buyer_address}') {
+            await page.waitForSelector('input#newOwnerAddress', { timeout: 10000 });
+            await page.type('input#newOwnerAddress', '${vehicle.buyer_address}');
+          }
+          if ('${vehicle.buyer_city}') {
+            await page.waitForSelector('input#newOwnerCity', { timeout: 10000 });
+            await page.type('input#newOwnerCity', '${vehicle.buyer_city}');
+          }
+          if ('${vehicle.buyer_zip}') {
+            await page.waitForSelector('input#newOwnerZip', { timeout: 10000 });
+            await page.type('input#newOwnerZip', '${vehicle.buyer_zip}');
+          }
+
+          // Set mileage
+          console.log('Setting mileage option');
+          await page.waitForSelector('label[for="notActualMileage"]', { timeout: 10000 });
+          await page.click('label[for="notActualMileage"]');
+
+          // Fill sale date
+          console.log('Filling sale date');
+          await page.waitForSelector('select#saleMonth', { timeout: 10000 });
+          await page.select('select#saleMonth', '${saleMonth}');
+          
+          await page.waitForSelector('input#saleDay', { timeout: 10000 });
+          await page.type('input#saleDay', '${saleDay}');
+          
+          await page.waitForSelector('input#saleYear', { timeout: 10000 });
+          await page.type('input#saleYear', '${saleYear}');
+
+          // Fill sale price
+          console.log('Filling sale price');
+          await page.waitForSelector('input#sellingPrice', { timeout: 10000 });
+          await page.type('input#sellingPrice', '${vehicle.sale_price}');
+          
+          await page.waitForSelector('label[for="gift_no"]', { timeout: 10000 });
+          await page.click('label[for="gift_no"]');
+
+          // Take screenshot before final submit
+          console.log('Taking screenshot before final submit');
+          const finalFormScreenshot = await page.screenshot({ 
+            type: 'png', 
+            encoding: 'base64',
+            fullPage: true
+          });
+          screenshots.push(finalFormScreenshot);
+
+          // Submit final form
+          console.log('Submitting final form');
+          await page.waitForSelector('button#continue', { timeout: 10000 });
+          await page.click('button#continue');
+          await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 });
+
+          // Wait for confirmation page
+          await page.waitForTimeout(3000);
+
+          // Take final screenshot
+          console.log('Taking final confirmation screenshot');
+          const confirmationScreenshot = await page.screenshot({ 
+            type: 'png', 
+            encoding: 'base64',
+            fullPage: true
+          });
+          screenshots.push(confirmationScreenshot);
+
+          // Get confirmation number
+          const confirmationText = await page.evaluate(() => document.body.textContent);
+          let confirmationNumber = "MANUAL-VERIFY-" + Date.now();
+          
+          if (confirmationText && confirmationText.includes("Number")) {
+            const match = confirmationText.match(/Number[:\\s]+([A-Za-z0-9\\-]+)/);
+            if (match) confirmationNumber = match[1];
+          }
+
+          console.log('DMV automation completed successfully, confirmation:', confirmationNumber);
+          return { success: true, screenshots, confirmationNumber };
+          
+        } catch (error) {
+          console.error('Error in automation script:', error);
+          return { success: false, screenshots, error: error.message };
         }
-        await page.type('input#vehicleIdentificationNumber', '${vehicle.vehicle_id}');
-
-        // Fill new owner data
-        await page.type('input#newOwnerFname', '${vehicle.buyer_first_name}');
-        await page.type('input#newOwnerLname', '${vehicle.buyer_last_name}');
-        
-        // Take screenshot after form 1
-        screenshots.push(await page.screenshot({ type: 'png', encoding: 'base64' }));
-
-        // Submit first page
-        await page.click('button[type="submit"]');
-        await page.waitForNavigation({ waitUntil: 'networkidle2' });
-
-        // Click on the "Yes" label to activate the radio
-        await page.click('label[for="y"]');
-        await page.click('button[type="submit"]');
-        await page.waitForNavigation({ waitUntil: 'networkidle2' });
-
-        // Take screenshot after page 2
-        screenshots.push(await page.screenshot({ type: 'png', encoding: 'base64' }));
-
-        // Toggle seller is a company
-        await page.click('div.toggle-text--left');
-        
-        // Fill in the company information (FIXED - Americas Towing LLC)
-        await page.type('input#seller-company-name', 'Americas Towing LLC');
-        await page.type('input#sellerAddress', '4735 Cecilia St');
-        await page.type('input#sellerCity', 'Cudahy');
-        await page.type('input#sellerZip', '90201');
-
-        // Fill in the new owner information
-        await page.type('input#newOwnerFname', '${vehicle.buyer_first_name}');
-        await page.type('input#newOwnerLname', '${vehicle.buyer_last_name}');
-        
-        if ('${vehicle.buyer_address}') {
-          await page.type('input#newOwnerAddress', '${vehicle.buyer_address}');
-        }
-        if ('${vehicle.buyer_city}') {
-          await page.type('input#newOwnerCity', '${vehicle.buyer_city}');
-        }
-        if ('${vehicle.buyer_zip}') {
-          await page.type('input#newOwnerZip', '${vehicle.buyer_zip}');
-        }
-
-        // Set mileage
-        await page.click('label[for="notActualMileage"]');
-
-        // Fill sale date
-        await page.select('select#saleMonth', '${saleMonth}');
-        await page.type('input#saleDay', '${saleDay}');
-        await page.type('input#saleYear', '${saleYear}');
-
-        // Fill sale price
-        await page.type('input#sellingPrice', '${vehicle.sale_price}');
-        await page.click('label[for="gift_no"]');
-
-        // Take screenshot before final submit
-        screenshots.push(await page.screenshot({ type: 'png', encoding: 'base64' }));
-
-        // Submit final form
-        await page.click('button#continue');
-        await page.waitForNavigation({ waitUntil: 'networkidle2' });
-
-        // Wait for confirmation page
-        await page.waitForTimeout(3000);
-
-        // Take final screenshot
-        screenshots.push(await page.screenshot({ type: 'png', encoding: 'base64' }));
-
-        // Get confirmation number
-        const confirmationText = await page.evaluate(() => document.body.textContent);
-        let confirmationNumber = "MANUAL-VERIFY-" + Date.now();
-        
-        if (confirmationText && confirmationText.includes("Number")) {
-          const match = confirmationText.match(/Number[:\\s]+([A-Za-z0-9\\-]+)/);
-          if (match) confirmationNumber = match[1];
-        }
-
-        return { success: true, screenshots, confirmationNumber };
       }
       
       return await runAutomation();
     `;
+
+    console.log('Making request to Browserless with token length:', browserlessToken.length);
 
     const response = await fetch(`https://chrome.browserless.io/function?token=${browserlessToken}`, {
       method: 'POST',
@@ -231,11 +288,17 @@ async function runDMVAutomation(browserlessToken: string, vehicle: any): Promise
       })
     });
 
+    console.log('Browserless response status:', response.status);
+
     if (!response.ok) {
-      throw new Error(`Browserless automation failed: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      console.error('Browserless error response:', errorText);
+      throw new Error(`Browserless automation failed: ${response.status} ${response.statusText}. Response: ${errorText}`);
     }
 
     const result = await response.json();
+    console.log('Browserless automation result:', result);
+    
     return result;
   } catch (error) {
     console.error('DMV automation error:', error);
@@ -271,16 +334,21 @@ serve(async (req) => {
     // Check for required API keys
     const browserlessToken = Deno.env.get('BROWSERLESS_API_KEY');
     if (!browserlessToken) {
+      console.error('BROWSERLESS_API_KEY not found in environment');
       return new Response(
         JSON.stringify({ error: 'Browserless API key not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    console.log('Browserless token configured, length:', browserlessToken.length);
+
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    console.log('Fetching vehicles for DMV automation:', vehicleIds);
 
     // Fetch vehicle data with buyer address details
     const { data: vehicles, error: fetchError } = await supabase
@@ -307,6 +375,8 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log('Found vehicles for processing:', vehicles.length);
 
     const results = [];
 
