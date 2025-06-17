@@ -95,31 +95,46 @@ class VehicleStore {
 
   // Helper function to convert documents back from storage
   private deserializeDocuments(documentsData: any): UploadedDocument[] {
-    if (!documentsData || !Array.isArray(documentsData)) {
-      console.log('No documents data or not an array:', documentsData);
+    if (!documentsData) {
+      console.log('No documents data found');
       return [];
     }
     
-    console.log('Deserializing documents from database:', documentsData);
+    // Handle both array and object formats
+    let docsArray;
+    if (Array.isArray(documentsData)) {
+      docsArray = documentsData;
+    } else if (typeof documentsData === 'object' && documentsData !== null) {
+      // If it's an object, try to extract documents from it
+      docsArray = documentsData.documents || Object.values(documentsData);
+    } else {
+      console.log('Invalid documents data format:', documentsData);
+      return [];
+    }
     
-    return documentsData.map(doc => {
+    console.log('Deserializing documents from database:', docsArray);
+    
+    return docsArray.map((doc: any) => {
       console.log('Processing document from DB:', doc);
       
+      // Handle cases where doc might be nested or have different structure
+      const docData = doc.documents ? doc.documents : doc;
+      
       // Create a proper File object with the stored type
-      const fileType = doc.type || this.getFileTypeFromName(doc.name);
-      const file = new File([], doc.name, { type: fileType });
+      const fileType = docData.type || this.getFileTypeFromName(docData.name || 'unknown');
+      const file = new File([], docData.name || 'unknown', { type: fileType });
       
       const deserializedDoc = {
-        id: doc.id,
-        name: doc.name,
-        size: doc.size,
-        url: doc.url,
+        id: docData.id || `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        name: docData.name || 'Unknown Document',
+        size: docData.size || 0,
+        url: docData.url || '',
         file: file
       };
       
       console.log('Deserialized document:', deserializedDoc);
       return deserializedDoc;
-    });
+    }).filter(doc => doc.url); // Filter out any documents without URLs
   }
 
   // Helper function to convert car images back from storage
