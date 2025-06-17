@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,6 @@ interface VehicleDetailsDialogProps {
   onSave: (vehicleId: string, newStatus: Vehicle['status'], soldData?: {
     buyerFirstName: string;
     buyerLastName: string;
-    buyerAddress?: string;
     salePrice: string;
     saleDate: string;
   }) => void;
@@ -27,7 +27,6 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
   const [pendingSoldData, setPendingSoldData] = useState<{
     buyerFirstName: string;
     buyerLastName: string;
-    buyerAddress?: string;
     salePrice: string;
     saleDate: string;
   } | null>(null);
@@ -53,13 +52,7 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
     }
   };
 
-  const handleSoldConfirm = (data: { 
-    buyerFirstName: string; 
-    buyerLastName: string; 
-    buyerAddress: string;
-    salePrice: string; 
-    saleDate: string 
-  }) => {
+  const handleSoldConfirm = (data: { buyerFirstName: string; buyerLastName: string; salePrice: string; saleDate: string }) => {
     setPendingSoldData(data);
     setSelectedStatus('sold'); // Set the status to sold when confirmed
     setSoldDialogOpen(false);
@@ -208,9 +201,6 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
                       <div className="space-y-2">
                         <p className="text-sm font-medium">Sale Details:</p>
                         <p className="text-sm">Buyer: {pendingSoldData.buyerFirstName} {pendingSoldData.buyerLastName}</p>
-                        {pendingSoldData.buyerAddress && (
-                          <p className="text-sm">Address: {pendingSoldData.buyerAddress}</p>
-                        )}
                         <p className="text-sm">Sale Price: ${pendingSoldData.salePrice}</p>
                         <p className="text-sm">Date: {pendingSoldData.saleDate}</p>
                       </div>
@@ -344,7 +334,6 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
         initialData={{
           buyerFirstName: vehicle.buyerFirstName || "",
           buyerLastName: vehicle.buyerLastName || "",
-          buyerAddress: "", // We don't store buyer address in vehicles table currently
           salePrice: vehicle.salePrice || "",
           saleDate: vehicle.saleDate || new Date().toISOString().split('T')[0]
         }}

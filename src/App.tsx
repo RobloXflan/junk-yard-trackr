@@ -1,5 +1,4 @@
 
-import React, { useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,15 +9,12 @@ import { Dashboard } from "@/pages/Dashboard";
 import { Intake } from "@/pages/Intake";
 import { InventoryOptimized } from "@/pages/InventoryOptimized";
 import { Menu } from "lucide-react";
+import { useState } from "react";
 
 const queryClient = new QueryClient();
 
 const App = () => {
   const [currentPage, setCurrentPage] = useState("dashboard");
-
-  const handleNavigate = (page: string) => {
-    setCurrentPage(page);
-  };
 
   const renderPage = () => {
     switch (currentPage) {
@@ -27,7 +23,7 @@ const App = () => {
       case 'intake':
         return <Intake />;
       case 'inventory':
-        return <InventoryOptimized onNavigate={handleNavigate} />;
+        return <InventoryOptimized onNavigate={setCurrentPage} />;
       default:
         return <Dashboard />;
     }
@@ -40,7 +36,7 @@ const App = () => {
         <Sonner />
         <SidebarProvider>
           <div className="min-h-screen flex w-full bg-background">
-            <AppSidebar currentPage={currentPage} onNavigate={handleNavigate} />
+            <AppSidebar currentPage={currentPage} onNavigate={setCurrentPage} />
             <main className="flex-1 flex flex-col">
               <header className="border-b bg-card px-4 py-3 lg:px-6">
                 <div className="flex items-center gap-4">
@@ -49,7 +45,7 @@ const App = () => {
                   </SidebarTrigger>
                   <nav className="hidden lg:flex items-center space-x-4">
                     <button
-                      onClick={() => handleNavigate("dashboard")}
+                      onClick={() => setCurrentPage("dashboard")}
                       className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                         currentPage === "dashboard"
                           ? "bg-primary text-primary-foreground"
@@ -59,7 +55,7 @@ const App = () => {
                       Dashboard
                     </button>
                     <button
-                      onClick={() => handleNavigate("intake")}
+                      onClick={() => setCurrentPage("intake")}
                       className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                         currentPage === "intake"
                           ? "bg-primary text-primary-foreground"
@@ -69,7 +65,7 @@ const App = () => {
                       Vehicle Intake
                     </button>
                     <button
-                      onClick={() => handleNavigate("inventory")}
+                      onClick={() => setCurrentPage("inventory")}
                       className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                         currentPage === "inventory"
                           ? "bg-primary text-primary-foreground"

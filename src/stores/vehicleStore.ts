@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface UploadedDocument {
@@ -276,6 +275,7 @@ class VehicleStore {
     }
   }
 
+  // Force refresh from database - useful for manual sync
   async refreshVehicles() {
     console.log('Manually refreshing vehicles from database...');
     await this.loadVehicles();
@@ -299,7 +299,7 @@ class VehicleStore {
       .reduce((sum, v) => sum + parseFloat(v.salePrice || '0'), 0);
   }
 
-  getPendingDocuments(): number {
+  getPendingDMV(): number {
     return this.vehicles.filter(v => !v.titlePresent && v.status === 'yard').length;
   }
 
