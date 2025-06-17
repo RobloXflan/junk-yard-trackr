@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { CarImage } from '@/stores/vehicleStore';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CarImagesUploadProps {
   vehicleId: string;
@@ -32,27 +33,57 @@ export function CarImagesUpload({ vehicleId, currentImages, onImagesUpdate, disa
           continue;
         }
 
-        // Create a preview URL for immediate display
-        const url = URL.createObjectURL(file);
+        // Create a unique file name with timestamp
+        const timestamp = Date.now();
+        const randomId = Math.random().toString(36).substring(2);
+        const fileExtension = file.name.split('.').pop() || 'jpg';
+        const fileName = `${vehicleId}/${timestamp}_${randomId}.${fileExtension}`;
+
+        console.log('Uploading car image:', fileName);
+
+        // Upload file to Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('car-images')
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) {
+          console.error('Error uploading car image:', uploadError);
+          toast.error(`Failed to upload ${file.name}`);
+          continue;
+        }
+
+        console.log('Car image uploaded successfully:', uploadData);
+
+        // Get the public URL for the uploaded file
+        const { data: urlData } = supabase.storage
+          .from('car-images')
+          .getPublicUrl(fileName);
+
         const newImage: CarImage = {
-          id: `temp_${Date.now()}_${Math.random()}`,
-          url,
+          id: `${timestamp}_${randomId}`,
+          url: urlData.publicUrl,
           name: file.name,
           size: file.size,
           uploadedAt: new Date().toISOString()
         };
         
         newImages.push(newImage);
+        console.log('Created car image object:', newImage);
       }
 
-      // Update the images list
-      const updatedImages = [...currentImages, ...newImages];
-      onImagesUpdate(updatedImages);
-      
-      toast.success(`${newImages.length} image(s) added successfully`);
+      if (newImages.length > 0) {
+        // Update the images list
+        const updatedImages = [...currentImages, ...newImages];
+        onImagesUpdate(updatedImages);
+        
+        toast.success(`${newImages.length} car image(s) uploaded successfully`);
+      }
     } catch (error) {
       console.error('Error uploading car images:', error);
-      toast.error('Failed to upload images');
+      toast.error('Failed to upload car images');
     } finally {
       setUploading(false);
       if (fileInputRef.current) {
@@ -61,10 +92,37 @@ export function CarImagesUpload({ vehicleId, currentImages, onImagesUpdate, disa
     }
   };
 
-  const handleRemoveImage = (imageId: string) => {
+  const handleRemoveImage = async (imageId: string) => {
+    const imageToRemove = currentImages.find(img => img.id === imageId);
+    if (!imageToRemove) return;
+
+    try {
+      // Extract the file path from the URL
+      const urlParts = imageToRemove.url.split('/');
+      const bucketIndex = urlParts.findIndex(part => part === 'car-images');
+      if (bucketIndex !== -1 && bucketIndex < urlParts.length - 1) {
+        const filePath = urlParts.slice(bucketIndex + 1).join('/');
+        
+        console.log('Removing car image from storage:', filePath);
+        
+        // Delete from Supabase Storage
+        const { error } = await supabase.storage
+          .from('car-images')
+          .remove([filePath]);
+
+        if (error) {
+          console.error('Error removing car image from storage:', error);
+          // Continue anyway to remove from the UI
+        }
+      }
+    } catch (error) {
+      console.error('Error parsing image URL for deletion:', error);
+    }
+
+    // Remove from the current images list
     const updatedImages = currentImages.filter(img => img.id !== imageId);
     onImagesUpdate(updatedImages);
-    toast.success('Image removed');
+    toast.success('Car image removed');
   };
 
   const handleAddImages = () => {
@@ -111,7 +169,7 @@ export function CarImagesUpload({ vehicleId, currentImages, onImagesUpdate, disa
                     alt={image.name}
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      console.error('Error loading image:', image.url);
+                      console.error('Error loading car image:', image.url);
                       e.currentTarget.src = '/placeholder.svg';
                     }}
                   />
