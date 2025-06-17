@@ -33,6 +33,8 @@ const App = () => {
   };
 
   const handleLogout = () => {
+    // Clear remembered user data from localStorage
+    localStorage.removeItem('rememberedUser');
     setUserType(null);
     setUsername("");
     setCurrentPage("dashboard");
