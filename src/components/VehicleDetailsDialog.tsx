@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +22,8 @@ import {
 } from "lucide-react";
 import { Vehicle } from "@/stores/vehicleStore";
 import { useVehicleStore } from "@/hooks/useVehicleStore";
-import { SoldDialog } from "@/components/forms/SoldDialog";
+import { BuyerSelector } from "@/components/forms/BuyerSelector";
+import { Buyer } from "@/hooks/useBuyers";
 import { toast } from "sonner";
 
 interface VehicleDetailsDialogProps {
@@ -36,7 +36,7 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<Partial<Vehicle>>({});
   const [isSaving, setIsSaving] = useState(false);
-  const [showSoldDialog, setShowSoldDialog] = useState(false);
+  const [showBuyerSelector, setShowBuyerSelector] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<Vehicle['status']>('yard');
   const { updateVehicleDetails, updateVehicleStatus } = useVehicleStore();
 
@@ -102,7 +102,7 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
 
   const handleStatusChange = async (newStatus: Vehicle['status']) => {
     if (newStatus === 'sold') {
-      setShowSoldDialog(true);
+      setShowBuyerSelector(true);
     } else {
       try {
         await updateVehicleStatus(vehicle.id, newStatus);
@@ -118,16 +118,22 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
     }
   };
 
-  const handleSoldConfirm = async (soldData: {
-    buyerFirstName: string;
-    buyerLastName: string;
-    salePrice: string;
-    saleDate: string;
-  }) => {
+  const handleBuyerSelected = async (buyer: Buyer, salePrice: string, saleDate: string) => {
     try {
+      const soldData = {
+        buyerFirstName: buyer.first_name,
+        buyerLastName: buyer.last_name,
+        salePrice,
+        saleDate,
+        buyerAddress: buyer.address,
+        buyerCity: buyer.city || '',
+        buyerState: buyer.state || 'CA',
+        buyerZip: buyer.zip_code || ''
+      };
+
       await updateVehicleStatus(vehicle.id, 'sold', soldData);
       setSelectedStatus('sold');
-      setShowSoldDialog(false);
+      setShowBuyerSelector(false);
       toast.success("Vehicle marked as sold");
       // Refresh the dialog
       onOpenChange(false);
@@ -578,17 +584,11 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
         </DialogContent>
       </Dialog>
 
-      {/* Sold Dialog */}
-      <SoldDialog
-        open={showSoldDialog}
-        onOpenChange={setShowSoldDialog}
-        onConfirm={handleSoldConfirm}
-        initialData={{
-          buyerFirstName: vehicle.buyerFirstName || '',
-          buyerLastName: vehicle.buyerLastName || '',
-          salePrice: vehicle.salePrice || '',
-          saleDate: vehicle.saleDate || new Date().toISOString().split('T')[0]
-        }}
+      {/* Buyer Selector Dialog */}
+      <BuyerSelector
+        open={showBuyerSelector}
+        onOpenChange={setShowBuyerSelector}
+        onSelectBuyer={handleBuyerSelected}
       />
     </>
   );
