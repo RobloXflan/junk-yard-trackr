@@ -45,10 +45,6 @@ export function useVehicleStorePaginated() {
           buyer_name,
           buyer_first_name,
           buyer_last_name,
-          buyer_address,
-          buyer_city,
-          buyer_state,
-          buyer_zip,
           sale_date,
           sale_price,
           notes,
@@ -99,10 +95,6 @@ export function useVehicleStorePaginated() {
         buyerName: vehicle.buyer_name || undefined,
         buyerFirstName: vehicle.buyer_first_name || undefined,
         buyerLastName: vehicle.buyer_last_name || undefined,
-        buyerAddress: vehicle.buyer_address || undefined,
-        buyerCity: vehicle.buyer_city || undefined,
-        buyerState: vehicle.buyer_state || undefined,
-        buyerZip: vehicle.buyer_zip || undefined,
         saleDate: vehicle.sale_date || undefined,
         salePrice: vehicle.sale_price || undefined,
         notes: vehicle.notes || undefined,
@@ -228,9 +220,6 @@ export function useVehicleStorePaginated() {
     buyerFirstName: string;
     buyerLastName: string;
     buyerAddress?: string;
-    buyerCity?: string;
-    buyerState?: string;
-    buyerZip?: string;
     salePrice: string;
     saleDate: string;
   }) => {
@@ -244,20 +233,12 @@ export function useVehicleStorePaginated() {
         updateData.buyer_first_name = soldData.buyerFirstName;
         updateData.buyer_last_name = soldData.buyerLastName;
         updateData.buyer_name = `${soldData.buyerFirstName} ${soldData.buyerLastName}`;
-        updateData.buyer_address = soldData.buyerAddress;
-        updateData.buyer_city = soldData.buyerCity;
-        updateData.buyer_state = soldData.buyerState || 'CA';
-        updateData.buyer_zip = soldData.buyerZip;
         updateData.sale_price = soldData.salePrice;
         updateData.sale_date = soldData.saleDate;
       } else if (newStatus !== 'sold') {
         updateData.buyer_first_name = null;
         updateData.buyer_last_name = null;
         updateData.buyer_name = null;
-        updateData.buyer_address = null;
-        updateData.buyer_city = null;
-        updateData.buyer_state = null;
-        updateData.buyer_zip = null;
         updateData.sale_price = null;
         updateData.sale_date = null;
       }
@@ -277,10 +258,6 @@ export function useVehicleStorePaginated() {
               ...(soldData && {
                 buyerFirstName: soldData.buyerFirstName,
                 buyerLastName: soldData.buyerLastName,
-                buyerAddress: soldData.buyerAddress,
-                buyerCity: soldData.buyerCity,
-                buyerState: soldData.buyerState,
-                buyerZip: soldData.buyerZip,
                 salePrice: soldData.salePrice,
                 saleDate: soldData.saleDate
               })
@@ -301,20 +278,15 @@ export function useVehicleStorePaginated() {
 
   const submitToDMV = async (vehicleIds: string[]) => {
     try {
-      console.log('Submitting vehicles to DMV via hook:', vehicleIds);
-      
       const { data, error } = await supabase.functions.invoke('dmv-automation', {
         body: { vehicleIds }
       });
 
-      if (error) {
-        console.error('Error submitting to DMV:', error);
-        throw error;
-      }
+      if (error) throw error;
 
-      console.log('DMV submission result:', data);
-
-      // Return the full response data including progress and screenshots
+      // Refresh vehicles to get updated DMV status
+      await refreshVehicles();
+      
       return data;
     } catch (error) {
       console.error('Failed to submit to DMV:', error);

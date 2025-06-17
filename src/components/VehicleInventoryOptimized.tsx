@@ -20,9 +20,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useVehicleStorePaginated } from "@/hooks/useVehicleStorePaginated";
 import { VehicleDetailsDialog } from "@/components/VehicleDetailsDialog";
-import { DMVProgressDialog } from "@/components/DMVProgressDialog";
 import { Vehicle } from "@/stores/vehicleStore";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 interface VehicleInventoryOptimizedProps {
   onNavigate: (page: string, state?: any) => void; // allow optional state
@@ -54,8 +54,8 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
   const [loadingDocuments, setLoadingDocuments] = useState(false);
   const [editingPaperworkId, setEditingPaperworkId] = useState<string | null>(null);
   const [selectedVehicles, setSelectedVehicles] = useState<Set<string>>(new Set());
-  const [isDMVDialogOpen, setIsDMVDialogOpen] = useState(false);
-  const [dmvVehicles, setDMVVehicles] = useState<Array<{ id: string; year: string; make: string; model: string; vehicleId: string; }>>([]);
+  const [submittingToDMV, setSubmittingToDMV] = useState(false);
+  const [submittingIndividual, setSubmittingIndividual] = useState<Set<string>>(new Set());
   
   const { 
     vehicles, 
@@ -183,82 +183,70 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
     }
   };
 
-  const handleDMVAutomation = () => {
-    const eligibleVehicles = vehicles.filter(v => 
-      v.status === 'sold' && 
-      v.buyerFirstName && 
-      v.buyerLastName &&
-      v.dmvStatus === 'pending'
-    );
-
+  const handleGoToDMVPreview = () => {
     if (selectedVehicles.size === 0) {
-      toast.error("Please select vehicles for DMV automation");
+      toast.error("Please select vehicles to submit to DMV");
+      return;
+    }
+    // Use onNavigate to go to the DMV preview page, pass the selected vehicles as state
+    onNavigate("dmv-preview", {
+      selectedVehicles: Array.from(selectedVehicles),
+    });
+  };
+
+  const handleSubmitToDMV = async () => {
+    if (selectedVehicles.size === 0) {
+      toast.error("Please select vehicles to submit to DMV");
       return;
     }
 
-    const selectedEligibleVehicles = eligibleVehicles.filter(v => selectedVehicles.has(v.id));
+    setSubmittingToDMV(true);
+    try {
+      const result = await submitToDMV(Array.from(selectedVehicles));
+      
+      if (result.success) {
+        const successCount = result.results?.filter((r: any) => r.success).length || 0;
+        const failedCount = result.results?.filter((r: any) => !r.success).length || 0;
+        
+        if (successCount > 0) {
+          toast.success(`Successfully submitted ${successCount} vehicle${successCount !== 1 ? 's' : ''} to DMV`);
+        }
+        if (failedCount > 0) {
+          toast.error(`Failed to submit ${failedCount} vehicle${failedCount !== 1 ? 's' : ''}`);
+        }
+        
+        setSelectedVehicles(new Set());
+      } else {
+        toast.error("Failed to submit vehicles to DMV");
+      }
+    } catch (error) {
+      console.error('Error submitting to DMV:', error);
+      toast.error("Failed to submit vehicles to DMV");
+    } finally {
+      setSubmittingToDMV(false);
+    }
+  };
+
+  const handleIndividualDMVSubmit = async (vehicleId: string) => {
+    setSubmittingIndividual(prev => new Set(prev).add(vehicleId));
     
-    if (selectedEligibleVehicles.length === 0) {
-      toast.error("No eligible vehicles selected for DMV automation");
-      return;
-    }
-
-    setDMVVehicles(selectedEligibleVehicles.map(v => ({
-      id: v.id,
-      year: v.year,
-      make: v.make,
-      model: v.model,
-      vehicleId: v.vehicleId
-    })));
-    setIsDMVDialogOpen(true);
-  };
-
-  const handleDMVSubmit = async (vehicleIds: string[]) => {
     try {
-      const result = await submitToDMV(vehicleIds);
-      await refreshVehicles();
-      return result;
+      const result = await submitToDMV([vehicleId]);
+      
+      if (result.success && result.results?.[0]?.success) {
+        toast.success("Vehicle successfully submitted to DMV");
+      } else {
+        toast.error("Failed to submit vehicle to DMV");
+      }
     } catch (error) {
-      console.error('DMV submission error:', error);
-      throw error;
-    }
-  };
-
-  const handleCloseDMVDialog = () => {
-    setIsDMVDialogOpen(false);
-    setDMVVehicles([]);
-    setSelectedVehicles(new Set());
-  };
-
-  const handleIndividualDMVAutomation = (vehicle: Vehicle) => {
-    setDMVVehicles([{
-      id: vehicle.id,
-      year: vehicle.year,
-      make: vehicle.make,
-      model: vehicle.model,
-      vehicleId: vehicle.vehicleId
-    }]);
-    setIsDMVDialogOpen(true);
-  };
-
-  const handleUpdateVehicleInfo = async (vehicleId: string, data: {
-    buyerFirstName: string;
-    buyerLastName: string;
-    buyerAddress?: string;
-    buyerCity?: string;
-    buyerState?: string;
-    buyerZip?: string;
-    salePrice: string;
-    saleDate: string;
-  }) => {
-    try {
-      await updateVehicleStatus(vehicleId, 'sold', data);
-      await refreshVehicles();
-      toast.success("Vehicle information updated successfully");
-    } catch (error) {
-      console.error('Error updating vehicle info:', error);
-      toast.error("Failed to update vehicle information");
-      throw error;
+      console.error('Error submitting vehicle to DMV:', error);
+      toast.error("Failed to submit vehicle to DMV");
+    } finally {
+      setSubmittingIndividual(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(vehicleId);
+        return newSet;
+      });
     }
   };
 
@@ -277,40 +265,31 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
       vehicle.buyerLastName && 
       vehicle.dmvStatus === 'pending';
     
+    const isSubmitting = submittingIndividual.has(vehicle.id);
+
     if (isEligibleForSubmission) {
       return (
         <Button
           size="sm"
           variant="outline"
-          onClick={() => handleIndividualDMVAutomation(vehicle)}
+          onClick={() => handleIndividualDMVSubmit(vehicle.id)}
+          disabled={isSubmitting}
           className="h-6 px-2 text-xs"
         >
           <Send className="w-3 h-3 mr-1" />
-          DMV Automation
+          {isSubmitting ? 'Submitting...' : 'Submit to DMV'}
         </Button>
       );
     }
 
+    // Show badges for other statuses
     switch (vehicle.dmvStatus) {
       case 'submitted':
         return <Badge variant="default" className="bg-green-500">Submitted</Badge>;
       case 'processing':
         return <Badge variant="secondary">Processing</Badge>;
       case 'failed':
-        return (
-          <div className="flex flex-col gap-1">
-            <Badge variant="destructive">Failed</Badge>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => handleIndividualDMVAutomation(vehicle)}
-              className="h-5 px-1 text-xs"
-            >
-              <Send className="w-2 h-2 mr-1" />
-              Retry
-            </Button>
-          </div>
-        );
+        return <Badge variant="destructive">Failed</Badge>;
       default:
         return <Badge variant="outline">Not Eligible</Badge>;
     }
@@ -330,11 +309,11 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
             <div className="flex items-center gap-2">
               <Button 
                 variant="outline"
-                onClick={handleDMVAutomation}
-                disabled={selectedVehicles.size === 0}
+                onClick={handleGoToDMVPreview}
+                disabled={selectedVehicles.size === 0 || submittingToDMV}
               >
                 <Send className="w-4 h-4 mr-2" />
-                DMV Automation ({selectedVehicles.size})
+                {submittingToDMV ? 'Submitting...' : `Submit to DMV (${selectedVehicles.size})`}
               </Button>
             </div>
           )}
@@ -592,14 +571,6 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
         isOpen={isDialogOpen}
         onClose={handleCloseDialog}
         onSave={handleSaveVehicle}
-      />
-
-      <DMVProgressDialog
-        isOpen={isDMVDialogOpen}
-        onClose={handleCloseDMVDialog}
-        vehicles={dmvVehicles}
-        onSubmit={handleDMVSubmit}
-        onUpdateVehicle={handleUpdateVehicleInfo}
       />
     </div>
   );

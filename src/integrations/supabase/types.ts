@@ -45,47 +45,6 @@ export type Database = {
         }
         Relationships: []
       }
-      dmv_automation_logs: {
-        Row: {
-          created_at: string
-          error_message: string | null
-          id: string
-          screenshot_url: string | null
-          status: string
-          step: string
-          updated_at: string
-          vehicle_id: string
-        }
-        Insert: {
-          created_at?: string
-          error_message?: string | null
-          id?: string
-          screenshot_url?: string | null
-          status: string
-          step: string
-          updated_at?: string
-          vehicle_id: string
-        }
-        Update: {
-          created_at?: string
-          error_message?: string | null
-          id?: string
-          screenshot_url?: string | null
-          status?: string
-          step?: string
-          updated_at?: string
-          vehicle_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "dmv_automation_logs_vehicle_id_fkey"
-            columns: ["vehicle_id"]
-            isOneToOne: false
-            referencedRelation: "vehicles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       email_processing_logs: {
         Row: {
           created_at: string
@@ -240,13 +199,9 @@ export type Database = {
       vehicles: {
         Row: {
           bill_of_sale: boolean | null
-          buyer_address: string | null
-          buyer_city: string | null
           buyer_first_name: string | null
           buyer_last_name: string | null
           buyer_name: string | null
-          buyer_state: string | null
-          buyer_zip: string | null
           created_at: string
           destination: string | null
           dmv_confirmation_number: string | null
@@ -273,13 +228,9 @@ export type Database = {
         }
         Insert: {
           bill_of_sale?: boolean | null
-          buyer_address?: string | null
-          buyer_city?: string | null
           buyer_first_name?: string | null
           buyer_last_name?: string | null
           buyer_name?: string | null
-          buyer_state?: string | null
-          buyer_zip?: string | null
           created_at?: string
           destination?: string | null
           dmv_confirmation_number?: string | null
@@ -306,13 +257,9 @@ export type Database = {
         }
         Update: {
           bill_of_sale?: boolean | null
-          buyer_address?: string | null
-          buyer_city?: string | null
           buyer_first_name?: string | null
           buyer_last_name?: string | null
           buyer_name?: string | null
-          buyer_state?: string | null
-          buyer_zip?: string | null
           created_at?: string
           destination?: string | null
           dmv_confirmation_number?: string | null

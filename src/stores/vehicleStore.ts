@@ -24,10 +24,6 @@ export interface Vehicle {
   buyerName?: string;
   buyerFirstName?: string;
   buyerLastName?: string;
-  buyerAddress?: string;
-  buyerCity?: string;
-  buyerState?: string;
-  buyerZip?: string;
   saleDate?: string;
   salePrice?: string;
   notes?: string;
@@ -139,10 +135,6 @@ class VehicleStore {
           buyerName: vehicle.buyer_name || undefined,
           buyerFirstName: vehicle.buyer_first_name || undefined,
           buyerLastName: vehicle.buyer_last_name || undefined,
-          buyerAddress: vehicle.buyer_address || undefined,
-          buyerCity: vehicle.buyer_city || undefined,
-          buyerState: vehicle.buyer_state || undefined,
-          buyerZip: vehicle.buyer_zip || undefined,
           saleDate: vehicle.sale_date || undefined,
           salePrice: vehicle.sale_price || undefined,
           notes: vehicle.notes || undefined,
@@ -190,10 +182,6 @@ class VehicleStore {
         buyer_name: vehicleData.buyerName,
         buyer_first_name: vehicleData.buyerFirstName,
         buyer_last_name: vehicleData.buyerLastName,
-        buyer_address: vehicleData.buyerAddress,
-        buyer_city: vehicleData.buyerCity,
-        buyer_state: vehicleData.buyerState,
-        buyer_zip: vehicleData.buyerZip,
         sale_date: vehicleData.saleDate,
         sale_price: vehicleData.salePrice,
         notes: vehicleData.notes,
@@ -229,10 +217,6 @@ class VehicleStore {
   async updateVehicleStatus(vehicleId: string, newStatus: Vehicle['status'], soldData?: {
     buyerFirstName: string;
     buyerLastName: string;
-    buyerAddress?: string;
-    buyerCity?: string;
-    buyerState?: string;
-    buyerZip?: string;
     salePrice: string;
     saleDate: string;
   }) {
@@ -258,10 +242,6 @@ class VehicleStore {
         updateData.buyer_first_name = soldData.buyerFirstName;
         updateData.buyer_last_name = soldData.buyerLastName;
         updateData.buyer_name = `${soldData.buyerFirstName} ${soldData.buyerLastName}`;
-        updateData.buyer_address = soldData.buyerAddress;
-        updateData.buyer_city = soldData.buyerCity;
-        updateData.buyer_state = soldData.buyerState || 'CA';
-        updateData.buyer_zip = soldData.buyerZip;
         updateData.sale_price = soldData.salePrice;
         updateData.sale_date = soldData.saleDate;
       } else if (newStatus !== 'sold') {
@@ -269,10 +249,6 @@ class VehicleStore {
         updateData.buyer_first_name = null;
         updateData.buyer_last_name = null;
         updateData.buyer_name = null;
-        updateData.buyer_address = null;
-        updateData.buyer_city = null;
-        updateData.buyer_state = null;
-        updateData.buyer_zip = null;
         updateData.sale_price = null;
         updateData.sale_date = null;
       }
