@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Vehicle } from '@/stores/vehicleStore';
+import { Vehicle, CarImage } from '@/stores/vehicleStore';
 
 interface PaginatedVehicleData {
   vehicles: Vehicle[];
@@ -39,6 +39,21 @@ export function useVehicleStorePaginated(isViewOnly: boolean = false, username: 
     const cutoffDate = new Date(VIEW_ONLY_CUTOFF_DATE);
     
     return vehicleCreatedAt >= cutoffDate;
+  };
+
+  // Helper function to properly deserialize car images from database
+  const deserializeCarImages = (carImagesData: any): CarImage[] => {
+    if (!carImagesData || !Array.isArray(carImagesData)) {
+      return [];
+    }
+    
+    return carImagesData.map(img => ({
+      id: img.id || `img_${Date.now()}`,
+      name: img.name || 'Untitled Image',
+      size: img.size || 0,
+      url: img.url || '',
+      uploadedAt: img.uploadedAt || new Date().toISOString()
+    }));
   };
 
   const loadVehicles = async (page: number = 1, search: string = "", append: boolean = false) => {
@@ -130,7 +145,7 @@ export function useVehicleStorePaginated(isViewOnly: boolean = false, username: 
         paperwork: vehicle.paperwork || undefined,
         paperworkOther: vehicle.paperwork_other || undefined,
         status: (vehicle.status as Vehicle['status']) || 'yard',
-        carImages: Array.isArray(vehicle.car_images) ? vehicle.car_images : [],
+        carImages: deserializeCarImages(vehicle.car_images),
         createdAt: vehicle.created_at,
         documents: []
       }));

@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,6 +54,18 @@ export function ViewOnlyVehicleDialog({ vehicle, open, onOpenChange }: ViewOnlyV
     }
   };
 
+  const getStatusDisplay = (status: string) => {
+    if (!status) return 'UNKNOWN';
+    
+    switch (status) {
+      case 'yard': return 'In Yard';
+      case 'sold': return 'Sold';
+      case 'pick-your-part': return 'Pick Your Part';
+      case 'sa-recycling': return 'SA Recycling';
+      default: return status.toUpperCase();
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
@@ -65,11 +76,7 @@ export function ViewOnlyVehicleDialog({ vehicle, open, onOpenChange }: ViewOnlyV
               {vehicle.year} {vehicle.make} {vehicle.model}
             </DialogTitle>
             <Badge className={`${getStatusColor(vehicle.status)} text-white`}>
-              {vehicle.status === 'yard' ? 'In Yard' : 
-               vehicle.status === 'sold' ? 'Sold' :
-               vehicle.status === 'pick-your-part' ? 'Pick Your Part' :
-               vehicle.status === 'sa-recycling' ? 'SA Recycling' :
-               vehicle.status?.toUpperCase()}
+              {getStatusDisplay(vehicle.status)}
             </Badge>
           </div>
         </DialogHeader>
@@ -120,181 +127,128 @@ export function ViewOnlyVehicleDialog({ vehicle, open, onOpenChange }: ViewOnlyV
             </Card>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Vehicle Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Car className="w-4 h-4" />
-                  Vehicle Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Vehicle ID</p>
-                    <p className="font-medium">{vehicle.vehicleId}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">License Plate</p>
-                    <p className="font-medium">{vehicle.licensePlate || 'N/A'}</p>
-                  </div>
-                </div>
-                <Separator />
+          {/* Vehicle Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Car className="w-4 h-4" />
+                Vehicle Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Make/Model/Year</p>
-                  <p className="font-medium">{vehicle.year} {vehicle.make} {vehicle.model}</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Purchase Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="w-4 h-4" />
-                  Purchase Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Seller</p>
-                    <p className="font-medium">{vehicle.sellerName || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Purchase Price</p>
-                    <p className="font-medium">{vehicle.purchasePrice ? `$${parseFloat(vehicle.purchasePrice).toLocaleString()}` : 'N/A'}</p>
-                  </div>
+                  <p className="text-sm text-muted-foreground">Vehicle ID</p>
+                  <p className="font-medium">{vehicle.vehicleId}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Purchase Date</p>
-                  <p className="font-medium">{vehicle.purchaseDate || 'N/A'}</p>
+                  <p className="text-sm text-muted-foreground">License Plate</p>
+                  <p className="font-medium">{vehicle.licensePlate || 'N/A'}</p>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+              <Separator />
+              <div>
+                <p className="text-sm text-muted-foreground">Make/Model/Year</p>
+                <p className="font-medium">{vehicle.year} {vehicle.make} {vehicle.model}</p>
+              </div>
+            </CardContent>
+          </Card>
 
-            {/* Documentation Status */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
-                  Documentation
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center gap-2">
-                    {vehicle.titlePresent ? (
-                      <CheckCircle className="w-4 h-4 text-green-600" />
-                    ) : (
-                      <XCircle className="w-4 h-4 text-red-600" />
-                    )}
-                    <span className="text-sm">Title Present</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {vehicle.billOfSale ? (
-                      <CheckCircle className="w-4 h-4 text-green-600" />
-                    ) : (
-                      <XCircle className="w-4 h-4 text-red-600" />
-                    )}
-                    <span className="text-sm">Bill of Sale</span>
-                  </div>
+          {/* Purchase Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="w-4 h-4" />
+                Purchase Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Seller</p>
+                  <p className="font-medium">{vehicle.sellerName || 'N/A'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Paperwork Status</p>
-                  <p className="font-medium">{formatPaperworkDisplay(vehicle.paperwork, vehicle.paperworkOther)}</p>
+                  <p className="text-sm text-muted-foreground">Purchase Price</p>
+                  <p className="font-medium">{vehicle.purchasePrice ? `$${parseFloat(vehicle.purchasePrice).toLocaleString()}` : 'N/A'}</p>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Purchase Date</p>
+                <p className="font-medium">{vehicle.purchaseDate || 'N/A'}</p>
+              </div>
+            </CardContent>
+          </Card>
 
-            {/* Sale Information (if sold) */}
-            {vehicle.status === 'sold' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <User className="w-4 h-4" />
-                    Sale Details
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Buyer</p>
-                      <p className="font-medium">{vehicle.buyerName || `${vehicle.buyerFirstName} ${vehicle.buyerLastName}` || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Sale Price</p>
-                      <p className="font-medium">{vehicle.salePrice ? `$${parseFloat(vehicle.salePrice).toLocaleString()}` : 'N/A'}</p>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Sale Date</p>
-                    <p className="font-medium">{vehicle.saleDate || 'N/A'}</p>
-                  </div>
-                  {vehicle.buyerAddress && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Buyer Address</p>
-                      <p className="font-medium">
-                        {vehicle.buyerAddress}
-                        {vehicle.buyerCity && `, ${vehicle.buyerCity}`}
-                        {vehicle.buyerState && `, ${vehicle.buyerState}`}
-                        {vehicle.buyerZip && ` ${vehicle.buyerZip}`}
-                      </p>
-                    </div>
+          {/* Documentation Status */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Documentation
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center gap-2">
+                  {vehicle.titlePresent ? (
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <XCircle className="w-4 h-4 text-red-600" />
                   )}
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          {/* Notes */}
-          {vehicle.notes && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
-                  Notes
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm whitespace-pre-wrap">{vehicle.notes}</p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Documents Section */}
-          {vehicle.documents && vehicle.documents.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="w-4 h-4" />
-                  Documents ({vehicle.documents.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {vehicle.documents.map((doc) => (
-                    <div key={doc.id} className="border rounded-lg p-3 hover:bg-muted/50 transition-colors">
-                      <div className="flex items-center gap-2 mb-2">
-                        <FileText className="w-4 h-4 text-muted-foreground" />
-                        <p className="font-medium text-sm truncate flex-1">{doc.name}</p>
-                      </div>
-                      <p className="text-xs text-muted-foreground mb-3">
-                        {doc.size ? `${(doc.size / 1024 / 1024).toFixed(2)} MB` : 'Unknown size'}
-                      </p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
-                        onClick={() => window.open(doc.url, '_blank')}
-                      >
-                        <ExternalLink className="w-3 h-3 mr-1" />
-                        View
-                      </Button>
-                    </div>
-                  ))}
+                  <span className="text-sm">Title Present</span>
                 </div>
+                <div className="flex items-center gap-2">
+                  {vehicle.billOfSale ? (
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <XCircle className="w-4 h-4 text-red-600" />
+                  )}
+                  <span className="text-sm">Bill of Sale</span>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Paperwork Status</p>
+                <p className="font-medium">{formatPaperworkDisplay(vehicle.paperwork, vehicle.paperworkOther)}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Sale Information (if sold) */}
+          {vehicle.status === 'sold' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  Sale Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Buyer</p>
+                    <p className="font-medium">{vehicle.buyerName || `${vehicle.buyerFirstName} ${vehicle.buyerLastName}` || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Sale Price</p>
+                    <p className="font-medium">{vehicle.salePrice ? `$${parseFloat(vehicle.salePrice).toLocaleString()}` : 'N/A'}</p>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Sale Date</p>
+                  <p className="font-medium">{vehicle.saleDate || 'N/A'}</p>
+                </div>
+                {vehicle.buyerAddress && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Buyer Address</p>
+                    <p className="font-medium">
+                      {vehicle.buyerAddress}
+                      {vehicle.buyerCity && `, ${vehicle.buyerCity}`}
+                      {vehicle.buyerState && `, ${vehicle.buyerState}`}
+                      {vehicle.buyerZip && ` ${vehicle.buyerZip}`}
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
