@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface UploadedDocument {
@@ -117,18 +116,15 @@ class VehicleStore {
     return docsArray.map((doc: any) => {
       console.log('Processing document from DB:', doc);
       
-      // Handle cases where doc might be nested or have different structure
-      const docData = doc.documents ? doc.documents : doc;
-      
-      // Create a proper File object with the stored type
-      const fileType = docData.type || this.getFileTypeFromName(docData.name || 'unknown');
-      const file = new File([], docData.name || 'unknown', { type: fileType });
+      // Documents are already in the correct format, don't look for nested structure
+      const fileType = doc.type || this.getFileTypeFromName(doc.name || 'unknown');
+      const file = new File([], doc.name || 'unknown', { type: fileType });
       
       const deserializedDoc = {
-        id: docData.id || `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        name: docData.name || 'Unknown Document',
-        size: docData.size || 0,
-        url: docData.url || '',
+        id: doc.id || `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        name: doc.name || 'Unknown Document',
+        size: doc.size || 0,
+        url: doc.url || '',
         file: file
       };
       
