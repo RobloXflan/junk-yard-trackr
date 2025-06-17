@@ -9,6 +9,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { Dashboard } from "@/pages/Dashboard";
 import { Intake } from "@/pages/Intake";
 import { InventoryOptimized } from "@/pages/InventoryOptimized";
+import { Screenshots } from "@/pages/Screenshots";
 import { Menu } from "lucide-react";
 import { DMVPreviewPage } from "@/pages/DMVPreviewPage";
 
@@ -33,6 +34,8 @@ const App = () => {
         return <Intake />;
       case 'inventory':
         return <InventoryOptimized onNavigate={handleNavigate} />;
+      case 'screenshots':
+        return <Screenshots />;
       case 'dmv-preview':
         return <DMVPreviewPage state={dmvPreviewState} onNavigate={handleNavigate} />;
       default:
@@ -84,6 +87,16 @@ const App = () => {
                       }`}
                     >
                       Inventory
+                    </button>
+                    <button
+                      onClick={() => handleNavigate("screenshots")}
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                        currentPage === "screenshots"
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      }`}
+                    >
+                      Screenshots
                     </button>
                   </nav>
                 </div>
