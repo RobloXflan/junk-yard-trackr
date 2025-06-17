@@ -61,7 +61,7 @@ export const ViewOnlyInventory = ({ onLogout, username }: ViewOnlyInventoryProps
 
       if (error) throw error;
       
-      // Transform the data to match our Vehicle interface
+      // Transform the data to match our Vehicle interface, ensuring documents is always an array
       const transformedData: Vehicle[] = (data || []).map(vehicle => ({
         id: vehicle.id,
         year: vehicle.year || '',
@@ -72,7 +72,7 @@ export const ViewOnlyInventory = ({ onLogout, username }: ViewOnlyInventoryProps
         paperwork: vehicle.paperwork || '',
         title_present: Boolean(vehicle.title_present),
         bill_of_sale: Boolean(vehicle.bill_of_sale),
-        documents: vehicle.documents || [],
+        documents: Array.isArray(vehicle.documents) ? vehicle.documents : [],
       }));
 
       setVehicles(transformedData);
