@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -107,57 +108,11 @@ const App = () => {
           <div className="min-h-screen flex w-full bg-background">
             <AppSidebar currentPage={currentPage} onNavigate={setCurrentPage} />
             <main className="flex-1 flex flex-col">
-              <header className="border-b bg-card px-3 py-2 sm:px-4 sm:py-3 lg:px-6">
-                <div className="flex items-center gap-2 sm:gap-4">
-                  <SidebarTrigger className="lg:hidden h-9 w-9 sm:h-10 sm:w-10">
-                    <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
+              <header className="border-b bg-card px-4 py-3 lg:px-6">
+                <div className="flex items-center gap-4">
+                  <SidebarTrigger className="lg:hidden">
+                    <Menu className="w-5 h-5" />
                   </SidebarTrigger>
-                  
-                  {/* Mobile navigation - horizontal scroll */}
-                  <nav className="flex lg:hidden items-center overflow-x-auto scrollbar-hide flex-1 gap-1">
-                    <button
-                      onClick={() => setCurrentPage("dashboard")}
-                      className={`px-2 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
-                        currentPage === "dashboard"
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                      }`}
-                    >
-                      Dashboard
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage("intake")}
-                      className={`px-2 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
-                        currentPage === "intake"
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                      }`}
-                    >
-                      Intake
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage("inventory")}
-                      className={`px-2 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
-                        currentPage === "inventory"
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                      }`}
-                    >
-                      Inventory
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage("pending-releases")}
-                      className={`px-2 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
-                        currentPage === "pending-releases"
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                      }`}
-                    >
-                      Releases
-                    </button>
-                  </nav>
-
-                  {/* Desktop navigation - unchanged */}
                   <nav className="hidden lg:flex items-center space-x-4">
                     <button
                       onClick={() => setCurrentPage("dashboard")}
@@ -200,21 +155,20 @@ const App = () => {
                       Pending Releases
                     </button>
                   </nav>
-                  
-                  <div className="ml-auto flex items-center gap-2 sm:gap-4">
-                    <span className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
+                  <div className="ml-auto flex items-center gap-4">
+                    <span className="text-sm text-muted-foreground">
                       Welcome, {username}
                     </span>
                     <button
                       onClick={handleLogout}
-                      className="text-xs sm:text-sm text-muted-foreground hover:text-foreground px-2 py-1 rounded"
+                      className="text-sm text-muted-foreground hover:text-foreground"
                     >
                       Logout
                     </button>
                   </div>
                 </div>
               </header>
-              <div className="flex-1 p-3 sm:p-4 lg:p-6">
+              <div className="flex-1 p-4 lg:p-6">
                 {renderPage()}
               </div>
             </main>
