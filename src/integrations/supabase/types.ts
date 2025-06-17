@@ -45,6 +45,47 @@ export type Database = {
         }
         Relationships: []
       }
+      dmv_automation_logs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          screenshot_url: string | null
+          status: string
+          step: string
+          updated_at: string
+          vehicle_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          screenshot_url?: string | null
+          status: string
+          step: string
+          updated_at?: string
+          vehicle_id: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          screenshot_url?: string | null
+          status?: string
+          step?: string
+          updated_at?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dmv_automation_logs_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_processing_logs: {
         Row: {
           created_at: string

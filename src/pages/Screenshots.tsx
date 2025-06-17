@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -15,22 +15,23 @@ interface Screenshot {
   status: 'completed' | 'error' | 'in-progress';
   screenshot_url: string;
   created_at: string;
+  error_message?: string;
   vehicle?: {
     year: string;
     make: string;
     model: string;
-    vin: string;
+    vehicle_id: string;
   };
 }
 
 export function Screenshots() {
   const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
-  const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
 
   const { data: screenshots, isLoading } = useQuery({
     queryKey: ['dmv-screenshots'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Using any type to work around TypeScript issues until types are regenerated
+      const { data, error } = await (supabase as any)
         .from('dmv_automation_logs')
         .select(`
           id,
@@ -39,11 +40,12 @@ export function Screenshots() {
           status,
           screenshot_url,
           created_at,
+          error_message,
           vehicles (
             year,
             make,
             model,
-            vin
+            vehicle_id
           )
         `)
         .not('screenshot_url', 'is', null)
@@ -132,7 +134,7 @@ export function Screenshots() {
                   {vehicleKey}
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  VIN: {vehicleScreenshots[0]?.vehicle?.vin || 'Unknown'}
+                  VIN: {vehicleScreenshots[0]?.vehicle?.vehicle_id || 'Unknown'}
                 </p>
               </CardHeader>
               <CardContent>
@@ -147,6 +149,11 @@ export function Screenshots() {
                             <Calendar className="w-3 h-3" />
                             {new Date(screenshot.created_at).toLocaleString()}
                           </div>
+                          {screenshot.error_message && (
+                            <div className="text-sm text-red-600 mt-1">
+                              Error: {screenshot.error_message}
+                            </div>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">

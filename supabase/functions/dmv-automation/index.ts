@@ -34,6 +34,21 @@ interface ProgressUpdate {
   screenshot?: string;
 }
 
+// Helper function to save progress to database
+async function saveProgressToDb(supabase: any, vehicleId: string, step: string, status: string, screenshotUrl?: string, errorMessage?: string) {
+  try {
+    await supabase.from('dmv_automation_logs').insert({
+      vehicle_id: vehicleId,
+      step: step,
+      status: status,
+      screenshot_url: screenshotUrl,
+      error_message: errorMessage
+    });
+  } catch (error) {
+    console.error('Failed to save progress to database:', error);
+  }
+}
+
 serve(async (req) => {
   console.log('DMV automation function called');
 
@@ -96,28 +111,31 @@ serve(async (req) => {
     for (const vehicle of vehicles) {
       const progress: ProgressUpdate[] = [];
       
-      const addProgress = (step: string, status: 'in-progress' | 'completed' | 'error', message: string, screenshot?: string) => {
+      const addProgress = async (step: string, status: 'in-progress' | 'completed' | 'error', message: string, screenshot?: string) => {
         progress.push({ vehicleId: vehicle.id, step, status, message, screenshot });
         console.log(`${vehicle.id} - ${step}: ${message}`);
+        
+        // Save to database
+        await saveProgressToDb(supabase, vehicle.id, step, status, screenshot, status === 'error' ? message : undefined);
       };
 
       try {
-        addProgress("init", "in-progress", "Starting DMV automation for vehicle");
+        await addProgress("init", "in-progress", "Starting DMV automation for vehicle");
         
         await supabase.from('vehicles').update({ dmv_status: 'processing' }).eq('id', vehicle.id);
 
-        addProgress("browser", "in-progress", "Launching browser...");
+        await addProgress("browser", "in-progress", "Launching browser...");
         const browser = await puppeteer.launch({ 
           headless: true,
           args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
         const page = await browser.newPage();
 
-        addProgress("navigate", "in-progress", "Navigating to DMV website...");
+        await addProgress("navigate", "in-progress", "Navigating to DMV website...");
         await page.goto("https://www.dmv.ca.gov/wasapp/nrl/nrlApplication.do", { 
           waitUntil: 'networkidle2' 
         });
-        addProgress("navigate", "completed", "DMV website loaded");
+        await addProgress("navigate", "completed", "DMV website loaded");
 
         // Parse sale date from YYYY-MM-DD to month/day/year format
         const saleDate = new Date(vehicle.sale_date || '');
@@ -125,7 +143,7 @@ serve(async (req) => {
         const saleDay = saleDate.getDate().toString();
         const saleYear = saleDate.getFullYear().toString();
 
-        addProgress("form1", "in-progress", "Filling vehicle information...");
+        await addProgress("form1", "in-progress", "Filling vehicle information...");
         
         // Fill vehicle data dynamically
         if (vehicle.license_plate) {
@@ -137,26 +155,26 @@ serve(async (req) => {
         await page.type('input#newOwnerFname', vehicle.buyer_first_name);
         await page.type('input#newOwnerLname', vehicle.buyer_last_name);
         
-        addProgress("form1", "completed", "Vehicle and owner info filled");
+        await addProgress("form1", "completed", "Vehicle and owner info filled");
 
         // Take screenshot before first submit
         const screenshot1 = await page.screenshot({ type: 'png' });
         const screenshot1Base64 = `data:image/png;base64,${screenshot1.toString('base64')}`;
         
-        addProgress("submit1", "in-progress", "Submitting first page...", screenshot1Base64);
+        await addProgress("submit1", "in-progress", "Submitting first page...", screenshot1Base64);
         await page.click('button[type="submit"]');
         await page.waitForNavigation({ waitUntil: 'networkidle2' });
-        addProgress("submit1", "completed", "First page submitted");
+        await addProgress("submit1", "completed", "First page submitted");
 
-        addProgress("form2", "in-progress", "Filling page 2...");
+        await addProgress("form2", "in-progress", "Filling page 2...");
         // Click on the "Yes" label to activate the radio
         await page.click('label[for="y"]');
 
         await page.click('button[type="submit"]');
         await page.waitForNavigation({ waitUntil: 'networkidle2' });
-        addProgress("form2", "completed", "Page 2 submitted");
+        await addProgress("form2", "completed", "Page 2 submitted");
 
-        addProgress("seller", "in-progress", "Setting up seller information...");
+        await addProgress("seller", "in-progress", "Setting up seller information...");
         // Toggle seller is a company
         await page.click('div.toggle-text--left');
         
@@ -165,9 +183,9 @@ serve(async (req) => {
         await page.type('input#sellerAddress', '4735 Cecilia St');
         await page.type('input#sellerCity', 'Cudahy');
         await page.type('input#sellerZip', '90201');
-        addProgress("seller", "completed", "Seller information filled");
+        await addProgress("seller", "completed", "Seller information filled");
 
-        addProgress("buyer", "in-progress", "Filling buyer information...");
+        await addProgress("buyer", "in-progress", "Filling buyer information...");
         // Fill in the new owner information
         await page.type('input#newOwnerFname', vehicle.buyer_first_name);
         await page.type('input#newOwnerLname', vehicle.buyer_last_name);
@@ -181,13 +199,13 @@ serve(async (req) => {
         if (vehicle.buyer_zip) {
           await page.type('input#newOwnerZip', vehicle.buyer_zip);
         }
-        addProgress("buyer", "completed", "Buyer information filled");
+        await addProgress("buyer", "completed", "Buyer information filled");
 
-        addProgress("mileage", "in-progress", "Setting mileage...");
+        await addProgress("mileage", "in-progress", "Setting mileage...");
         await page.click('label[for="notActualMileage"]');
-        addProgress("mileage", "completed", "Mileage set");
+        await addProgress("mileage", "completed", "Mileage set");
 
-        addProgress("sale", "in-progress", "Filling sale information...");
+        await addProgress("sale", "in-progress", "Filling sale information...");
         // Fill sale date
         await page.select('select#saleMonth', saleMonth);
         await page.type('input#saleDay', saleDay);
@@ -196,20 +214,20 @@ serve(async (req) => {
         // Fill sale price
         await page.type('input#sellingPrice', vehicle.sale_price || '');
         await page.click('label[for="gift_no"]');
-        addProgress("sale", "completed", "Sale information filled");
+        await addProgress("sale", "completed", "Sale information filled");
 
         // Take screenshot before final submit
         const screenshot2 = await page.screenshot({ type: 'png' });
         const screenshot2Base64 = `data:image/png;base64,${screenshot2.toString('base64')}`;
 
-        addProgress("final", "in-progress", "Submitting final form...", screenshot2Base64);
+        await addProgress("final", "in-progress", "Submitting final form...", screenshot2Base64);
         await page.click('button#continue');
         await page.waitForNavigation({ waitUntil: 'networkidle2' });
 
         // Wait a bit for the confirmation page to fully load
         await page.waitForTimeout(3000);
 
-        addProgress("confirmation", "in-progress", "Processing confirmation...");
+        await addProgress("confirmation", "in-progress", "Processing confirmation...");
         const confirmationText = await page.evaluate(() => document.body.textContent);
         let confirmationNumber: string | undefined = undefined;
         
@@ -224,7 +242,7 @@ serve(async (req) => {
         const screenshot3 = await page.screenshot({ type: 'png' });
         const screenshot3Base64 = `data:image/png;base64,${screenshot3.toString('base64')}`;
         
-        addProgress("confirmation", "completed", `DMV submission completed. Confirmation: ${confirmationNumber}`, screenshot3Base64);
+        await addProgress("confirmation", "completed", `DMV submission completed. Confirmation: ${confirmationNumber}`, screenshot3Base64);
 
         await browser.close();
 
@@ -238,7 +256,7 @@ serve(async (req) => {
           })
           .eq('id', vehicle.id);
 
-        addProgress("complete", "completed", "Vehicle DMV status updated successfully");
+        await addProgress("complete", "completed", "Vehicle DMV status updated successfully");
 
         results.push({
           vehicleId: vehicle.id,
@@ -255,13 +273,13 @@ serve(async (req) => {
           if (page && !page.isClosed()) {
             const errorScreenshot = await page.screenshot({ type: 'png' });
             const errorScreenshotBase64 = `data:image/png;base64,${errorScreenshot.toString('base64')}`;
-            addProgress("error", "error", `Error: ${error?.message || String(error)}`, errorScreenshotBase64);
+            await addProgress("error", "error", `Error: ${error?.message || String(error)}`, errorScreenshotBase64);
           } else {
-            addProgress("error", "error", `Error: ${error?.message || String(error)}`);
+            await addProgress("error", "error", `Error: ${error?.message || String(error)}`);
           }
         } catch (screenshotError) {
           console.error('Could not take error screenshot:', screenshotError);
-          addProgress("error", "error", `Error: ${error?.message || String(error)}`);
+          await addProgress("error", "error", `Error: ${error?.message || String(error)}`);
         }
         
         // Close browser if it exists
