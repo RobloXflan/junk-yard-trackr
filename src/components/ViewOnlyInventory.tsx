@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -5,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ViewOnlyVehicleDialog } from "@/components/ViewOnlyVehicleDialog";
 import { ChocoXflanPendingReleases } from "@/components/ChocoXflanPendingReleases";
-import { Search, LogOut, CheckCircle, XCircle, Eye, RefreshCw, ChevronDown, FileText } from "lucide-react";
+import { Search, LogOut, CheckCircle, XCircle, Eye, RefreshCw, ChevronDown, FileText, Car } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useVehicleStorePaginated } from "@/hooks/useVehicleStorePaginated";
 import { Vehicle } from "@/stores/vehicleStore";
@@ -234,10 +235,35 @@ export const ViewOnlyInventory = ({ onLogout, username }: ViewOnlyInventoryProps
               {vehicles.map((vehicle) => (
                 <Card 
                   key={vehicle.id} 
-                  className="hover:shadow-lg transition-shadow cursor-pointer"
+                  className="hover:shadow-lg transition-shadow cursor-pointer overflow-hidden"
                   onClick={() => handleVehicleClick(vehicle)}
                 >
-                  <CardHeader>
+                  {/* Car Image Thumbnail */}
+                  {vehicle.carImages && vehicle.carImages.length > 0 ? (
+                    <div className="relative h-48 w-full overflow-hidden">
+                      <img
+                        src={vehicle.carImages[0].url}
+                        alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          console.error('Error loading car image:', vehicle.carImages?.[0]?.url);
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.parentElement?.classList.add('hidden');
+                        }}
+                      />
+                      {vehicle.carImages.length > 1 && (
+                        <div className="absolute top-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
+                          +{vehicle.carImages.length - 1} more
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="h-48 w-full bg-gray-100 flex items-center justify-center">
+                      <Car className="w-12 h-12 text-gray-400" />
+                    </div>
+                  )}
+
+                  <CardHeader className="pb-3">
                     <CardTitle className="text-lg">
                       {vehicle.year} {vehicle.make} {vehicle.model}
                     </CardTitle>
@@ -250,7 +276,7 @@ export const ViewOnlyInventory = ({ onLogout, username }: ViewOnlyInventoryProps
                       </Badge>
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-3">
+                  <CardContent className="space-y-3 pt-0">
                     <div className="grid grid-cols-1 gap-2">
                       <div>
                         <p className="text-sm text-gray-600">Vehicle ID</p>
@@ -286,7 +312,7 @@ export const ViewOnlyInventory = ({ onLogout, username }: ViewOnlyInventoryProps
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         {vehicle.documents && vehicle.documents.length > 0 ? (
                           <>
-                            <Eye className="w-4 h-4" />
+                            <FileText className="w-4 h-4" />
                             <span>{vehicle.documents.length} document(s)</span>
                           </>
                         ) : (

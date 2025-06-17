@@ -78,6 +78,7 @@ export function useVehicleStorePaginated(isViewOnly: boolean = false, username: 
           paperwork,
           paperwork_other,
           status,
+          car_images,
           created_at,
           updated_at
         `, { count: 'exact' })
@@ -129,6 +130,7 @@ export function useVehicleStorePaginated(isViewOnly: boolean = false, username: 
         paperwork: vehicle.paperwork || undefined,
         paperworkOther: vehicle.paperwork_other || undefined,
         status: (vehicle.status as Vehicle['status']) || 'yard',
+        carImages: Array.isArray(vehicle.car_images) ? vehicle.car_images : [],
         createdAt: vehicle.created_at,
         documents: []
       }));
