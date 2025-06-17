@@ -10,19 +10,14 @@ import { Dashboard } from "@/pages/Dashboard";
 import { Intake } from "@/pages/Intake";
 import { InventoryOptimized } from "@/pages/InventoryOptimized";
 import { Menu } from "lucide-react";
-import { DMVPreviewPage } from "@/pages/DMVPreviewPage";
 
 const queryClient = new QueryClient();
 
 const App = () => {
   const [currentPage, setCurrentPage] = useState("dashboard");
-  const [dmvPreviewState, setDmvPreviewState] = useState<any>(null);
 
-  const handleNavigate = (page: string, state?: any) => {
+  const handleNavigate = (page: string) => {
     setCurrentPage(page);
-    if (page === "dmv-preview") {
-      setDmvPreviewState(state);
-    }
   };
 
   const renderPage = () => {
@@ -33,8 +28,6 @@ const App = () => {
         return <Intake />;
       case 'inventory':
         return <InventoryOptimized onNavigate={handleNavigate} />;
-      case 'dmv-preview':
-        return <DMVPreviewPage state={dmvPreviewState} onNavigate={handleNavigate} />;
       default:
         return <Dashboard />;
     }
