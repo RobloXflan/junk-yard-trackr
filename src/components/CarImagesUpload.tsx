@@ -1,4 +1,3 @@
-
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -220,6 +219,15 @@ export function CarImagesUpload({ vehicleId, currentImages, onImagesUpdate, disa
   // Get preview images (either pending or current)
   const previewImages = pendingImages.length > 0 ? pendingImages : currentImages;
 
+  // Helper functions to safely access properties
+  const getImageUrl = (image: PendingImage | CarImage) => {
+    return 'preview' in image ? image.preview : image.url;
+  };
+
+  const getImageName = (image: PendingImage | CarImage) => {
+    return 'file' in image ? image.file.name : image.name;
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -245,20 +253,20 @@ export function CarImagesUpload({ vehicleId, currentImages, onImagesUpdate, disa
                     <div className="relative">
                       <div className="aspect-video w-full overflow-hidden rounded-lg border bg-muted">
                         <img
-                          src={pendingImages.length > 0 ? previewImages[0].preview : (previewImages[0] as CarImage).url}
+                          src={getImageUrl(previewImages[0])}
                           alt="Vehicle preview"
                           className="w-full h-full object-cover"
                         />
                       </div>
                       <p className="text-sm text-muted-foreground mt-2">
-                        {pendingImages.length > 0 ? previewImages[0].file.name : (previewImages[0] as CarImage).name}
+                        {getImageName(previewImages[0])}
                       </p>
                     </div>
                   ) : (
                     <div className="relative">
                       <div className="aspect-video w-full overflow-hidden rounded-lg border bg-muted">
                         <img
-                          src={pendingImages.length > 0 ? previewImages[carouselIndex].preview : (previewImages[carouselIndex] as CarImage).url}
+                          src={getImageUrl(previewImages[carouselIndex])}
                           alt={`Vehicle preview ${carouselIndex + 1}`}
                           className="w-full h-full object-cover"
                         />
@@ -292,7 +300,7 @@ export function CarImagesUpload({ vehicleId, currentImages, onImagesUpdate, disa
                       
                       <div className="flex items-center justify-between mt-2">
                         <p className="text-sm text-muted-foreground">
-                          {pendingImages.length > 0 ? previewImages[carouselIndex].file.name : (previewImages[carouselIndex] as CarImage).name}
+                          {getImageName(previewImages[carouselIndex])}
                         </p>
                         <p className="text-sm text-muted-foreground">
                           Image {carouselIndex + 1} of {previewImages.length}
