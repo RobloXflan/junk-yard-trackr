@@ -109,7 +109,7 @@ export function Screenshots() {
           <CardContent className="text-center py-8">
             <Eye className="w-12 h-12 mx-auto text-gray-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-600 mb-2">No Process Logs Yet</h3>
-            <p className="text-gray-500">DMV automation process logs will appear here.</p>
+            <p className="text-gray-500">DMV automation process logs will appear here when you run the automation.</p>
           </CardContent>
         </Card>
       </div>
@@ -163,15 +163,17 @@ export function Screenshots() {
                           <Badge className={getStatusColor(screenshot.status)}>
                             {screenshot.status}
                           </Badge>
-                          {screenshot.screenshot_url && (
+                          {screenshot.screenshot_url ? (
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => setSelectedScreenshot(screenshot.screenshot_url)}
                             >
                               <Eye className="w-3 h-3 mr-1" />
-                              View
+                              View Screenshot
                             </Button>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">No screenshot available</span>
                           )}
                         </div>
                       </div>
