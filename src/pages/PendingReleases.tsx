@@ -140,6 +140,39 @@ export function PendingReleases() {
                       </Button>
                     </div>
                   )}
+
+                  {/* Buyer Address */}
+                  {(vehicle.buyerAddress || vehicle.buyerCity || vehicle.buyerState || vehicle.buyerZip) && (
+                    <div className="flex items-center justify-between p-2 bg-muted rounded">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">Address:</span>
+                        <span className="text-sm">
+                          {[
+                            vehicle.buyerAddress,
+                            vehicle.buyerCity,
+                            vehicle.buyerState,
+                            vehicle.buyerZip
+                          ].filter(Boolean).join(', ')}
+                        </span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const fullAddress = [
+                            vehicle.buyerAddress,
+                            vehicle.buyerCity,
+                            vehicle.buyerState,
+                            vehicle.buyerZip
+                          ].filter(Boolean).join(', ');
+                          copyToClipboard(fullAddress, "Buyer Address");
+                        }}
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Sale Information */}
@@ -189,11 +222,19 @@ export function PendingReleases() {
                     variant="outline"
                     className="w-full"
                     onClick={() => {
+                      const fullAddress = [
+                        vehicle.buyerAddress,
+                        vehicle.buyerCity,
+                        vehicle.buyerState,
+                        vehicle.buyerZip
+                      ].filter(Boolean).join(', ');
+                      
                       const allData = [
                         `Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}`,
                         `Vehicle ID: ${vehicle.vehicleId}`,
                         vehicle.licensePlate ? `License Plate: ${vehicle.licensePlate}` : '',
                         vehicle.buyerFirstName && vehicle.buyerLastName ? `Buyer: ${vehicle.buyerFirstName} ${vehicle.buyerLastName}` : '',
+                        fullAddress ? `Address: ${fullAddress}` : '',
                         vehicle.saleDate ? `Sale Date: ${new Date(vehicle.saleDate).toLocaleDateString()}` : '',
                         vehicle.salePrice ? `Sale Price: $${parseFloat(vehicle.salePrice).toLocaleString()}` : ''
                       ].filter(Boolean).join('\n');
