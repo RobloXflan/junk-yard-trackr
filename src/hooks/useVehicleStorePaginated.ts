@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Vehicle } from '@/stores/vehicleStore';
@@ -45,6 +46,10 @@ export function useVehicleStorePaginated() {
           buyer_name,
           buyer_first_name,
           buyer_last_name,
+          buyer_address,
+          buyer_city,
+          buyer_state,
+          buyer_zip,
           sale_date,
           sale_price,
           notes,
@@ -92,6 +97,10 @@ export function useVehicleStorePaginated() {
         buyerName: vehicle.buyer_name || undefined,
         buyerFirstName: vehicle.buyer_first_name || undefined,
         buyerLastName: vehicle.buyer_last_name || undefined,
+        buyerAddress: vehicle.buyer_address || undefined,
+        buyerCity: vehicle.buyer_city || undefined,
+        buyerState: vehicle.buyer_state || undefined,
+        buyerZip: vehicle.buyer_zip || undefined,
         saleDate: vehicle.sale_date || undefined,
         salePrice: vehicle.sale_price || undefined,
         notes: vehicle.notes || undefined,

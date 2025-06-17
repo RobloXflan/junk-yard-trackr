@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface UploadedDocument {
@@ -24,6 +25,10 @@ export interface Vehicle {
   buyerName?: string;
   buyerFirstName?: string;
   buyerLastName?: string;
+  buyerAddress?: string;
+  buyerCity?: string;
+  buyerState?: string;
+  buyerZip?: string;
   saleDate?: string;
   salePrice?: string;
   notes?: string;
