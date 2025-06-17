@@ -3,11 +3,11 @@ import { useVehicleStorePaginated } from "@/hooks/useVehicleStorePaginated";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Copy, Car, User, Calendar, MapPin, Hash, CreditCard, Clock } from "lucide-react";
+import { Copy, Car, User, Calendar, MapPin, Hash, CreditCard, Clock, ExternalLink, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export function PendingReleases() {
-  const { vehicles, isLoading } = useVehicleStorePaginated();
+  const { vehicles, isLoading, updateVehicleStatus } = useVehicleStorePaginated();
   const { toast } = useToast();
 
   // Filter vehicles with status 'sold'
@@ -24,6 +24,27 @@ export function PendingReleases() {
       toast({
         title: "Failed to copy",
         description: "Could not copy to clipboard",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRelease = () => {
+    window.open("https://www.dmv.ca.gov/wasapp/nrl/nrlApplication.do", "_blank");
+  };
+
+  const handleMarkReleased = async (vehicleId: string) => {
+    try {
+      await updateVehicleStatus(vehicleId, 'yard');
+      toast({
+        title: "Vehicle marked as released",
+        description: "Vehicle has been removed from pending releases",
+      });
+    } catch (error) {
+      console.error('Error marking vehicle as released:', error);
+      toast({
+        title: "Failed to mark vehicle as released",
+        description: "Could not update vehicle status",
         variant: "destructive",
       });
     }
@@ -75,7 +96,17 @@ export function PendingReleases() {
                     <Car className="w-5 h-5" />
                     {vehicle.year} {vehicle.make} {vehicle.model}
                   </CardTitle>
-                  <Badge variant="default">Sold</Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="default">Sold</Badge>
+                    <Button
+                      size="sm"
+                      onClick={handleRelease}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-1" />
+                      Release
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -216,8 +247,8 @@ export function PendingReleases() {
                   )}
                 </div>
 
-                {/* Copy All Data Button */}
-                <div className="pt-4 border-t">
+                {/* Action Buttons */}
+                <div className="pt-4 border-t space-y-3">
                   <Button
                     variant="outline"
                     className="w-full"
@@ -244,6 +275,15 @@ export function PendingReleases() {
                   >
                     <Copy className="w-4 h-4 mr-2" />
                     Copy All Data
+                  </Button>
+
+                  <Button
+                    variant="default"
+                    className="w-full bg-green-600 hover:bg-green-700"
+                    onClick={() => handleMarkReleased(vehicle.id)}
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Mark Released
                   </Button>
                 </div>
               </CardContent>
