@@ -9,6 +9,7 @@ import { Dashboard } from "@/pages/Dashboard";
 import { Intake } from "@/pages/Intake";
 import { InventoryOptimized } from "@/pages/InventoryOptimized";
 import { PendingReleases } from "@/pages/PendingReleases";
+import { PublicInventory } from "@/pages/PublicInventory";
 import { Menu } from "lucide-react";
 import { useState } from "react";
 
@@ -16,6 +17,9 @@ const queryClient = new QueryClient();
 
 const App = () => {
   const [currentPage, setCurrentPage] = useState("dashboard");
+
+  // Check if we're on the public inventory route
+  const isPublicInventory = window.location.pathname === "/public-inventory";
 
   const renderPage = () => {
     switch (currentPage) {
@@ -27,10 +31,25 @@ const App = () => {
         return <InventoryOptimized onNavigate={setCurrentPage} />;
       case 'pending-releases':
         return <PendingReleases />;
+      case 'public-inventory':
+        return <PublicInventory />;
       default:
         return <Dashboard />;
     }
   };
+
+  // Handle URL-based routing for public inventory
+  if (isPublicInventory) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <PublicInventory />
+        </TooltipProvider>
+      </QueryClientProvider>
+    );
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
