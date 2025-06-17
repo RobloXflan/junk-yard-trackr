@@ -93,8 +93,23 @@ async function runDMVAutomation(browserlessToken: string, vehicle: any): Promise
 
     console.log('Parsed sale date:', { saleMonth, saleDay, saleYear });
 
+    // Properly escape variables for the automation script
+    const vehicleData = {
+      licensePlate: vehicle.license_plate || '',
+      vehicleId: vehicle.vehicle_id || '',
+      buyerFirstName: vehicle.buyer_first_name || '',
+      buyerLastName: vehicle.buyer_last_name || '',
+      buyerAddress: vehicle.buyer_address || '',
+      buyerCity: vehicle.buyer_city || '',
+      buyerZip: vehicle.buyer_zip || '',
+      salePrice: vehicle.sale_price || '',
+      saleMonth,
+      saleDay,
+      saleYear
+    };
+
     const automationScript = `
-      async function runAutomation() {
+      (async function() {
         console.log('Starting DMV automation script');
         const screenshots = [];
         
@@ -117,20 +132,20 @@ async function runDMVAutomation(browserlessToken: string, vehicle: any): Promise
 
           // Fill vehicle data
           console.log('Filling vehicle information');
-          if ('${vehicle.license_plate}') {
+          if ('${vehicleData.licensePlate}') {
             await page.waitForSelector('input#licensePlateNumber', { timeout: 10000 });
-            await page.type('input#licensePlateNumber', '${vehicle.license_plate}');
+            await page.type('input#licensePlateNumber', '${vehicleData.licensePlate}');
           }
           
           await page.waitForSelector('input#vehicleIdentificationNumber', { timeout: 10000 });
-          await page.type('input#vehicleIdentificationNumber', '${vehicle.vehicle_id}');
+          await page.type('input#vehicleIdentificationNumber', '${vehicleData.vehicleId}');
 
           // Fill new owner data
           await page.waitForSelector('input#newOwnerFname', { timeout: 10000 });
-          await page.type('input#newOwnerFname', '${vehicle.buyer_first_name}');
+          await page.type('input#newOwnerFname', '${vehicleData.buyerFirstName}');
           
           await page.waitForSelector('input#newOwnerLname', { timeout: 10000 });
-          await page.type('input#newOwnerLname', '${vehicle.buyer_last_name}');
+          await page.type('input#newOwnerLname', '${vehicleData.buyerLastName}');
           
           // Take screenshot after form 1
           console.log('Taking screenshot after form 1');
@@ -183,24 +198,24 @@ async function runDMVAutomation(browserlessToken: string, vehicle: any): Promise
 
           // Fill in the new owner information
           await page.waitForSelector('input#newOwnerFname', { timeout: 10000 });
-          await page.clear('input#newOwnerFname');
-          await page.type('input#newOwnerFname', '${vehicle.buyer_first_name}');
+          await page.evaluate(() => document.querySelector('input#newOwnerFname').value = '');
+          await page.type('input#newOwnerFname', '${vehicleData.buyerFirstName}');
           
           await page.waitForSelector('input#newOwnerLname', { timeout: 10000 });
-          await page.clear('input#newOwnerLname');
-          await page.type('input#newOwnerLname', '${vehicle.buyer_last_name}');
+          await page.evaluate(() => document.querySelector('input#newOwnerLname').value = '');
+          await page.type('input#newOwnerLname', '${vehicleData.buyerLastName}');
           
-          if ('${vehicle.buyer_address}') {
+          if ('${vehicleData.buyerAddress}') {
             await page.waitForSelector('input#newOwnerAddress', { timeout: 10000 });
-            await page.type('input#newOwnerAddress', '${vehicle.buyer_address}');
+            await page.type('input#newOwnerAddress', '${vehicleData.buyerAddress}');
           }
-          if ('${vehicle.buyer_city}') {
+          if ('${vehicleData.buyerCity}') {
             await page.waitForSelector('input#newOwnerCity', { timeout: 10000 });
-            await page.type('input#newOwnerCity', '${vehicle.buyer_city}');
+            await page.type('input#newOwnerCity', '${vehicleData.buyerCity}');
           }
-          if ('${vehicle.buyer_zip}') {
+          if ('${vehicleData.buyerZip}') {
             await page.waitForSelector('input#newOwnerZip', { timeout: 10000 });
-            await page.type('input#newOwnerZip', '${vehicle.buyer_zip}');
+            await page.type('input#newOwnerZip', '${vehicleData.buyerZip}');
           }
 
           // Set mileage
@@ -211,18 +226,18 @@ async function runDMVAutomation(browserlessToken: string, vehicle: any): Promise
           // Fill sale date
           console.log('Filling sale date');
           await page.waitForSelector('select#saleMonth', { timeout: 10000 });
-          await page.select('select#saleMonth', '${saleMonth}');
+          await page.select('select#saleMonth', '${vehicleData.saleMonth}');
           
           await page.waitForSelector('input#saleDay', { timeout: 10000 });
-          await page.type('input#saleDay', '${saleDay}');
+          await page.type('input#saleDay', '${vehicleData.saleDay}');
           
           await page.waitForSelector('input#saleYear', { timeout: 10000 });
-          await page.type('input#saleYear', '${saleYear}');
+          await page.type('input#saleYear', '${vehicleData.saleYear}');
 
           // Fill sale price
           console.log('Filling sale price');
           await page.waitForSelector('input#sellingPrice', { timeout: 10000 });
-          await page.type('input#sellingPrice', '${vehicle.sale_price}');
+          await page.type('input#sellingPrice', '${vehicleData.salePrice}');
           
           await page.waitForSelector('label[for="gift_no"]', { timeout: 10000 });
           await page.click('label[for="gift_no"]');
@@ -270,9 +285,7 @@ async function runDMVAutomation(browserlessToken: string, vehicle: any): Promise
           console.error('Error in automation script:', error);
           return { success: false, screenshots, error: error.message };
         }
-      }
-      
-      return await runAutomation();
+      })();
     `;
 
     console.log('Making request to Browserless with updated endpoint');
