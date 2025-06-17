@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,6 +25,7 @@ import {
 import { Vehicle, CarImage } from '@/stores/vehicleStore';
 import { useVehicleStore } from '@/hooks/useVehicleStore';
 import { CarImagesUpload } from '@/components/CarImagesUpload';
+import { SoldDialog } from '@/components/forms/SoldDialog';
 import { toast } from 'sonner';
 
 interface VehicleDetailsDialogProps {
@@ -42,6 +44,7 @@ export function VehicleDetailsDialog({
   isViewOnly = false 
 }: VehicleDetailsDialogProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const [soldDialogOpen, setSoldDialogOpen] = useState(false);
   const { updateVehicleCarImages } = useVehicleStore();
 
   if (!vehicle) return null;
@@ -66,241 +69,321 @@ export function VehicleDetailsDialog({
     }
   };
 
+  const handleStatusChange = async (newStatus: Vehicle['status']) => {
+    if (newStatus === 'sold') {
+      setSoldDialogOpen(true);
+    } else if (onStatusUpdate) {
+      try {
+        await onStatusUpdate(vehicle.id, newStatus);
+      } catch (error) {
+        console.error('Error updating status:', error);
+      }
+    }
+  };
+
+  const handleSoldConfirm = async (soldData: {
+    buyerFirstName: string;
+    buyerLastName: string;
+    salePrice: string;
+    saleDate: string;
+  }) => {
+    if (onStatusUpdate) {
+      try {
+        await onStatusUpdate(vehicle.id, 'sold', soldData);
+        setSoldDialogOpen(false);
+      } catch (error) {
+        console.error('Error updating to sold:', error);
+      }
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="flex items-center gap-2">
-              <Car className="w-5 h-5" />
-              {vehicle.year} {vehicle.make} {vehicle.model}
-            </DialogTitle>
-            <div className="flex items-center gap-2">
-              <Badge className={`${getStatusColor(vehicle.status)} text-white`}>
-                {vehicle.status.toUpperCase()}
-              </Badge>
-              {!isViewOnly && (
-                <Button 
-                  variant={isEditing ? "secondary" : "outline"}
-                  onClick={() => setIsEditing(!isEditing)}
-                >
-                  {isEditing ? 'View Mode' : 'Edit Mode'}
-                </Button>
-              )}
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="flex items-center gap-2">
+                <Car className="w-5 h-5" />
+                {vehicle.year} {vehicle.make} {vehicle.model}
+              </DialogTitle>
+              <div className="flex items-center gap-2">
+                <Badge className={`${getStatusColor(vehicle.status)} text-white`}>
+                  {vehicle.status.toUpperCase()}
+                </Badge>
+                {!isViewOnly && (
+                  <Button 
+                    variant={isEditing ? "secondary" : "outline"}
+                    onClick={() => setIsEditing(!isEditing)}
+                  >
+                    {isEditing ? 'View Mode' : 'Edit Mode'}
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
-        </DialogHeader>
+          </DialogHeader>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Vehicle Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Car className="w-4 h-4" />
-                Vehicle Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Vehicle ID</p>
-                  <p className="font-medium">{vehicle.vehicleId}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">License Plate</p>
-                  <p className="font-medium">{vehicle.licensePlate || 'N/A'}</p>
-                </div>
-              </div>
-              <Separator />
-              <div>
-                <p className="text-sm text-muted-foreground">Make/Model/Year</p>
-                <p className="font-medium">{vehicle.year} {vehicle.make} {vehicle.model}</p>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Status Change Buttons */}
+          {!isViewOnly && (
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                variant={vehicle.status === 'yard' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleStatusChange('yard')}
+                disabled={vehicle.status === 'yard'}
+              >
+                Mark as In Yard
+              </Button>
+              <Button
+                variant={vehicle.status === 'sold' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleStatusChange('sold')}
+                disabled={vehicle.status === 'sold'}
+              >
+                Mark as Sold
+              </Button>
+              <Button
+                variant={vehicle.status === 'pick-your-part' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleStatusChange('pick-your-part')}
+                disabled={vehicle.status === 'pick-your-part'}
+              >
+                Send to Pick Your Part
+              </Button>
+              <Button
+                variant={vehicle.status === 'sa-recycling' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleStatusChange('sa-recycling')}
+                disabled={vehicle.status === 'sa-recycling'}
+              >
+                Send to SA Recycling
+              </Button>
+            </div>
+          )}
 
-          {/* Purchase Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <DollarSign className="w-4 h-4" />
-                Purchase Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Seller</p>
-                  <p className="font-medium">{vehicle.sellerName || 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Purchase Price</p>
-                  <p className="font-medium">${vehicle.purchasePrice || 'N/A'}</p>
-                </div>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Purchase Date</p>
-                <p className="font-medium">{vehicle.purchaseDate || 'N/A'}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Documentation Status */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                Documentation
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-2">
-                  <div className={`w-3 h-3 rounded-full ${vehicle.titlePresent ? 'bg-green-500' : 'bg-red-500'}`} />
-                  <span className="text-sm">Title Present</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className={`w-3 h-3 rounded-full ${vehicle.billOfSale ? 'bg-green-500' : 'bg-red-500'}`} />
-                  <span className="text-sm">Bill of Sale</span>
-                </div>
-              </div>
-              {vehicle.paperwork && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Paperwork Status</p>
-                  <p className="font-medium">{vehicle.paperwork}</p>
-                </div>
-              )}
-              {vehicle.paperworkOther && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Other Paperwork</p>
-                  <p className="font-medium">{vehicle.paperworkOther}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Sale Information (if sold) */}
-          {vehicle.status === 'sold' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Vehicle Information */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <User className="w-4 h-4" />
-                  Sale Details
+                  <Car className="w-4 h-4" />
+                  Vehicle Details
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Buyer</p>
-                    <p className="font-medium">{vehicle.buyerName || `${vehicle.buyerFirstName} ${vehicle.buyerLastName}` || 'N/A'}</p>
+                    <p className="text-sm text-muted-foreground">Vehicle ID</p>
+                    <p className="font-medium">{vehicle.vehicleId}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Sale Price</p>
-                    <p className="font-medium">${vehicle.salePrice || 'N/A'}</p>
+                    <p className="text-sm text-muted-foreground">License Plate</p>
+                    <p className="font-medium">{vehicle.licensePlate || 'N/A'}</p>
+                  </div>
+                </div>
+                <Separator />
+                <div>
+                  <p className="text-sm text-muted-foreground">Make/Model/Year</p>
+                  <p className="font-medium">{vehicle.year} {vehicle.make} {vehicle.model}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Purchase Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="w-4 h-4" />
+                  Purchase Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Seller</p>
+                    <p className="font-medium">{vehicle.sellerName || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Purchase Price</p>
+                    <p className="font-medium">${vehicle.purchasePrice || 'N/A'}</p>
                   </div>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Sale Date</p>
-                  <p className="font-medium">{vehicle.saleDate || 'N/A'}</p>
+                  <p className="text-sm text-muted-foreground">Purchase Date</p>
+                  <p className="font-medium">{vehicle.purchaseDate || 'N/A'}</p>
                 </div>
               </CardContent>
             </Card>
-          )}
 
-          {/* Notes */}
-          {vehicle.notes && (
-            <Card className="lg:col-span-2">
+            {/* Documentation Status */}
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="w-4 h-4" />
-                  Notes
+                  Documentation
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-sm whitespace-pre-wrap">{vehicle.notes}</p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Documents */}
-          {vehicle.documents && vehicle.documents.length > 0 && (
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="w-4 h-4" />
-                  Documents
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {vehicle.documents.map((doc) => (
-                    <div key={doc.id} className="border rounded-lg p-3">
-                      <p className="font-medium text-sm truncate">{doc.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {(doc.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full mt-2"
-                        onClick={() => window.open(doc.url, '_blank')}
-                      >
-                        View
-                      </Button>
-                    </div>
-                  ))}
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-3 h-3 rounded-full ${vehicle.titlePresent ? 'bg-green-500' : 'bg-red-500'}`} />
+                    <span className="text-sm">Title Present</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-3 h-3 rounded-full ${vehicle.billOfSale ? 'bg-green-500' : 'bg-red-500'}`} />
+                    <span className="text-sm">Bill of Sale</span>
+                  </div>
                 </div>
+                {vehicle.paperwork && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Paperwork Status</p>
+                    <p className="font-medium">{vehicle.paperwork}</p>
+                  </div>
+                )}
+                {vehicle.paperworkOther && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Other Paperwork</p>
+                    <p className="font-medium">{vehicle.paperworkOther}</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
-          )}
 
-          {/* Car Images - Only show in edit mode for non-view-only users */}
-          {isEditing && !isViewOnly && (
-            <div className="lg:col-span-2">
-              <CarImagesUpload
-                vehicleId={vehicle.id}
-                currentImages={vehicle.carImages || []}
-                onImagesUpdate={handleCarImagesUpdate}
-              />
-            </div>
-          )}
-
-          {/* Car Images Display - Always show if images exist */}
-          {vehicle.carImages && vehicle.carImages.length > 0 && !isEditing && (
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Car className="w-4 h-4" />
-                  Car Images
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {vehicle.carImages.map((image) => (
-                    <div key={image.id} className="relative group">
-                      <div className="aspect-square overflow-hidden rounded-lg border bg-muted">
-                        <img
-                          src={image.url}
-                          alt={image.name}
-                          className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
-                          onClick={() => window.open(image.url, '_blank')}
-                          onError={(e) => {
-                            console.error('Error loading image:', image.url);
-                            e.currentTarget.src = '/placeholder.svg';
-                          }}
-                        />
-                      </div>
-                      <div className="mt-1 text-xs text-muted-foreground truncate">
-                        {image.name}
-                      </div>
+            {/* Sale Information (if sold) */}
+            {vehicle.status === 'sold' && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    Sale Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Buyer</p>
+                      <p className="font-medium">{vehicle.buyerName || `${vehicle.buyerFirstName} ${vehicle.buyerLastName}` || 'N/A'}</p>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Sale Price</p>
+                      <p className="font-medium">${vehicle.salePrice || 'N/A'}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Sale Date</p>
+                    <p className="font-medium">{vehicle.saleDate || 'N/A'}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Notes */}
+            {vehicle.notes && (
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    Notes
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm whitespace-pre-wrap">{vehicle.notes}</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Documents */}
+            {vehicle.documents && vehicle.documents.length > 0 && (
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Package className="w-4 h-4" />
+                    Documents
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {vehicle.documents.map((doc) => (
+                      <div key={doc.id} className="border rounded-lg p-3">
+                        <p className="font-medium text-sm truncate">{doc.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {(doc.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full mt-2"
+                          onClick={() => window.open(doc.url, '_blank')}
+                        >
+                          View
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Car Images - Only show in edit mode for non-view-only users */}
+            {isEditing && !isViewOnly && (
+              <div className="lg:col-span-2">
+                <CarImagesUpload
+                  vehicleId={vehicle.id}
+                  currentImages={vehicle.carImages || []}
+                  onImagesUpdate={handleCarImagesUpdate}
+                />
+              </div>
+            )}
+
+            {/* Car Images Display - Always show if images exist */}
+            {vehicle.carImages && vehicle.carImages.length > 0 && !isEditing && (
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Car className="w-4 h-4" />
+                    Car Images
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {vehicle.carImages.map((image) => (
+                      <div key={image.id} className="relative group">
+                        <div className="aspect-square overflow-hidden rounded-lg border bg-muted">
+                          <img
+                            src={image.url}
+                            alt={image.name}
+                            className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                            onClick={() => window.open(image.url, '_blank')}
+                            onError={(e) => {
+                              console.error('Error loading image:', image.url);
+                              e.currentTarget.src = '/placeholder.svg';
+                            }}
+                          />
+                        </div>
+                        <div className="mt-1 text-xs text-muted-foreground truncate">
+                          {image.name}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <SoldDialog
+        open={soldDialogOpen}
+        onOpenChange={setSoldDialogOpen}
+        onConfirm={handleSoldConfirm}
+        initialData={{
+          buyerFirstName: vehicle.buyerFirstName || "",
+          buyerLastName: vehicle.buyerLastName || "",
+          salePrice: vehicle.salePrice || "",
+          saleDate: vehicle.saleDate || new Date().toISOString().split('T')[0]
+        }}
+      />
+    </>
   );
 }
