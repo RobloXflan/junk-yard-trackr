@@ -275,9 +275,9 @@ async function runDMVAutomation(browserlessToken: string, vehicle: any): Promise
       return await runAutomation();
     `;
 
-    console.log('Making request to Browserless with token length:', browserlessToken.length);
+    console.log('Making request to Browserless with updated endpoint');
 
-    const response = await fetch(`https://chrome.browserless.io/function?token=${browserlessToken}`, {
+    const response = await fetch(`https://production-sfo.browserless.io/function?token=${browserlessToken}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
