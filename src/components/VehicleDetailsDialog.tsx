@@ -1,3 +1,4 @@
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,10 +39,12 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
   const [isSaving, setIsSaving] = useState(false);
   const [showBuyerSelector, setShowBuyerSelector] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<Vehicle['status']>('yard');
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const { updateVehicleDetails, updateVehicleStatus } = useVehicleStore();
 
   useEffect(() => {
     if (vehicle) {
+      console.log('Vehicle data in dialog:', vehicle);
       setEditData({
         vehicleId: vehicle.vehicleId,
         licensePlate: vehicle.licensePlate || '',
@@ -58,6 +61,7 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
         notes: vehicle.notes || ''
       });
       setSelectedStatus(vehicle.status);
+      console.log('Set selected status to:', vehicle.status);
     }
   }, [vehicle]);
 
@@ -66,6 +70,7 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      console.log('Saving vehicle details:', editData);
       await updateVehicleDetails(vehicle.id, editData);
       toast.success("Vehicle details updated successfully");
       setIsEditing(false);
@@ -101,25 +106,42 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
   };
 
   const handleStatusChange = async (newStatus: Vehicle['status']) => {
+    console.log('Status change requested:', newStatus, 'for vehicle:', vehicle.id);
+    
+    if (isUpdatingStatus) {
+      console.log('Status update already in progress, ignoring');
+      return;
+    }
+
     if (newStatus === 'sold') {
+      console.log('Opening buyer selector for sold status');
       setShowBuyerSelector(true);
     } else {
+      setIsUpdatingStatus(true);
       try {
+        console.log('Updating status to:', newStatus);
         await updateVehicleStatus(vehicle.id, newStatus);
         setSelectedStatus(newStatus);
-        toast.success(`Vehicle status updated to ${newStatus}`);
+        toast.success(`Vehicle status updated to ${getStatusDisplay(newStatus)}`);
+        console.log('Status updated successfully');
         // Refresh the dialog
         onOpenChange(false);
         setTimeout(() => onOpenChange(true), 100);
       } catch (error) {
         console.error('Error updating vehicle status:', error);
         toast.error("Failed to update vehicle status");
+        // Reset the selected status back to original
+        setSelectedStatus(vehicle.status);
+      } finally {
+        setIsUpdatingStatus(false);
       }
     }
   };
 
   const handleBuyerSelected = async (buyer: Buyer, salePrice: string, saleDate: string) => {
+    setIsUpdatingStatus(true);
     try {
+      console.log('Buyer selected for sold status:', buyer, salePrice, saleDate);
       const soldData = {
         buyerFirstName: buyer.first_name,
         buyerLastName: buyer.last_name,
@@ -131,16 +153,21 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
         buyerZip: buyer.zip_code || ''
       };
 
+      console.log('Updating vehicle to sold with data:', soldData);
       await updateVehicleStatus(vehicle.id, 'sold', soldData);
       setSelectedStatus('sold');
       setShowBuyerSelector(false);
       toast.success("Vehicle marked as sold");
+      console.log('Vehicle marked as sold successfully');
       // Refresh the dialog
       onOpenChange(false);
       setTimeout(() => onOpenChange(true), 100);
     } catch (error) {
       console.error('Error marking vehicle as sold:', error);
       toast.error("Failed to mark vehicle as sold");
+      setSelectedStatus(vehicle.status);
+    } finally {
+      setIsUpdatingStatus(false);
     }
   };
 
@@ -202,8 +229,8 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
                 {vehicle.year} {vehicle.make} {vehicle.model}
               </DialogTitle>
               <div className="flex items-center gap-2">
-                <Badge className={`${getStatusColor(vehicle.status)} text-white`}>
-                  {getStatusDisplay(vehicle.status)}
+                <Badge className={`${getStatusColor(selectedStatus)} text-white`}>
+                  {getStatusDisplay(selectedStatus)}
                 </Badge>
                 {!isEditing ? (
                   <Button
@@ -240,7 +267,7 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
           </DialogHeader>
 
           <div className="space-y-6">
-            {/* Status Change Section - Only for Main Account */}
+            {/* Status Change Section */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -251,7 +278,11 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
               <CardContent className="space-y-3">
                 <div className="space-y-2">
                   <Label className="text-sm text-muted-foreground">Current Status</Label>
-                  <Select value={selectedStatus} onValueChange={handleStatusChange}>
+                  <Select 
+                    value={selectedStatus} 
+                    onValueChange={handleStatusChange}
+                    disabled={isUpdatingStatus}
+                  >
                     <SelectTrigger className="w-[200px]">
                       <SelectValue />
                     </SelectTrigger>
@@ -262,6 +293,9 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
                       <SelectItem value="sa-recycling">SA Recycling</SelectItem>
                     </SelectContent>
                   </Select>
+                  {isUpdatingStatus && (
+                    <p className="text-sm text-muted-foreground">Updating status...</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
