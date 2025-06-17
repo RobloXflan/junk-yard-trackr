@@ -1,7 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { chromium } from "https://esm.sh/playwright-core@1.41.2";
+import puppeteer from "https://deno.land/x/puppeteer@16.2.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -92,7 +92,7 @@ serve(async (req) => {
 
     const results = [];
 
-    // Process each vehicle with your Playwright script logic
+    // Process each vehicle with Puppeteer
     for (const vehicle of vehicles) {
       const progress: ProgressUpdate[] = [];
       
@@ -107,12 +107,16 @@ serve(async (req) => {
         await supabase.from('vehicles').update({ dmv_status: 'processing' }).eq('id', vehicle.id);
 
         addProgress("browser", "in-progress", "Launching browser...");
-        const browser = await chromium.launch({ headless: false });
+        const browser = await puppeteer.launch({ 
+          headless: true,
+          args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
         const page = await browser.newPage();
 
         addProgress("navigate", "in-progress", "Navigating to DMV website...");
-        await page.goto("https://www.dmv.ca.gov/wasapp/nrl/nrlApplication.do");
-        await page.waitForLoadState('networkidle');
+        await page.goto("https://www.dmv.ca.gov/wasapp/nrl/nrlApplication.do", { 
+          waitUntil: 'networkidle2' 
+        });
         addProgress("navigate", "completed", "DMV website loaded");
 
         // Parse sale date from YYYY-MM-DD to month/day/year format
@@ -125,13 +129,13 @@ serve(async (req) => {
         
         // Fill vehicle data dynamically
         if (vehicle.license_plate) {
-          await page.fill('input#licensePlateNumber', vehicle.license_plate);
+          await page.type('input#licensePlateNumber', vehicle.license_plate);
         }
-        await page.fill('input#vehicleIdentificationNumber', vehicle.vehicle_id);
+        await page.type('input#vehicleIdentificationNumber', vehicle.vehicle_id);
 
         // Fill new owner data
-        await page.fill('input#newOwnerFname', vehicle.buyer_first_name);
-        await page.fill('input#newOwnerLname', vehicle.buyer_last_name);
+        await page.type('input#newOwnerFname', vehicle.buyer_first_name);
+        await page.type('input#newOwnerLname', vehicle.buyer_last_name);
         
         addProgress("form1", "completed", "Vehicle and owner info filled");
 
@@ -141,7 +145,7 @@ serve(async (req) => {
         
         addProgress("submit1", "in-progress", "Submitting first page...", screenshot1Base64);
         await page.click('button[type="submit"]');
-        await page.waitForLoadState('networkidle');
+        await page.waitForNavigation({ waitUntil: 'networkidle2' });
         addProgress("submit1", "completed", "First page submitted");
 
         addProgress("form2", "in-progress", "Filling page 2...");
@@ -149,7 +153,7 @@ serve(async (req) => {
         await page.click('label[for="y"]');
 
         await page.click('button[type="submit"]');
-        await page.waitForLoadState('networkidle');
+        await page.waitForNavigation({ waitUntil: 'networkidle2' });
         addProgress("form2", "completed", "Page 2 submitted");
 
         addProgress("seller", "in-progress", "Setting up seller information...");
@@ -157,25 +161,25 @@ serve(async (req) => {
         await page.click('div.toggle-text--left');
         
         // Fill in the company information (FIXED - Americas Towing LLC)
-        await page.fill('input#seller-company-name', 'Americas Towing LLC');
-        await page.fill('input#sellerAddress', '4735 Cecilia St');
-        await page.fill('input#sellerCity', 'Cudahy');
-        await page.fill('input#sellerZip', '90201');
+        await page.type('input#seller-company-name', 'Americas Towing LLC');
+        await page.type('input#sellerAddress', '4735 Cecilia St');
+        await page.type('input#sellerCity', 'Cudahy');
+        await page.type('input#sellerZip', '90201');
         addProgress("seller", "completed", "Seller information filled");
 
         addProgress("buyer", "in-progress", "Filling buyer information...");
         // Fill in the new owner information
-        await page.fill('input#newOwnerFname', vehicle.buyer_first_name);
-        await page.fill('input#newOwnerLname', vehicle.buyer_last_name);
+        await page.type('input#newOwnerFname', vehicle.buyer_first_name);
+        await page.type('input#newOwnerLname', vehicle.buyer_last_name);
         
         if (vehicle.buyer_address) {
-          await page.fill('input#newOwnerAddress', vehicle.buyer_address);
+          await page.type('input#newOwnerAddress', vehicle.buyer_address);
         }
         if (vehicle.buyer_city) {
-          await page.fill('input#newOwnerCity', vehicle.buyer_city);
+          await page.type('input#newOwnerCity', vehicle.buyer_city);
         }
         if (vehicle.buyer_zip) {
-          await page.fill('input#newOwnerZip', vehicle.buyer_zip);
+          await page.type('input#newOwnerZip', vehicle.buyer_zip);
         }
         addProgress("buyer", "completed", "Buyer information filled");
 
@@ -185,12 +189,12 @@ serve(async (req) => {
 
         addProgress("sale", "in-progress", "Filling sale information...");
         // Fill sale date
-        await page.selectOption('select#saleMonth', { label: saleMonth });
-        await page.fill('input#saleDay', saleDay);
-        await page.fill('input#saleYear', saleYear);
+        await page.select('select#saleMonth', saleMonth);
+        await page.type('input#saleDay', saleDay);
+        await page.type('input#saleYear', saleYear);
 
         // Fill sale price
-        await page.fill('input#sellingPrice', vehicle.sale_price || '');
+        await page.type('input#sellingPrice', vehicle.sale_price || '');
         await page.click('label[for="gift_no"]');
         addProgress("sale", "completed", "Sale information filled");
 
@@ -200,13 +204,13 @@ serve(async (req) => {
 
         addProgress("final", "in-progress", "Submitting final form...", screenshot2Base64);
         await page.click('button#continue');
-        await page.waitForLoadState('networkidle');
+        await page.waitForNavigation({ waitUntil: 'networkidle2' });
 
         // Wait a bit for the confirmation page to fully load
         await page.waitForTimeout(3000);
 
         addProgress("confirmation", "in-progress", "Processing confirmation...");
-        const confirmationText = await page.textContent('body');
+        const confirmationText = await page.evaluate(() => document.body.textContent);
         let confirmationNumber: string | undefined = undefined;
         
         if (confirmationText && confirmationText.includes("Number")) {
