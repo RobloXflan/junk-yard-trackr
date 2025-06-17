@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -65,7 +64,7 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
     setIsDialogOpen(true);
   };
 
-  const handleSaveVehicle = async (vehicleId: string, newStatus: Vehicle['status'], soldData?: {
+  const handleStatusUpdate = async (vehicleId: string, newStatus: Vehicle['status'], soldData?: {
     buyerFirstName: string;
     buyerLastName: string;
     salePrice: string;
@@ -261,7 +260,7 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
         vehicle={selectedVehicle}
         isOpen={isDialogOpen}
         onClose={handleCloseDialog}
-        onSave={handleSaveVehicle}
+        onStatusUpdate={handleStatusUpdate}
       />
     </div>
   );

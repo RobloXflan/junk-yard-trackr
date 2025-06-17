@@ -124,7 +124,7 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
     }
   }, [loadVehicleDocuments]);
 
-  const handleSaveVehicle = async (vehicleId: string, newStatus: Vehicle['status'], soldData?: {
+  const handleStatusUpdate = async (vehicleId: string, newStatus: Vehicle['status'], soldData?: {
     buyerFirstName: string;
     buyerLastName: string;
     salePrice: string;
@@ -374,7 +374,7 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
         vehicle={selectedVehicle}
         isOpen={isDialogOpen}
         onClose={handleCloseDialog}
-        onSave={handleSaveVehicle}
+        onStatusUpdate={handleStatusUpdate}
       />
     </div>
   );
