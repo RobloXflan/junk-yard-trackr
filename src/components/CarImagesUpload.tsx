@@ -2,10 +2,11 @@
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Upload, X, Image as ImageIcon } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { CarImage } from '@/stores/vehicleStore';
 import { supabase } from '@/integrations/supabase/client';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 interface CarImagesUploadProps {
   vehicleId: string;
@@ -16,6 +17,8 @@ interface CarImagesUploadProps {
 
 export function CarImagesUpload({ vehicleId, currentImages, onImagesUpdate, disabled }: CarImagesUploadProps) {
   const [uploading, setUploading] = useState(false);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [carouselIndex, setCarouselIndex] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -129,12 +132,97 @@ export function CarImagesUpload({ vehicleId, currentImages, onImagesUpdate, disa
     fileInputRef.current?.click();
   };
 
+  const nextImage = () => {
+    setCarouselIndex((prev) => (prev + 1) % currentImages.length);
+  };
+
+  const prevImage = () => {
+    setCarouselIndex((prev) => (prev - 1 + currentImages.length) % currentImages.length);
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <ImageIcon className="w-5 h-5" />
           Car Images
+          {currentImages.length > 0 && (
+            <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="ml-auto">
+                  <Eye className="w-4 h-4 mr-2" />
+                  Preview View-Only
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl">
+                <DialogHeader>
+                  <DialogTitle>View-Only Account Preview</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  {currentImages.length === 1 ? (
+                    <div className="relative">
+                      <div className="aspect-video w-full overflow-hidden rounded-lg border bg-muted">
+                        <img
+                          src={currentImages[0].url}
+                          alt="Vehicle preview"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-2">{currentImages[0].name}</p>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <div className="aspect-video w-full overflow-hidden rounded-lg border bg-muted">
+                        <img
+                          src={currentImages[carouselIndex].url}
+                          alt={`Vehicle preview ${carouselIndex + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      
+                      {/* Carousel Controls */}
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full"
+                        onClick={prevImage}
+                        disabled={currentImages.length <= 1}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full"
+                        onClick={nextImage}
+                        disabled={currentImages.length <= 1}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                      
+                      {/* Image Counter */}
+                      <div className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
+                        {carouselIndex + 1} / {currentImages.length}
+                      </div>
+                      
+                      <div className="flex items-center justify-between mt-2">
+                        <p className="text-sm text-muted-foreground">{currentImages[carouselIndex].name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Image {carouselIndex + 1} of {currentImages.length}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="text-sm text-muted-foreground p-4 bg-blue-50 rounded-lg">
+                    <strong>View-Only Preview:</strong> This is how your uploaded images will appear to view-only accounts. 
+                    {currentImages.length > 1 && " They can navigate through all images using the arrow buttons or by clicking on the image."}
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -161,7 +249,7 @@ export function CarImagesUpload({ vehicleId, currentImages, onImagesUpdate, disa
         {/* Images Grid */}
         {currentImages.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {currentImages.map((image) => (
+            {currentImages.map((image, index) => (
               <div key={image.id} className="relative group">
                 <div className="aspect-square overflow-hidden rounded-lg border bg-muted">
                   <img
@@ -174,6 +262,16 @@ export function CarImagesUpload({ vehicleId, currentImages, onImagesUpdate, disa
                     }}
                   />
                 </div>
+                {index === 0 && currentImages.length > 1 && (
+                  <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded">
+                    Header Image
+                  </div>
+                )}
+                {currentImages.length > 1 && index === 0 && (
+                  <div className="absolute top-2 right-8 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
+                    +{currentImages.length - 1} more
+                  </div>
+                )}
                 <Button
                   variant="destructive"
                   size="sm"
@@ -194,6 +292,13 @@ export function CarImagesUpload({ vehicleId, currentImages, onImagesUpdate, disa
             <ImageIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
             <p>No car images added yet</p>
             <p className="text-sm">Click "Add Car Images" to upload photos of this vehicle</p>
+          </div>
+        )}
+        
+        {currentImages.length > 0 && (
+          <div className="text-sm text-muted-foreground bg-gray-50 p-3 rounded-lg">
+            <strong>Note:</strong> The first image will be used as the header image in view-only accounts. 
+            {currentImages.length > 1 && " View-only users can click on it to see all images in a carousel view."}
           </div>
         )}
       </CardContent>
