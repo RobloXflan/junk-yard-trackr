@@ -1,11 +1,11 @@
-
 import { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ViewOnlyVehicleDialog } from "@/components/ViewOnlyVehicleDialog";
-import { Search, LogOut, CheckCircle, XCircle, Eye, RefreshCw, ChevronDown } from "lucide-react";
+import { ChocoXflanPendingReleases } from "@/components/ChocoXflanPendingReleases";
+import { Search, LogOut, CheckCircle, XCircle, Eye, RefreshCw, ChevronDown, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useVehicleStorePaginated } from "@/hooks/useVehicleStorePaginated";
 import { Vehicle } from "@/stores/vehicleStore";
@@ -19,6 +19,7 @@ export const ViewOnlyInventory = ({ onLogout, username }: ViewOnlyInventoryProps
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loadingDocuments, setLoadingDocuments] = useState(false);
+  const [currentView, setCurrentView] = useState<'inventory' | 'pending-releases'>('inventory');
   const { toast } = useToast();
 
   const { 
@@ -115,6 +116,44 @@ export const ViewOnlyInventory = ({ onLogout, username }: ViewOnlyInventoryProps
   };
 
   const isSearching = searchTerm.trim().length > 0;
+  const isChocoXflan = username === 'ChocoXflan';
+
+  if (currentView === 'pending-releases' && isChocoXflan) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white shadow-sm border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Denis Gonzalez - Pending Releases</h1>
+                <p className="text-sm text-gray-600">Logged in as: {username} (View Only)</p>
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setCurrentView('inventory')}
+                >
+                  <Eye className="w-4 h-4 mr-2" />
+                  Inventory
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={onLogout}
+                  className="flex items-center gap-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <ChocoXflanPendingReleases />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -126,6 +165,15 @@ export const ViewOnlyInventory = ({ onLogout, username }: ViewOnlyInventoryProps
               <p className="text-sm text-gray-600">Logged in as: {username} (View Only) - {totalCount} total vehicles</p>
             </div>
             <div className="flex gap-2">
+              {isChocoXflan && (
+                <Button 
+                  variant="outline" 
+                  onClick={() => setCurrentView('pending-releases')}
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  Denis Releases
+                </Button>
+              )}
               <Button 
                 variant="outline" 
                 onClick={handleRefresh}
