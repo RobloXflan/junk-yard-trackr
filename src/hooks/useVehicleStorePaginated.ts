@@ -8,10 +8,14 @@ interface PaginatedVehicleData {
   hasMore: boolean;
 }
 
-// Vehicle IDs that view-only users are allowed to see
+// Vehicle IDs that view-only users are allowed to see (specific vehicles from screenshot)
 const ALLOWED_VEHICLE_IDS_FOR_VIEW_ONLY = [
-  '83002', '14202', '56957', '34536', '22964', '03762'
+  '10905', '83002', '14202', '56957', '34536', '03762', '22964', '63753', '79967'
 ];
+
+// Cutoff date - vehicles created after this date will be shown to view-only users
+// This represents when the new policy started (vehicles added by America Main going forward)
+const VIEW_ONLY_CUTOFF_DATE = '2025-06-17T00:00:00Z'; // Today's date as the cutoff
 
 export function useVehicleStorePaginated(isViewOnly: boolean = false, username: string = '') {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -25,16 +29,16 @@ export function useVehicleStorePaginated(isViewOnly: boolean = false, username: 
 
   // Helper function to check if a vehicle should be visible to view-only users
   const isVehicleAllowedForViewOnly = (vehicleId: string, createdAt: string): boolean => {
-    // If it's one of the allowed vehicle IDs, always show it
+    // If it's one of the specific allowed vehicle IDs, always show it
     if (ALLOWED_VEHICLE_IDS_FOR_VIEW_ONLY.includes(vehicleId)) {
       return true;
     }
     
-    // For new vehicles, we need to check if they were created after the latest allowed vehicle
-    // This is a simple approach - in practice you might want to store a cutoff date
-    // For now, we'll be permissive and show vehicles that aren't in the restricted list
-    // You can adjust this logic based on your specific needs
-    return true; // Allow new vehicles by default
+    // For new vehicles, check if they were created after the cutoff date
+    const vehicleCreatedAt = new Date(createdAt);
+    const cutoffDate = new Date(VIEW_ONLY_CUTOFF_DATE);
+    
+    return vehicleCreatedAt >= cutoffDate;
   };
 
   const loadVehicles = async (page: number = 1, search: string = "", append: boolean = false) => {
@@ -129,12 +133,20 @@ export function useVehicleStorePaginated(isViewOnly: boolean = false, username: 
         documents: []
       }));
 
-      // Apply filtering for view-only users (not admin)
+      // Apply filtering for view-only users (not America Main)
       if (isViewOnly && username !== 'America Main') {
         console.log('Applying view-only filtering for user:', username);
-        transformedVehicles = transformedVehicles.filter(vehicle => 
-          isVehicleAllowedForViewOnly(vehicle.vehicleId, vehicle.createdAt)
-        );
+        console.log('Filtering with allowed IDs:', ALLOWED_VEHICLE_IDS_FOR_VIEW_ONLY);
+        console.log('Cutoff date:', VIEW_ONLY_CUTOFF_DATE);
+        
+        transformedVehicles = transformedVehicles.filter(vehicle => {
+          const isAllowed = isVehicleAllowedForViewOnly(vehicle.vehicleId, vehicle.createdAt);
+          if (isAllowed) {
+            console.log('Vehicle allowed:', vehicle.vehicleId, 'created:', vehicle.createdAt);
+          }
+          return isAllowed;
+        });
+        
         console.log('Filtered vehicles count:', transformedVehicles.length);
       }
 
