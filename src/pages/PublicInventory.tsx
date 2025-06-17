@@ -57,8 +57,23 @@ export const PublicInventory = () => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setVehicles(data || []);
-      setFilteredVehicles(data || []);
+      
+      // Transform the data to match our Vehicle interface
+      const transformedData: Vehicle[] = (data || []).map(vehicle => ({
+        id: vehicle.id,
+        year: vehicle.year || '',
+        make: vehicle.make || '',
+        model: vehicle.model || '',
+        vehicle_id: vehicle.vehicle_id || '',
+        status: vehicle.status || '',
+        paperwork: vehicle.paperwork || '',
+        title_present: Boolean(vehicle.title_present),
+        bill_of_sale: Boolean(vehicle.bill_of_sale),
+        documents: Array.isArray(vehicle.documents) ? vehicle.documents : []
+      }));
+
+      setVehicles(transformedData);
+      setFilteredVehicles(transformedData);
     } catch (error) {
       console.error("Error fetching vehicles:", error);
       toast({
