@@ -22,6 +22,9 @@ export const ViewOnlyInventory = ({ onLogout, username }: ViewOnlyInventoryProps
   const [currentView, setCurrentView] = useState<'inventory' | 'pending-releases'>('inventory');
   const { toast } = useToast();
 
+  // Determine user type based on username
+  const userType = username === 'America Main' ? 'admin' : 'viewer';
+
   const { 
     vehicles, 
     totalCount, 
@@ -32,7 +35,7 @@ export const ViewOnlyInventory = ({ onLogout, username }: ViewOnlyInventoryProps
     loadMore,
     refreshVehicles,
     loadVehicleDocuments
-  } = useVehicleStorePaginated();
+  } = useVehicleStorePaginated(userType, username);
 
   const handleVehicleClick = useCallback(async (vehicle: Vehicle) => {
     console.log('Loading documents for vehicle:', vehicle.id);
