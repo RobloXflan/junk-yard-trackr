@@ -11,8 +11,6 @@ import {
   FileText, 
   User,
   Package,
-  CheckCircle,
-  XCircle,
   ExternalLink
 } from "lucide-react";
 import { Vehicle } from "@/stores/vehicleStore";
@@ -190,24 +188,6 @@ export function ViewOnlyVehicleDialog({ vehicle, open, onOpenChange }: ViewOnlyV
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-2">
-                  {vehicle.titlePresent ? (
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                  ) : (
-                    <XCircle className="w-4 h-4 text-red-600" />
-                  )}
-                  <span className="text-sm">Title Present</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {vehicle.billOfSale ? (
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                  ) : (
-                    <XCircle className="w-4 h-4 text-red-600" />
-                  )}
-                  <span className="text-sm">Bill of Sale</span>
-                </div>
-              </div>
               <div>
                 <p className="text-sm text-muted-foreground">Paperwork Status</p>
                 <p className="font-medium">{formatPaperworkDisplay(vehicle.paperwork, vehicle.paperworkOther)}</p>

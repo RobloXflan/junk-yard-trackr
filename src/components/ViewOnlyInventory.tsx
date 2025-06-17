@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ViewOnlyVehicleDialog } from "@/components/ViewOnlyVehicleDialog";
 import { ChocoXflanPendingReleases } from "@/components/ChocoXflanPendingReleases";
-import { Search, LogOut, CheckCircle, XCircle, Eye, RefreshCw, ChevronDown, FileText, Car } from "lucide-react";
+import { Search, LogOut, Eye, RefreshCw, ChevronDown, FileText, Car } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useVehicleStorePaginated } from "@/hooks/useVehicleStorePaginated";
 import { Vehicle } from "@/stores/vehicleStore";
@@ -298,25 +298,6 @@ export const ViewOnlyInventory = ({ onLogout, username }: ViewOnlyInventoryProps
                       <div>
                         <p className="text-sm text-gray-600">License Plate</p>
                         <p className="font-semibold">{vehicle.licensePlate || 'Not specified'}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        {vehicle.titlePresent ? (
-                          <CheckCircle className="w-4 h-4 text-green-600" />
-                        ) : (
-                          <XCircle className="w-4 h-4 text-red-600" />
-                        )}
-                        <span className="text-sm">Title</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {vehicle.billOfSale ? (
-                          <CheckCircle className="w-4 h-4 text-green-600" />
-                        ) : (
-                          <XCircle className="w-4 h-4 text-red-600" />
-                        )}
-                        <span className="text-sm">Bill of Sale</span>
                       </div>
                     </div>
 
