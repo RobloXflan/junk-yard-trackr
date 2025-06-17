@@ -248,7 +248,31 @@ serve(async (req) => {
         });
 
       } catch (error) {
-        addProgress("error", "error", `Error: ${error?.message || String(error)}`);
+        console.error('DMV automation error for vehicle:', vehicle.id, error);
+        
+        // Take error screenshot if browser/page still exists
+        try {
+          if (page && !page.isClosed()) {
+            const errorScreenshot = await page.screenshot({ type: 'png' });
+            const errorScreenshotBase64 = `data:image/png;base64,${errorScreenshot.toString('base64')}`;
+            addProgress("error", "error", `Error: ${error?.message || String(error)}`, errorScreenshotBase64);
+          } else {
+            addProgress("error", "error", `Error: ${error?.message || String(error)}`);
+          }
+        } catch (screenshotError) {
+          console.error('Could not take error screenshot:', screenshotError);
+          addProgress("error", "error", `Error: ${error?.message || String(error)}`);
+        }
+        
+        // Close browser if it exists
+        try {
+          if (browser) {
+            await browser.close();
+          }
+        } catch (closeError) {
+          console.error('Error closing browser:', closeError);
+        }
+        
         await supabase.from('vehicles').update({ dmv_status: 'failed' }).eq('id', vehicle.id);
         
         results.push({

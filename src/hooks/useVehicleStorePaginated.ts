@@ -301,15 +301,20 @@ export function useVehicleStorePaginated() {
 
   const submitToDMV = async (vehicleIds: string[]) => {
     try {
+      console.log('Submitting vehicles to DMV via hook:', vehicleIds);
+      
       const { data, error } = await supabase.functions.invoke('dmv-automation', {
         body: { vehicleIds }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error submitting to DMV:', error);
+        throw error;
+      }
 
-      // Refresh vehicles to get updated DMV status
-      await refreshVehicles();
-      
+      console.log('DMV submission result:', data);
+
+      // Return the full response data including progress and screenshots
       return data;
     } catch (error) {
       console.error('Failed to submit to DMV:', error);
