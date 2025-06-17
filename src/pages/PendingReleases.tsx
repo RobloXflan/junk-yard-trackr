@@ -3,7 +3,7 @@ import { useVehicleStorePaginated } from "@/hooks/useVehicleStorePaginated";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Copy, Car, User, Calendar, MapPin, Hash, CreditCard } from "lucide-react";
+import { Copy, Car, User, Calendar, MapPin, Hash, CreditCard, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export function PendingReleases() {
