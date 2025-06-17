@@ -18,7 +18,8 @@ import {
   Download,
   Edit,
   Save,
-  X
+  X,
+  Eye
 } from "lucide-react";
 import { Vehicle } from "@/stores/vehicleStore";
 import { useVehicleStorePaginated } from "@/hooks/useVehicleStorePaginated";
@@ -30,7 +31,7 @@ interface VehicleDetailsDialogProps {
   vehicle: Vehicle | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onVehicleUpdated?: () => void; // Add callback for when vehicle is updated
+  onVehicleUpdated?: () => void;
 }
 
 export function VehicleDetailsDialog({ vehicle, open, onOpenChange, onVehicleUpdated }: VehicleDetailsDialogProps) {
@@ -235,6 +236,25 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange, onVehicleUpd
   const handleDownloadDocument = (document: any) => {
     if (document.url) {
       window.open(document.url, '_blank');
+    }
+  };
+
+  const viewDocument = (document: any) => {
+    if (document.file && document.file.type === 'application/pdf') {
+      window.open(document.url, '_blank');
+    } else {
+      // For images, create a new window to display them
+      const newWindow = window.open('', '_blank');
+      if (newWindow) {
+        newWindow.document.write(`
+          <html>
+            <head><title>${document.name}</title></head>
+            <body style="margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#f0f0f0;">
+              <img src="${document.url}" style="max-width:100%;max-height:100%;object-fit:contain;" alt="${document.name}" />
+            </body>
+          </html>
+        `);
+      }
     }
   };
 
@@ -493,7 +513,7 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange, onVehicleUpd
               </CardContent>
             </Card>
 
-            {/* Documentation */}
+            {/* Documentation - RESTORED SECTION */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -506,27 +526,52 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange, onVehicleUpd
                   <p className="text-sm text-muted-foreground">Paperwork Status</p>
                   <p className="font-medium">{formatPaperworkDisplay(vehicle.paperwork, vehicle.paperworkOther)}</p>
                 </div>
+                
+                {/* Show uploaded documents */}
                 {vehicle.documents && vehicle.documents.length > 0 && (
                   <div className="mt-4">
-                    <h4 className="text-sm font-medium mb-2">Documents ({vehicle.documents.length})</h4>
-                    <div className="space-y-2">
-                      {vehicle.documents.map((doc: any, index: number) => (
-                        <div key={index} className="flex items-center justify-between p-2 bg-muted rounded-lg">
-                          <div className="flex items-center gap-2">
-                            <FileText className="w-4 h-4" />
-                            <span className="text-sm">{doc.name || `Document ${index + 1}`}</span>
+                    <h4 className="text-sm font-medium mb-3">Uploaded Documents ({vehicle.documents.length})</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {vehicle.documents.map((document: any, index: number) => (
+                        <div key={document.id || index} className="flex items-center gap-3 p-3 bg-card rounded-lg border border-border">
+                          <FileText className="w-6 h-6 text-primary flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">{document.name || `Document ${index + 1}`}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {document.size ? `${(document.size / 1024 / 1024).toFixed(2)} MB` : 'Unknown size'}
+                            </p>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDownloadDocument(doc)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <Download className="w-4 h-4" />
-                          </Button>
+                          <div className="flex gap-1">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => viewDocument(document)}
+                              className="text-primary hover:text-primary"
+                              title="View document"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDownloadDocument(document)}
+                              className="text-primary hover:text-primary"
+                              title="Open in new tab"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </div>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {(!vehicle.documents || vehicle.documents.length === 0) && (
+                  <div className="mt-3 p-3 bg-muted rounded-lg">
+                    <p className="text-sm text-muted-foreground">No documents uploaded for this vehicle</p>
                   </div>
                 )}
               </CardContent>
