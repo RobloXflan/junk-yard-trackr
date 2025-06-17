@@ -7,6 +7,7 @@ import { Vehicle } from "@/stores/vehicleStore";
 import { Save, X, ExternalLink, FileText } from "lucide-react";
 import { BuyerSelector } from "@/components/forms/BuyerSelector";
 import { Buyer } from "@/hooks/useBuyers";
+import { toast } from "sonner";
 
 interface VehicleDetailsDialogProps {
   vehicle: Vehicle | null;
@@ -37,6 +38,7 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
     buyerState?: string;
     buyerZip?: string;
   } | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Reset state when vehicle changes or dialog opens/closes
   useEffect(() => {
@@ -44,6 +46,7 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
       setSelectedStatus(vehicle.status);
       setPendingSoldData(null);
       setBuyerSelectorOpen(false);
+      setIsSaving(false);
     }
   }, [vehicle, isOpen]);
 
@@ -66,10 +69,10 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
     }
   };
 
-  const handleBuyerSelect = (buyer: Buyer, salePrice: string, saleDate: string) => {
+  const handleBuyerSelect = async (buyer: Buyer, salePrice: string, saleDate: string) => {
     console.log('Buyer selected in dialog:', buyer);
     
-    setPendingSoldData({
+    const soldData = {
       buyerFirstName: buyer.first_name,
       buyerLastName: buyer.last_name,
       salePrice,
@@ -78,37 +81,74 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
       buyerCity: buyer.city || undefined,
       buyerState: buyer.state || undefined,
       buyerZip: buyer.zip_code || undefined
-    });
-    setSelectedStatus('sold');
-    setBuyerSelectorOpen(false);
+    };
+
+    try {
+      setIsSaving(true);
+      setBuyerSelectorOpen(false);
+      
+      // Immediately update the local state to show the sold status
+      setSelectedStatus('sold');
+      setPendingSoldData(soldData);
+      
+      console.log('Calling onSave with sold data:', soldData);
+      
+      // Call the parent's save function
+      await onSave(vehicle.id, 'sold', soldData);
+      
+      toast.success("Vehicle marked as sold successfully!");
+      
+    } catch (error) {
+      console.error('Error saving vehicle as sold:', error);
+      // Revert the optimistic update on error
+      setSelectedStatus(vehicle.status);
+      setPendingSoldData(null);
+      toast.error("Failed to mark vehicle as sold. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleBuyerSelectorClose = (open: boolean) => {
-    if (!open) {
-      // Only reset if we don't have pending sold data (meaning it was cancelled, not confirmed)
-      if (!pendingSoldData) {
-        setSelectedStatus(vehicle.status); // Reset to original status only if cancelled
-      }
+    if (!open && !pendingSoldData) {
+      // Only reset if we don't have pending sold data and we're closing
+      setSelectedStatus(vehicle.status);
     }
     setBuyerSelectorOpen(open);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (isSaving) return; // Prevent double-clicking
+    
     console.log('Saving vehicle with data:', { selectedStatus, pendingSoldData });
     
-    if (selectedStatus === 'sold' && pendingSoldData) {
-      onSave(vehicle.id, selectedStatus, pendingSoldData);
-    } else {
-      onSave(vehicle.id, selectedStatus);
+    try {
+      setIsSaving(true);
+      
+      if (selectedStatus === 'sold' && pendingSoldData) {
+        await onSave(vehicle.id, selectedStatus, pendingSoldData);
+      } else {
+        await onSave(vehicle.id, selectedStatus);
+      }
+      
+      toast.success("Vehicle status updated successfully!");
+      onClose();
+    } catch (error) {
+      console.error('Error saving vehicle:', error);
+      toast.error("Failed to update vehicle status. Please try again.");
+    } finally {
+      setIsSaving(false);
     }
-    onClose();
   };
 
   const handleClose = () => {
+    if (isSaving) return; // Don't allow closing while saving
+    
     // Reset state when closing
     setSelectedStatus(vehicle.status);
     setPendingSoldData(null);
     setBuyerSelectorOpen(false);
+    setIsSaving(false);
     onClose();
   };
 
@@ -193,11 +233,11 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Current Status:</span>
                     <Badge variant={
-                      vehicle.status === 'sold' ? 'default' :
-                      vehicle.status === 'yard' ? 'secondary' :
+                      selectedStatus === 'sold' ? 'default' :
+                      selectedStatus === 'yard' ? 'secondary' :
                       'outline'
                     }>
-                      {getStatusLabel(vehicle.status)}
+                      {getStatusLabel(selectedStatus)}
                     </Badge>
                   </div>
                 </div>
@@ -214,8 +254,9 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
                         <button
                           key={option.value}
                           onClick={() => handleStatusChange(option.value)}
+                          disabled={isSaving}
                           className={`
-                            px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 border-2
+                            px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 border-2 disabled:opacity-50
                             ${selectedStatus === option.value 
                               ? 'border-primary shadow-md scale-105' 
                               : 'border-transparent hover:scale-102'
@@ -252,12 +293,12 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
                     <Button 
                       onClick={handleSave} 
                       className="flex-1"
-                      disabled={selectedStatus === vehicle.status && !pendingSoldData}
+                      disabled={isSaving || (selectedStatus === vehicle.status && !pendingSoldData)}
                     >
                       <Save className="w-4 h-4 mr-2" />
-                      Save Status
+                      {isSaving ? 'Saving...' : 'Save Status'}
                     </Button>
-                    <Button variant="outline" onClick={handleClose}>
+                    <Button variant="outline" onClick={handleClose} disabled={isSaving}>
                       <X className="w-4 h-4 mr-2" />
                       Cancel
                     </Button>
