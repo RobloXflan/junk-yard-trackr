@@ -372,9 +372,8 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
 
       <VehicleDetailsDialog
         vehicle={selectedVehicle}
-        isOpen={isDialogOpen}
-        onClose={handleCloseDialog}
-        onStatusUpdate={handleStatusUpdate}
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
       />
     </div>
   );
