@@ -2,8 +2,6 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Vehicle } from "@/stores/vehicleStore";
 import { Save, X, ExternalLink, FileText } from "lucide-react";
@@ -41,6 +39,13 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
   }, [vehicle, isOpen]);
 
   if (!vehicle) return null;
+
+  const statusOptions = [
+    { value: 'yard', label: 'In Yard', color: 'bg-blue-100 text-blue-800 hover:bg-blue-200' },
+    { value: 'sold', label: 'Sold', color: 'bg-green-100 text-green-800 hover:bg-green-200' },
+    { value: 'pick-your-part', label: 'Pick Your Part', color: 'bg-orange-100 text-orange-800 hover:bg-orange-200' },
+    { value: 'sa-recycling', label: 'SA Recycling', color: 'bg-purple-100 text-purple-800 hover:bg-purple-200' }
+  ] as const;
 
   const handleStatusChange = (newStatus: Vehicle['status']) => {
     if (newStatus === 'sold') {
@@ -176,23 +181,30 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
                 </div>
               </div>
 
-              {/* Status Editor */}
+              {/* Status Editor with Bubble Format */}
               <div>
                 <h3 className="text-lg font-semibold mb-3">Update Status</h3>
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <div>
-                    <Label htmlFor="status">New Status</Label>
-                    <Select value={selectedStatus} onValueChange={handleStatusChange}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="yard">In Yard</SelectItem>
-                        <SelectItem value="sold">Sold</SelectItem>
-                        <SelectItem value="pick-your-part">Pick Your Part</SelectItem>
-                        <SelectItem value="sa-recycling">SA Recycling</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <p className="text-sm text-muted-foreground mb-3">Select new status:</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {statusOptions.map((option) => (
+                        <button
+                          key={option.value}
+                          onClick={() => handleStatusChange(option.value)}
+                          className={`
+                            px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 border-2
+                            ${selectedStatus === option.value 
+                              ? 'border-primary shadow-md scale-105' 
+                              : 'border-transparent hover:scale-102'
+                            }
+                            ${option.color}
+                          `}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Show sold details if status is sold and we have pending data */}
@@ -208,7 +220,11 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
                   )}
                   
                   <div className="flex gap-2">
-                    <Button onClick={handleSave} className="flex-1">
+                    <Button 
+                      onClick={handleSave} 
+                      className="flex-1"
+                      disabled={selectedStatus === vehicle.status && !pendingSoldData}
+                    >
                       <Save className="w-4 h-4 mr-2" />
                       Save Status
                     </Button>
