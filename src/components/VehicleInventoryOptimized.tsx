@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter, Car, Plus, Edit, RefreshCw, ChevronDown, FileText, Send, Eye } from "lucide-react";
+import { Search, Filter, Car, Plus, Edit, RefreshCw, ChevronDown, FileText, Send } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -20,9 +20,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useVehicleStorePaginated } from "@/hooks/useVehicleStorePaginated";
 import { VehicleDetailsDialog } from "@/components/VehicleDetailsDialog";
-import { DMVProgressDialog } from "@/components/DMVProgressDialog";
 import { Vehicle } from "@/stores/vehicleStore";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 interface VehicleInventoryOptimizedProps {
   onNavigate: (page: string, state?: any) => void; // allow optional state
@@ -56,8 +56,6 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
   const [selectedVehicles, setSelectedVehicles] = useState<Set<string>>(new Set());
   const [submittingToDMV, setSubmittingToDMV] = useState(false);
   const [submittingIndividual, setSubmittingIndividual] = useState<Set<string>>(new Set());
-  const [showProgressDialog, setShowProgressDialog] = useState(false);
-  const [progressVehicleIds, setProgressVehicleIds] = useState<string[]>([]);
   
   const { 
     vehicles, 
@@ -190,25 +188,43 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
       toast.error("Please select vehicles to submit to DMV");
       return;
     }
+    // Use onNavigate to go to the DMV preview page, pass the selected vehicles as state
     onNavigate("dmv-preview", {
       selectedVehicles: Array.from(selectedVehicles),
     });
   };
 
-  const handleSubmitToDMVRealTime = () => {
+  const handleSubmitToDMV = async () => {
     if (selectedVehicles.size === 0) {
       toast.error("Please select vehicles to submit to DMV");
       return;
     }
 
-    setProgressVehicleIds(Array.from(selectedVehicles));
-    setShowProgressDialog(true);
-  };
-
-  const handleProgressComplete = async () => {
-    await refreshVehicles();
-    setSelectedVehicles(new Set());
-    setShowProgressDialog(false);
+    setSubmittingToDMV(true);
+    try {
+      const result = await submitToDMV(Array.from(selectedVehicles));
+      
+      if (result.success) {
+        const successCount = result.results?.filter((r: any) => r.success).length || 0;
+        const failedCount = result.results?.filter((r: any) => !r.success).length || 0;
+        
+        if (successCount > 0) {
+          toast.success(`Successfully submitted ${successCount} vehicle${successCount !== 1 ? 's' : ''} to DMV`);
+        }
+        if (failedCount > 0) {
+          toast.error(`Failed to submit ${failedCount} vehicle${failedCount !== 1 ? 's' : ''}`);
+        }
+        
+        setSelectedVehicles(new Set());
+      } else {
+        toast.error("Failed to submit vehicles to DMV");
+      }
+    } catch (error) {
+      console.error('Error submitting to DMV:', error);
+      toast.error("Failed to submit vehicles to DMV");
+    } finally {
+      setSubmittingToDMV(false);
+    }
   };
 
   const handleIndividualDMVSubmit = async (vehicleId: string) => {
@@ -266,6 +282,7 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
       );
     }
 
+    // Show badges for other statuses
     switch (vehicle.dmvStatus) {
       case 'submitted':
         return <Badge variant="default" className="bg-green-500">Submitted</Badge>;
@@ -293,18 +310,10 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
               <Button 
                 variant="outline"
                 onClick={handleGoToDMVPreview}
-                disabled={selectedVehicles.size === 0}
+                disabled={selectedVehicles.size === 0 || submittingToDMV}
               >
-                <FileText className="w-4 h-4 mr-2" />
-                Preview ({selectedVehicles.size})
-              </Button>
-              <Button 
-                onClick={handleSubmitToDMVRealTime}
-                disabled={selectedVehicles.size === 0}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                <Eye className="w-4 h-4 mr-2" />
-                Submit & Watch ({selectedVehicles.size})
+                <Send className="w-4 h-4 mr-2" />
+                {submittingToDMV ? 'Submitting...' : `Submit to DMV (${selectedVehicles.size})`}
               </Button>
             </div>
           )}
@@ -562,13 +571,6 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
         isOpen={isDialogOpen}
         onClose={handleCloseDialog}
         onSave={handleSaveVehicle}
-      />
-
-      <DMVProgressDialog
-        isOpen={showProgressDialog}
-        onClose={() => setShowProgressDialog(false)}
-        vehicleIds={progressVehicleIds}
-        onComplete={handleProgressComplete}
       />
     </div>
   );
