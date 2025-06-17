@@ -9,13 +9,22 @@ import { Dashboard } from "@/pages/Dashboard";
 import { Intake } from "@/pages/Intake";
 import { InventoryOptimized } from "@/pages/InventoryOptimized";
 import { PendingReleases } from "@/pages/PendingReleases";
+import { PublicInventory } from "@/pages/PublicInventory";
 import { Menu } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const queryClient = new QueryClient();
 
 const App = () => {
   const [currentPage, setCurrentPage] = useState("dashboard");
+
+  // Check if the current URL is the public inventory route
+  useEffect(() => {
+    const path = window.location.pathname;
+    if (path === '/public-inventory') {
+      setCurrentPage('public-inventory');
+    }
+  }, []);
 
   const renderPage = () => {
     switch (currentPage) {
@@ -27,10 +36,25 @@ const App = () => {
         return <InventoryOptimized onNavigate={setCurrentPage} />;
       case 'pending-releases':
         return <PendingReleases />;
+      case 'public-inventory':
+        return <PublicInventory />;
       default:
         return <Dashboard />;
     }
   };
+
+  // If on public inventory page, render without sidebar and header
+  if (currentPage === 'public-inventory') {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <PublicInventory />
+        </TooltipProvider>
+      </QueryClientProvider>
+    );
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
