@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Eye, Calendar, Car, AlertCircle, CheckCircle } from 'lucide-react';
+import { Eye, Calendar, Car, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -13,7 +13,7 @@ interface Screenshot {
   vehicle_id: string;
   step: string;
   status: 'completed' | 'error' | 'in-progress';
-  screenshot_url: string;
+  screenshot_url: string | null;
   created_at: string;
   error_message?: string;
   vehicle?: {
@@ -48,7 +48,6 @@ export function Screenshots() {
             vehicle_id
           )
         `)
-        .not('screenshot_url', 'is', null)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -57,7 +56,7 @@ export function Screenshots() {
   });
 
   const groupedScreenshots = screenshots?.reduce((acc, screenshot) => {
-    const vehicleKey = `${screenshot.vehicle?.year} ${screenshot.vehicle?.make} ${screenshot.vehicle?.model}`;
+    const vehicleKey = screenshot.vehicle?.vehicle_id || 'Unknown Vehicle';
     if (!acc[vehicleKey]) {
       acc[vehicleKey] = [];
     }
@@ -70,7 +69,7 @@ export function Screenshots() {
       case 'completed':
         return <CheckCircle className="w-4 h-4 text-green-500" />;
       case 'error':
-        return <AlertCircle className="w-4 h-4 text-red-500" />;
+        return <XCircle className="w-4 h-4 text-red-500" />;
       default:
         return <AlertCircle className="w-4 h-4 text-blue-500" />;
     }
@@ -92,9 +91,9 @@ export function Screenshots() {
       <div className="space-y-6">
         <div className="flex items-center gap-2">
           <Eye className="w-6 h-6" />
-          <h1 className="text-2xl font-bold">DMV Screenshots</h1>
+          <h1 className="text-2xl font-bold">DMV Process Logs</h1>
         </div>
-        <div className="text-center py-8">Loading screenshots...</div>
+        <div className="text-center py-8">Loading process logs...</div>
       </div>
     );
   }
@@ -104,13 +103,13 @@ export function Screenshots() {
       <div className="space-y-6">
         <div className="flex items-center gap-2">
           <Eye className="w-6 h-6" />
-          <h1 className="text-2xl font-bold">DMV Screenshots</h1>
+          <h1 className="text-2xl font-bold">DMV Process Logs</h1>
         </div>
         <Card>
           <CardContent className="text-center py-8">
             <Eye className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-600 mb-2">No Screenshots Yet</h3>
-            <p className="text-gray-500">Screenshots from DMV automation processes will appear here.</p>
+            <h3 className="text-lg font-medium text-gray-600 mb-2">No Process Logs Yet</h3>
+            <p className="text-gray-500">DMV automation process logs will appear here.</p>
           </CardContent>
         </Card>
       </div>
@@ -122,59 +121,66 @@ export function Screenshots() {
       <div className="space-y-6">
         <div className="flex items-center gap-2">
           <Eye className="w-6 h-6" />
-          <h1 className="text-2xl font-bold">DMV Screenshots</h1>
+          <h1 className="text-2xl font-bold">DMV Process Logs</h1>
         </div>
 
         <div className="grid gap-6">
-          {Object.entries(groupedScreenshots).map(([vehicleKey, vehicleScreenshots]) => (
-            <Card key={vehicleKey}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Car className="w-5 h-5" />
-                  {vehicleKey}
-                </CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  VIN: {vehicleScreenshots[0]?.vehicle?.vehicle_id || 'Unknown'}
-                </p>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-3">
-                  {vehicleScreenshots.map((screenshot) => (
-                    <div key={screenshot.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-3">
-                        {getStatusIcon(screenshot.status)}
-                        <div>
-                          <div className="font-medium capitalize">{screenshot.step}</div>
-                          <div className="text-sm text-muted-foreground flex items-center gap-2">
-                            <Calendar className="w-3 h-3" />
-                            {new Date(screenshot.created_at).toLocaleString()}
-                          </div>
-                          {screenshot.error_message && (
-                            <div className="text-sm text-red-600 mt-1">
-                              Error: {screenshot.error_message}
+          {Object.entries(groupedScreenshots).map(([vehicleKey, vehicleScreenshots]) => {
+            const vehicle = vehicleScreenshots[0]?.vehicle;
+            const vehicleName = vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : vehicleKey;
+            
+            return (
+              <Card key={vehicleKey}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Car className="w-5 h-5" />
+                    {vehicleName}
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    VIN: {vehicle?.vehicle_id || vehicleKey}
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-3">
+                    {vehicleScreenshots.map((screenshot) => (
+                      <div key={screenshot.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex items-center gap-3 flex-1">
+                          {getStatusIcon(screenshot.status)}
+                          <div className="flex-1">
+                            <div className="font-medium capitalize">{screenshot.step}</div>
+                            <div className="text-sm text-muted-foreground flex items-center gap-2">
+                              <Calendar className="w-3 h-3" />
+                              {new Date(screenshot.created_at).toLocaleString()}
                             </div>
+                            {screenshot.error_message && (
+                              <div className="text-sm text-red-600 mt-1 max-w-lg">
+                                <strong>Error:</strong> {screenshot.error_message}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge className={getStatusColor(screenshot.status)}>
+                            {screenshot.status}
+                          </Badge>
+                          {screenshot.screenshot_url && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setSelectedScreenshot(screenshot.screenshot_url)}
+                            >
+                              <Eye className="w-3 h-3 mr-1" />
+                              View
+                            </Button>
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge className={getStatusColor(screenshot.status)}>
-                          {screenshot.status}
-                        </Badge>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setSelectedScreenshot(screenshot.screenshot_url)}
-                        >
-                          <Eye className="w-3 h-3 mr-1" />
-                          View
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </div>
 
