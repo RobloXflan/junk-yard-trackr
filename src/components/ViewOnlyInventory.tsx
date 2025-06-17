@@ -19,7 +19,6 @@ interface ViewOnlyInventoryProps {
 export const ViewOnlyInventory = ({ onLogout, username }: ViewOnlyInventoryProps) => {
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [loadingDocuments, setLoadingDocuments] = useState(false);
   const [currentView, setCurrentView] = useState<'inventory' | 'pending-releases'>('inventory');
   const { toast } = useToast();
 
@@ -36,40 +35,30 @@ export const ViewOnlyInventory = ({ onLogout, username }: ViewOnlyInventoryProps
   } = useVehicleStorePaginated(true, username); // Pass true for isViewOnly and the username
 
   const handleVehicleClick = useCallback(async (vehicle: Vehicle) => {
-    console.log('Loading documents for vehicle:', vehicle.id);
-    setLoadingDocuments(true);
+    console.log('Loading vehicle details for view-only:', vehicle.id);
     
     try {
+      // Load documents for document count but don't expose them for viewing
       const documents = await loadVehicleDocuments(vehicle.id);
-      console.log('Loaded documents for vehicle dialog:', documents);
+      console.log('Loaded documents count for view-only:', documents.length);
       
       const vehicleWithDocuments = { 
         ...vehicle, 
-        documents: documents.map(doc => ({
-          id: doc.id || `doc_${Date.now()}`,
-          name: doc.name || 'Untitled Document',
-          url: doc.url || '',
-          size: doc.size || 0,
-          file: new File([], doc.name || 'document', { 
-            type: doc.name?.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg' 
-          })
-        }))
+        documents: documents // Keep for count display but remove viewing access
       };
       
-      console.log('Setting selected vehicle with documents:', vehicleWithDocuments);
+      console.log('Setting selected vehicle for view-only:', vehicleWithDocuments);
       setSelectedVehicle(vehicleWithDocuments);
       setDialogOpen(true);
     } catch (error) {
-      console.error('Error loading vehicle documents:', error);
+      console.error('Error loading vehicle details:', error);
       toast({
         title: "Error",
-        description: "Failed to load vehicle documents",
+        description: "Failed to load vehicle details",
         variant: "destructive",
       });
       setSelectedVehicle(vehicle);
       setDialogOpen(true);
-    } finally {
-      setLoadingDocuments(false);
     }
   }, [loadVehicleDocuments, toast]);
 
@@ -105,14 +94,37 @@ export const ViewOnlyInventory = ({ onLogout, username }: ViewOnlyInventoryProps
 
   const getPaperworkColor = (paperwork: string) => {
     switch (paperwork?.toLowerCase()) {
-      case "complete":
+      case "title":
         return "bg-green-100 text-green-800";
-      case "pending":
+      case "registered-owner":
+        return "bg-blue-100 text-blue-800";
+      case "lien-sale":
         return "bg-yellow-100 text-yellow-800";
-      case "missing":
+      case "no-paperwork":
         return "bg-red-100 text-red-800";
+      case "other":
+        return "bg-purple-100 text-purple-800";
       default:
         return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const formatPaperworkDisplay = (paperwork?: string, paperworkOther?: string): string => {
+    if (!paperwork) return "Unknown";
+    
+    switch (paperwork) {
+      case "title":
+        return "Title";
+      case "registered-owner":
+        return "Registered Owner";
+      case "lien-sale":
+        return "Lien Sale";
+      case "no-paperwork":
+        return "No Paperwork";
+      case "other":
+        return paperworkOther || "Other";
+      default:
+        return paperwork;
     }
   };
 
@@ -272,7 +284,7 @@ export const ViewOnlyInventory = ({ onLogout, username }: ViewOnlyInventoryProps
                         {vehicle.status || "Unknown"}
                       </Badge>
                       <Badge className={getPaperworkColor(vehicle.paperwork)}>
-                        {vehicle.paperwork || "Unknown"} Paperwork
+                        {formatPaperworkDisplay(vehicle.paperwork, vehicle.paperworkOther)}
                       </Badge>
                     </div>
                   </CardHeader>
@@ -313,7 +325,7 @@ export const ViewOnlyInventory = ({ onLogout, username }: ViewOnlyInventoryProps
                         {vehicle.documents && vehicle.documents.length > 0 ? (
                           <>
                             <FileText className="w-4 h-4" />
-                            <span>{vehicle.documents.length} document(s)</span>
+                            <span>{vehicle.documents.length} document(s) on file</span>
                           </>
                         ) : (
                           <span className="text-gray-400">No documents</span>
@@ -326,10 +338,9 @@ export const ViewOnlyInventory = ({ onLogout, username }: ViewOnlyInventoryProps
                           e.stopPropagation();
                           handleVehicleClick(vehicle);
                         }}
-                        disabled={loadingDocuments}
                       >
                         <Eye className="w-4 h-4 mr-1" />
-                        {loadingDocuments ? 'Loading...' : 'View Details'}
+                        View Details
                       </Button>
                     </div>
                   </CardContent>

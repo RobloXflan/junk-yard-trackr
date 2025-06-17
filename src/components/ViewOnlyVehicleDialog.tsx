@@ -13,8 +13,7 @@ import {
   Package,
   CheckCircle,
   XCircle,
-  ExternalLink,
-  Eye
+  ExternalLink
 } from "lucide-react";
 import { Vehicle } from "@/stores/vehicleStore";
 
@@ -65,30 +64,6 @@ export function ViewOnlyVehicleDialog({ vehicle, open, onOpenChange }: ViewOnlyV
       case 'pick-your-part': return 'Pick Your Part';
       case 'sa-recycling': return 'SA Recycling';
       default: return status.toUpperCase();
-    }
-  };
-
-  const viewDocument = (document: any) => {
-    if (document.url) {
-      // Determine if it's a PDF or image based on the file name or type
-      const isPdf = document.name?.toLowerCase().endsWith('.pdf') || document.file?.type === 'application/pdf';
-      
-      if (isPdf) {
-        window.open(document.url, '_blank');
-      } else {
-        // For images, create a new window to display them
-        const newWindow = window.open('', '_blank');
-        if (newWindow) {
-          newWindow.document.write(`
-            <html>
-              <head><title>${document.name || 'Document'}</title></head>
-              <body style="margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#f0f0f0;">
-                <img src="${document.url}" style="max-width:100%;max-height:100%;object-fit:contain;" alt="${document.name || 'Document'}" />
-              </body>
-            </html>
-          `);
-        }
-      }
     }
   };
 
@@ -206,12 +181,12 @@ export function ViewOnlyVehicleDialog({ vehicle, open, onOpenChange }: ViewOnlyV
             </CardContent>
           </Card>
 
-          {/* Documentation Status */}
+          {/* Documentation Status - Show status but no document access */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="w-4 h-4" />
-                Documentation
+                Documentation Status
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -237,44 +212,20 @@ export function ViewOnlyVehicleDialog({ vehicle, open, onOpenChange }: ViewOnlyV
                 <p className="text-sm text-muted-foreground">Paperwork Status</p>
                 <p className="font-medium">{formatPaperworkDisplay(vehicle.paperwork, vehicle.paperworkOther)}</p>
               </div>
+              {/* Show document count but no access to view them */}
+              {vehicle.documents && vehicle.documents.length > 0 && (
+                <div className="mt-3 p-3 bg-muted rounded-lg">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <FileText className="w-4 h-4" />
+                    <span>{vehicle.documents.length} document(s) on file</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Document access restricted to admin users
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
-
-          {/* Uploaded Documents Section */}
-          {vehicle.documents && vehicle.documents.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
-                  Uploaded Documents ({vehicle.documents.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {vehicle.documents.map((document) => (
-                    <div key={document.id} className="flex items-center gap-3 p-3 bg-card rounded-lg border border-border">
-                      <FileText className="w-6 h-6 text-primary flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">{document.name}</p>
-                        <p className="text-xs text-foreground">
-                          {document.size ? `${(document.size / 1024 / 1024).toFixed(2)} MB` : 'Size unknown'}
-                        </p>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => viewDocument(document)}
-                        className="text-primary hover:text-primary"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           {/* Sale Information (if sold) */}
           {vehicle.status === 'sold' && (
