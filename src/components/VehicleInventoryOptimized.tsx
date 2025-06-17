@@ -216,7 +216,7 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
   const handleDMVSubmit = async (vehicleIds: string[]) => {
     try {
       const result = await submitToDMV(vehicleIds);
-      await refreshVehicles(); // Refresh to get updated DMV status
+      await refreshVehicles();
       return result;
     } catch (error) {
       console.error('DMV submission error:', error);
@@ -227,7 +227,7 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
   const handleCloseDMVDialog = () => {
     setIsDMVDialogOpen(false);
     setDMVVehicles([]);
-    setSelectedVehicles(new Set()); // Clear selection after dialog closes
+    setSelectedVehicles(new Set());
   };
 
   const handleIndividualDMVAutomation = (vehicle: Vehicle) => {
@@ -239,6 +239,27 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
       vehicleId: vehicle.vehicleId
     }]);
     setIsDMVDialogOpen(true);
+  };
+
+  const handleUpdateVehicleInfo = async (vehicleId: string, data: {
+    buyerFirstName: string;
+    buyerLastName: string;
+    buyerAddress?: string;
+    buyerCity?: string;
+    buyerState?: string;
+    buyerZip?: string;
+    salePrice: string;
+    saleDate: string;
+  }) => {
+    try {
+      await updateVehicleStatus(vehicleId, 'sold', data);
+      await refreshVehicles();
+      toast.success("Vehicle information updated successfully");
+    } catch (error) {
+      console.error('Error updating vehicle info:', error);
+      toast.error("Failed to update vehicle information");
+      throw error;
+    }
   };
 
   const eligibleVehicles = vehicles.filter(v => 
@@ -270,14 +291,26 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
       );
     }
 
-    // Show badges for other statuses
     switch (vehicle.dmvStatus) {
       case 'submitted':
         return <Badge variant="default" className="bg-green-500">Submitted</Badge>;
       case 'processing':
         return <Badge variant="secondary">Processing</Badge>;
       case 'failed':
-        return <Badge variant="destructive">Failed</Badge>;
+        return (
+          <div className="flex flex-col gap-1">
+            <Badge variant="destructive">Failed</Badge>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleIndividualDMVAutomation(vehicle)}
+              className="h-5 px-1 text-xs"
+            >
+              <Send className="w-2 h-2 mr-1" />
+              Retry
+            </Button>
+          </div>
+        );
       default:
         return <Badge variant="outline">Not Eligible</Badge>;
     }
@@ -566,6 +599,7 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
         onClose={handleCloseDMVDialog}
         vehicles={dmvVehicles}
         onSubmit={handleDMVSubmit}
+        onUpdateVehicle={handleUpdateVehicleInfo}
       />
     </div>
   );
