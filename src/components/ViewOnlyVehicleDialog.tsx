@@ -153,29 +153,25 @@ export function ViewOnlyVehicleDialog({ vehicle, open, onOpenChange }: ViewOnlyV
             </CardContent>
           </Card>
 
-          {/* Purchase Information */}
+          {/* Basic Vehicle Status - No sensitive purchase information */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <DollarSign className="w-4 h-4" />
-                Purchase Details
+                <Package className="w-4 h-4" />
+                Vehicle Status
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Driver</p>
-                  <p className="font-medium">{vehicle.sellerName || 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Purchase Price</p>
-                  <p className="font-medium">{vehicle.purchasePrice ? `$${parseFloat(vehicle.purchasePrice).toLocaleString()}` : 'N/A'}</p>
-                </div>
-              </div>
               <div>
-                <p className="text-sm text-muted-foreground">Purchase Date</p>
-                <p className="font-medium">{vehicle.purchaseDate || 'N/A'}</p>
+                <p className="text-sm text-muted-foreground">Current Status</p>
+                <p className="font-medium">{getStatusDisplay(vehicle.status)}</p>
               </div>
+              {vehicle.purchaseDate && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Date Added</p>
+                  <p className="font-medium">{vehicle.purchaseDate}</p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -207,41 +203,46 @@ export function ViewOnlyVehicleDialog({ vehicle, open, onOpenChange }: ViewOnlyV
             </CardContent>
           </Card>
 
-          {/* Sale Information (if sold) */}
+          {/* Sale Information (if sold) - Limited information for view-only */}
           {vehicle.status === 'sold' && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <User className="w-4 h-4" />
-                  Sale Details
+                  Sale Status
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Buyer</p>
-                    <p className="font-medium">{vehicle.buyerName || `${vehicle.buyerFirstName} ${vehicle.buyerLastName}` || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Sale Price</p>
-                    <p className="font-medium">{vehicle.salePrice ? `$${parseFloat(vehicle.salePrice).toLocaleString()}` : 'N/A'}</p>
-                  </div>
-                </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Sale Date</p>
-                  <p className="font-medium">{vehicle.saleDate || 'N/A'}</p>
+                  <p className="text-sm text-muted-foreground">Status</p>
+                  <p className="font-medium">Vehicle has been sold</p>
                 </div>
-                {vehicle.buyerAddress && (
+                {vehicle.saleDate && (
                   <div>
-                    <p className="text-sm text-muted-foreground">Buyer Address</p>
-                    <p className="font-medium">
-                      {vehicle.buyerAddress}
-                      {vehicle.buyerCity && `, ${vehicle.buyerCity}`}
-                      {vehicle.buyerState && `, ${vehicle.buyerState}`}
-                      {vehicle.buyerZip && ` ${vehicle.buyerZip}`}
-                    </p>
+                    <p className="text-sm text-muted-foreground">Sale Date</p>
+                    <p className="font-medium">{vehicle.saleDate}</p>
                   </div>
                 )}
+                <div className="mt-3 p-3 bg-muted rounded-lg">
+                  <p className="text-xs text-muted-foreground">
+                    Detailed sale information is restricted to admin users
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Notes Section - Only show if there are notes */}
+          {vehicle.notes && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Notes
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="font-medium">{vehicle.notes}</p>
               </CardContent>
             </Card>
           )}

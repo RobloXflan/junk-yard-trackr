@@ -299,6 +299,12 @@ export const ViewOnlyInventory = ({ onLogout, username }: ViewOnlyInventoryProps
                         <p className="text-sm text-gray-600">License Plate</p>
                         <p className="font-semibold">{vehicle.licensePlate || 'Not specified'}</p>
                       </div>
+
+                      {/* Show basic status information only, no sensitive purchase details */}
+                      <div>
+                        <p className="text-sm text-gray-600">Status</p>
+                        <p className="font-semibold">{vehicle.status || 'Unknown'}</p>
+                      </div>
                     </div>
 
                     <div className="flex items-center justify-between pt-2 border-t">
