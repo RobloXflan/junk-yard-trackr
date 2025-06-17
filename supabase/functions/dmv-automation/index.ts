@@ -17,13 +17,21 @@ interface VehicleData {
   licensePlate?: string;
   buyerFirstName: string;
   buyerLastName: string;
-  salePrice: string;
-  saleDate: string;
-  purchasePrice?: string;
   buyerAddress?: string;
   buyerCity?: string;
   buyerState?: string;
   buyerZip?: string;
+  salePrice: string;
+  saleDate: string;
+  purchasePrice?: string;
+}
+
+interface ProgressUpdate {
+  vehicleId: string;
+  step: string;
+  status: 'in-progress' | 'completed' | 'error';
+  message: string;
+  screenshot?: string;
 }
 
 serve(async (req) => {
@@ -84,70 +92,139 @@ serve(async (req) => {
 
     const results = [];
 
-    // Main DMV Automation for all vehicles
+    // Process each vehicle with your Playwright script logic
     for (const vehicle of vehicles) {
-      const progress = [];
+      const progress: ProgressUpdate[] = [];
+      
+      const addProgress = (step: string, status: 'in-progress' | 'completed' | 'error', message: string, screenshot?: string) => {
+        progress.push({ vehicleId: vehicle.id, step, status, message, screenshot });
+        console.log(`${vehicle.id} - ${step}: ${message}`);
+      };
+
       try {
-        progress.push("Marking vehicle 'processing' in DB");
+        addProgress("init", "in-progress", "Starting DMV automation for vehicle");
+        
         await supabase.from('vehicles').update({ dmv_status: 'processing' }).eq('id', vehicle.id);
 
-        progress.push("Launching browser for DMV automation...");
-        const browser = await chromium.launch({ headless: true });
+        addProgress("browser", "in-progress", "Launching browser...");
+        const browser = await chromium.launch({ headless: false });
         const page = await browser.newPage();
 
-        progress.push("Navigating to DMV NRL form page...");
+        addProgress("navigate", "in-progress", "Navigating to DMV website...");
         await page.goto("https://www.dmv.ca.gov/wasapp/nrl/nrlApplication.do");
-        await page.waitForLoadState("domcontentloaded");
+        await page.waitForLoadState('networkidle');
+        addProgress("navigate", "completed", "DMV website loaded");
+
+        // Parse sale date from YYYY-MM-DD to month/day/year format
+        const saleDate = new Date(vehicle.sale_date || '');
+        const saleMonth = saleDate.toLocaleString('default', { month: 'long' });
+        const saleDay = saleDate.getDate().toString();
+        const saleYear = saleDate.getFullYear().toString();
+
+        addProgress("form1", "in-progress", "Filling vehicle information...");
         
-        progress.push("Filling in form: Seller (Americas Auto Towing)");
-        await page.fill('input[name="Company"]', "Americas Auto Towing");
-        await page.fill('input[name="companyAddress"]', "4735 Cecilia St");
-        await page.fill('input[name="companyCity"]', "Cudahy");
-        await page.selectOption('select[name="companyState"]', "CA");
-        await page.fill('input[name="companyZip"]', "90201");
-        await page.check('input[name="c1"]'); // Seller is Company
-        await page.uncheck('input[name="o1"]'); // Seller is not person
+        // Fill vehicle data dynamically
+        if (vehicle.license_plate) {
+          await page.fill('input#licensePlateNumber', vehicle.license_plate);
+        }
+        await page.fill('input#vehicleIdentificationNumber', vehicle.vehicle_id);
 
-        progress.push("Filling in form: Buyer");
-        await page.fill('input[name="buyerFName"]', vehicle.buyer_first_name);
-        await page.fill('input[name="buyerLName"]', vehicle.buyer_last_name);
-        await page.check('input[name="bc1"]'); // Buyer is NOT Company
-        if (vehicle.buyer_address) await page.fill('input[name="buyerAddress"]', vehicle.buyer_address);
-        if (vehicle.buyer_city) await page.fill('input[name="buyerCity"]', vehicle.buyer_city);
-        if (vehicle.buyer_state) await page.selectOption('select[name="buyerState"]', vehicle.buyer_state);
-        if (vehicle.buyer_zip) await page.fill('input[name="buyerZip"]', vehicle.buyer_zip);
+        // Fill new owner data
+        await page.fill('input#newOwnerFname', vehicle.buyer_first_name);
+        await page.fill('input#newOwnerLname', vehicle.buyer_last_name);
+        
+        addProgress("form1", "completed", "Vehicle and owner info filled");
 
-        progress.push("Filling in form: Vehicle details");
-        await page.fill('input[name="vehicleYear"]', vehicle.year);
-        await page.fill('input[name="vehicleMake"]', vehicle.make);
-        await page.fill('input[name="vehicleModel"]', vehicle.model);
-        await page.fill('input[name="vehicleId"]', vehicle.vehicle_id);
-        await page.fill('input[name="licensePlate"]', vehicle.license_plate ?? "");
+        // Take screenshot before first submit
+        const screenshot1 = await page.screenshot({ type: 'png' });
+        const screenshot1Base64 = `data:image/png;base64,${screenshot1.toString('base64')}`;
+        
+        addProgress("submit1", "in-progress", "Submitting first page...", screenshot1Base64);
+        await page.click('button[type="submit"]');
+        await page.waitForLoadState('networkidle');
+        addProgress("submit1", "completed", "First page submitted");
 
-        progress.push("Filling Sale Information");
-        await page.fill('input[name="salePrice"]', vehicle.sale_price ?? "");
-        await page.fill('input[name="saleDate"]', vehicle.sale_date ?? "");
+        addProgress("form2", "in-progress", "Filling page 2...");
+        // Click on the "Yes" label to activate the radio
+        await page.click('label[for="y"]');
 
-        progress.push("Submitting DMV Form...");
-        await page.click('input[type="submit"]');
+        await page.click('button[type="submit"]');
+        await page.waitForLoadState('networkidle');
+        addProgress("form2", "completed", "Page 2 submitted");
 
-        // Wait for confirmation page to load
-        await page.waitForLoadState("networkidle");
-        progress.push("Parsing DMV confirmation number...");
+        addProgress("seller", "in-progress", "Setting up seller information...");
+        // Toggle seller is a company
+        await page.click('div.toggle-text--left');
+        
+        // Fill in the company information (FIXED - Americas Towing LLC)
+        await page.fill('input#seller-company-name', 'Americas Towing LLC');
+        await page.fill('input#sellerAddress', '4735 Cecilia St');
+        await page.fill('input#sellerCity', 'Cudahy');
+        await page.fill('input#sellerZip', '90201');
+        addProgress("seller", "completed", "Seller information filled");
+
+        addProgress("buyer", "in-progress", "Filling buyer information...");
+        // Fill in the new owner information
+        await page.fill('input#newOwnerFname', vehicle.buyer_first_name);
+        await page.fill('input#newOwnerLname', vehicle.buyer_last_name);
+        
+        if (vehicle.buyer_address) {
+          await page.fill('input#newOwnerAddress', vehicle.buyer_address);
+        }
+        if (vehicle.buyer_city) {
+          await page.fill('input#newOwnerCity', vehicle.buyer_city);
+        }
+        if (vehicle.buyer_zip) {
+          await page.fill('input#newOwnerZip', vehicle.buyer_zip);
+        }
+        addProgress("buyer", "completed", "Buyer information filled");
+
+        addProgress("mileage", "in-progress", "Setting mileage...");
+        await page.click('label[for="notActualMileage"]');
+        addProgress("mileage", "completed", "Mileage set");
+
+        addProgress("sale", "in-progress", "Filling sale information...");
+        // Fill sale date
+        await page.selectOption('select#saleMonth', { label: saleMonth });
+        await page.fill('input#saleDay', saleDay);
+        await page.fill('input#saleYear', saleYear);
+
+        // Fill sale price
+        await page.fill('input#sellingPrice', vehicle.sale_price || '');
+        await page.click('label[for="gift_no"]');
+        addProgress("sale", "completed", "Sale information filled");
+
+        // Take screenshot before final submit
+        const screenshot2 = await page.screenshot({ type: 'png' });
+        const screenshot2Base64 = `data:image/png;base64,${screenshot2.toString('base64')}`;
+
+        addProgress("final", "in-progress", "Submitting final form...", screenshot2Base64);
+        await page.click('button#continue');
+        await page.waitForLoadState('networkidle');
+
+        // Wait a bit for the confirmation page to fully load
+        await page.waitForTimeout(3000);
+
+        addProgress("confirmation", "in-progress", "Processing confirmation...");
         const confirmationText = await page.textContent('body');
         let confirmationNumber: string | undefined = undefined;
+        
         if (confirmationText && confirmationText.includes("Number")) {
-          // Extract from confirmation page
           const match = confirmationText.match(/Number[:\s]+([A-Za-z0-9\-]+)/);
           if (match) confirmationNumber = match[1];
         } else {
-          confirmationNumber = "UNKNOWN-" + Date.now();
+          confirmationNumber = "MANUAL-VERIFY-" + Date.now();
         }
+
+        // Take final screenshot of confirmation
+        const screenshot3 = await page.screenshot({ type: 'png' });
+        const screenshot3Base64 = `data:image/png;base64,${screenshot3.toString('base64')}`;
         
+        addProgress("confirmation", "completed", `DMV submission completed. Confirmation: ${confirmationNumber}`, screenshot3Base64);
+
         await browser.close();
 
         // Update vehicle in DB
-        progress.push("Updating DB: Set dmv_status to 'submitted' with confirmation number");
         await supabase
           .from('vehicles')
           .update({
@@ -157,7 +234,7 @@ serve(async (req) => {
           })
           .eq('id', vehicle.id);
 
-        progress.push("DMV submission complete.");
+        addProgress("complete", "completed", "Vehicle DMV status updated successfully");
 
         results.push({
           vehicleId: vehicle.id,
@@ -167,8 +244,9 @@ serve(async (req) => {
         });
 
       } catch (error) {
-        progress.push("Error: " + (error?.message || String(error)));
+        addProgress("error", "error", `Error: ${error?.message || String(error)}`);
         await supabase.from('vehicles').update({ dmv_status: 'failed' }).eq('id', vehicle.id);
+        
         results.push({
           vehicleId: vehicle.id,
           success: false,

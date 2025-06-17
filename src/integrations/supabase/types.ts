@@ -199,9 +199,13 @@ export type Database = {
       vehicles: {
         Row: {
           bill_of_sale: boolean | null
+          buyer_address: string | null
+          buyer_city: string | null
           buyer_first_name: string | null
           buyer_last_name: string | null
           buyer_name: string | null
+          buyer_state: string | null
+          buyer_zip: string | null
           created_at: string
           destination: string | null
           dmv_confirmation_number: string | null
@@ -228,9 +232,13 @@ export type Database = {
         }
         Insert: {
           bill_of_sale?: boolean | null
+          buyer_address?: string | null
+          buyer_city?: string | null
           buyer_first_name?: string | null
           buyer_last_name?: string | null
           buyer_name?: string | null
+          buyer_state?: string | null
+          buyer_zip?: string | null
           created_at?: string
           destination?: string | null
           dmv_confirmation_number?: string | null
@@ -257,9 +265,13 @@ export type Database = {
         }
         Update: {
           bill_of_sale?: boolean | null
+          buyer_address?: string | null
+          buyer_city?: string | null
           buyer_first_name?: string | null
           buyer_last_name?: string | null
           buyer_name?: string | null
+          buyer_state?: string | null
+          buyer_zip?: string | null
           created_at?: string
           destination?: string | null
           dmv_confirmation_number?: string | null
