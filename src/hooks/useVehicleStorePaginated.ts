@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Vehicle } from '@/stores/vehicleStore';
@@ -8,7 +9,7 @@ interface PaginatedVehicleData {
   hasMore: boolean;
 }
 
-export function useVehicleStorePaginated(userType?: 'admin' | 'viewer', username?: string) {
+export function useVehicleStorePaginated() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -17,9 +18,6 @@ export function useVehicleStorePaginated(userType?: 'admin' | 'viewer', username
   const [hasMore, setHasMore] = useState(true);
   
   const ITEMS_PER_PAGE = 50;
-
-  // Vehicle IDs that should be visible for non-admin users
-  const allowedVehicleIds = ['83002', '14202', '56957', '34536', '22964', '03762'];
 
   const loadVehicles = async (page: number = 1, search: string = "", append: boolean = false) => {
     setIsLoading(true);
@@ -62,12 +60,6 @@ export function useVehicleStorePaginated(userType?: 'admin' | 'viewer', username
           updated_at
         `, { count: 'exact' })
         .order('created_at', { ascending: false });
-
-      // Apply vehicle ID filter for non-admin users
-      if (userType !== 'admin' && username !== 'America Main') {
-        console.log('Applying vehicle ID filter for non-admin user');
-        query = query.in('vehicle_id', allowedVehicleIds);
-      }
 
       if (isSearching) {
         const searchPattern = `%${search.toLowerCase()}%`;
@@ -212,12 +204,12 @@ export function useVehicleStorePaginated(userType?: 'admin' | 'viewer', username
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchTerm, userType, username]);
+  }, [searchTerm]);
 
   // Initial load
   useEffect(() => {
     loadVehicles(1, '', false);
-  }, [userType, username]);
+  }, []);
 
   const loadMore = () => {
     if (!isLoading && hasMore && !searchTerm.trim()) {
