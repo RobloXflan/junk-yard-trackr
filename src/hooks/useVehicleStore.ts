@@ -50,6 +50,17 @@ export function useVehicleStore() {
         setIsLoading(false);
       }
     },
+    updateVehicleDetails: async (vehicleId: string, updateData: Partial<Vehicle>) => {
+      setIsLoading(true);
+      try {
+        await vehicleStore.updateVehicleDetails(vehicleId, updateData);
+      } catch (error) {
+        console.error('Error updating vehicle details:', error);
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
     updateVehicleCarImages: async (vehicleId: string, carImages: CarImage[]) => {
       setIsLoading(true);
       try {

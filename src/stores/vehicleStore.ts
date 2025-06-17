@@ -351,6 +351,65 @@ class VehicleStore {
     }
   }
 
+  async updateVehicleDetails(vehicleId: string, updateData: Partial<Vehicle>) {
+    // Prevent concurrent updates to the same vehicle
+    if (this.updateInProgress.has(vehicleId)) {
+      console.log('Update already in progress for vehicle:', vehicleId);
+      return;
+    }
+
+    this.updateInProgress.add(vehicleId);
+
+    try {
+      console.log('Updating vehicle details for ID:', vehicleId, 'with data:', updateData);
+      
+      // Map the update data to database column names
+      const dbUpdateData: any = {
+        updated_at: new Date().toISOString()
+      };
+
+      if (updateData.vehicleId !== undefined) dbUpdateData.vehicle_id = updateData.vehicleId;
+      if (updateData.licensePlate !== undefined) dbUpdateData.license_plate = updateData.licensePlate;
+      if (updateData.year !== undefined) dbUpdateData.year = updateData.year;
+      if (updateData.make !== undefined) dbUpdateData.make = updateData.make;
+      if (updateData.model !== undefined) dbUpdateData.model = updateData.model;
+      if (updateData.sellerName !== undefined) dbUpdateData.seller_name = updateData.sellerName;
+      if (updateData.purchaseDate !== undefined) dbUpdateData.purchase_date = updateData.purchaseDate;
+      if (updateData.purchasePrice !== undefined) dbUpdateData.purchase_price = updateData.purchasePrice;
+      if (updateData.salePrice !== undefined) dbUpdateData.sale_price = updateData.salePrice;
+      if (updateData.saleDate !== undefined) dbUpdateData.sale_date = updateData.saleDate;
+      if (updateData.buyerFirstName !== undefined) dbUpdateData.buyer_first_name = updateData.buyerFirstName;
+      if (updateData.buyerLastName !== undefined) dbUpdateData.buyer_last_name = updateData.buyerLastName;
+      if (updateData.notes !== undefined) dbUpdateData.notes = updateData.notes;
+
+      console.log('Sending update to Supabase for vehicle ID:', vehicleId, dbUpdateData);
+
+      // Update only this specific vehicle by ID
+      const { error } = await supabase
+        .from('vehicles')
+        .update(dbUpdateData)
+        .eq('id', vehicleId);
+
+      if (error) {
+        console.error('Error updating vehicle details:', error);
+        throw error;
+      }
+
+      console.log('Vehicle details updated successfully in database for ID:', vehicleId);
+
+      // Reload vehicles to get the latest state from database
+      await this.loadVehicles();
+      
+      console.log('Vehicles reloaded after details update');
+    } catch (error) {
+      console.error('Failed to update vehicle details:', error);
+      throw error;
+    } finally {
+      // Always remove from update progress set
+      this.updateInProgress.delete(vehicleId);
+    }
+  }
+
   // Force refresh from database - useful for manual sync
   async refreshVehicles() {
     console.log('Manually refreshing vehicles from database...');

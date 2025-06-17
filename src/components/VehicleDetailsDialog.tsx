@@ -4,6 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useState, useEffect } from "react";
 import { 
   Car, 
   Calendar, 
@@ -12,9 +15,14 @@ import {
   User,
   Package,
   ExternalLink,
-  Download
+  Download,
+  Edit,
+  Save,
+  X
 } from "lucide-react";
 import { Vehicle } from "@/stores/vehicleStore";
+import { useVehicleStore } from "@/hooks/useVehicleStore";
+import { toast } from "sonner";
 
 interface VehicleDetailsDialogProps {
   vehicle: Vehicle | null;
@@ -23,7 +31,69 @@ interface VehicleDetailsDialogProps {
 }
 
 export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDetailsDialogProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState<Partial<Vehicle>>({});
+  const [isSaving, setIsSaving] = useState(false);
+  const { updateVehicleDetails } = useVehicleStore();
+
+  useEffect(() => {
+    if (vehicle) {
+      setEditData({
+        vehicleId: vehicle.vehicleId,
+        licensePlate: vehicle.licensePlate || '',
+        year: vehicle.year,
+        make: vehicle.make,
+        model: vehicle.model,
+        sellerName: vehicle.sellerName || '',
+        purchaseDate: vehicle.purchaseDate || '',
+        purchasePrice: vehicle.purchasePrice || '',
+        salePrice: vehicle.salePrice || '',
+        saleDate: vehicle.saleDate || '',
+        buyerFirstName: vehicle.buyerFirstName || '',
+        buyerLastName: vehicle.buyerLastName || '',
+        notes: vehicle.notes || ''
+      });
+    }
+  }, [vehicle]);
+
   if (!vehicle) return null;
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await updateVehicleDetails(vehicle.id, editData);
+      toast.success("Vehicle details updated successfully");
+      setIsEditing(false);
+      // Close and reopen dialog to refresh data
+      onOpenChange(false);
+      setTimeout(() => onOpenChange(true), 100);
+    } catch (error) {
+      console.error('Error updating vehicle:', error);
+      toast.error("Failed to update vehicle details");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    // Reset edit data to original values
+    setEditData({
+      vehicleId: vehicle.vehicleId,
+      licensePlate: vehicle.licensePlate || '',
+      year: vehicle.year,
+      make: vehicle.make,
+      model: vehicle.model,
+      sellerName: vehicle.sellerName || '',
+      purchaseDate: vehicle.purchaseDate || '',
+      purchasePrice: vehicle.purchasePrice || '',
+      salePrice: vehicle.salePrice || '',
+      saleDate: vehicle.saleDate || '',
+      buyerFirstName: vehicle.buyerFirstName || '',
+      buyerLastName: vehicle.buyerLastName || '',
+      notes: vehicle.notes || ''
+    });
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -81,9 +151,41 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
               <Car className="w-5 h-5" />
               {vehicle.year} {vehicle.make} {vehicle.model}
             </DialogTitle>
-            <Badge className={`${getStatusColor(vehicle.status)} text-white`}>
-              {getStatusDisplay(vehicle.status)}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge className={`${getStatusColor(vehicle.status)} text-white`}>
+                {getStatusDisplay(vehicle.status)}
+              </Badge>
+              {!isEditing ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditing(true)}
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit
+                </Button>
+              ) : (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCancel}
+                    disabled={isSaving}
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleSave}
+                    disabled={isSaving}
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    {isSaving ? 'Saving...' : 'Save'}
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         </DialogHeader>
 
@@ -141,21 +243,71 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
                 Vehicle Details
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Vehicle ID</p>
-                  <p className="font-medium">{vehicle.vehicleId}</p>
+                <div className="space-y-2">
+                  <Label className="text-sm text-muted-foreground">Vehicle ID</Label>
+                  {isEditing ? (
+                    <Input
+                      value={editData.vehicleId || ''}
+                      onChange={(e) => setEditData({...editData, vehicleId: e.target.value})}
+                      placeholder="Vehicle ID"
+                    />
+                  ) : (
+                    <p className="font-medium">{vehicle.vehicleId}</p>
+                  )}
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">License Plate</p>
-                  <p className="font-medium">{vehicle.licensePlate || 'N/A'}</p>
+                <div className="space-y-2">
+                  <Label className="text-sm text-muted-foreground">License Plate</Label>
+                  {isEditing ? (
+                    <Input
+                      value={editData.licensePlate || ''}
+                      onChange={(e) => setEditData({...editData, licensePlate: e.target.value})}
+                      placeholder="License Plate"
+                    />
+                  ) : (
+                    <p className="font-medium">{vehicle.licensePlate || 'N/A'}</p>
+                  )}
                 </div>
               </div>
               <Separator />
-              <div>
-                <p className="text-sm text-muted-foreground">Make/Model/Year</p>
-                <p className="font-medium">{vehicle.year} {vehicle.make} {vehicle.model}</p>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm text-muted-foreground">Year</Label>
+                  {isEditing ? (
+                    <Input
+                      value={editData.year || ''}
+                      onChange={(e) => setEditData({...editData, year: e.target.value})}
+                      placeholder="Year"
+                    />
+                  ) : (
+                    <p className="font-medium">{vehicle.year}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm text-muted-foreground">Make</Label>
+                  {isEditing ? (
+                    <Input
+                      value={editData.make || ''}
+                      onChange={(e) => setEditData({...editData, make: e.target.value})}
+                      placeholder="Make"
+                    />
+                  ) : (
+                    <p className="font-medium">{vehicle.make}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm text-muted-foreground">Model</Label>
+                  {isEditing ? (
+                    <Input
+                      value={editData.model || ''}
+                      onChange={(e) => setEditData({...editData, model: e.target.value})}
+                      placeholder="Model"
+                    />
+                  ) : (
+                    <p className="font-medium">{vehicle.model}</p>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -168,20 +320,45 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
                 Purchase Details
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Driver</p>
-                  <p className="font-medium">{vehicle.sellerName || 'N/A'}</p>
+                <div className="space-y-2">
+                  <Label className="text-sm text-muted-foreground">Driver</Label>
+                  {isEditing ? (
+                    <Input
+                      value={editData.sellerName || ''}
+                      onChange={(e) => setEditData({...editData, sellerName: e.target.value})}
+                      placeholder="Driver Name"
+                    />
+                  ) : (
+                    <p className="font-medium">{vehicle.sellerName || 'N/A'}</p>
+                  )}
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Purchase Price</p>
-                  <p className="font-medium">{vehicle.purchasePrice ? `$${parseFloat(vehicle.purchasePrice).toLocaleString()}` : 'N/A'}</p>
+                <div className="space-y-2">
+                  <Label className="text-sm text-muted-foreground">Purchase Price</Label>
+                  {isEditing ? (
+                    <Input
+                      type="number"
+                      value={editData.purchasePrice || ''}
+                      onChange={(e) => setEditData({...editData, purchasePrice: e.target.value})}
+                      placeholder="Purchase Price"
+                    />
+                  ) : (
+                    <p className="font-medium">{vehicle.purchasePrice ? `$${parseFloat(vehicle.purchasePrice).toLocaleString()}` : 'N/A'}</p>
+                  )}
                 </div>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Purchase Date</p>
-                <p className="font-medium">{vehicle.purchaseDate || 'N/A'}</p>
+              <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground">Purchase Date</Label>
+                {isEditing ? (
+                  <Input
+                    type="date"
+                    value={editData.purchaseDate || ''}
+                    onChange={(e) => setEditData({...editData, purchaseDate: e.target.value})}
+                  />
+                ) : (
+                  <p className="font-medium">{vehicle.purchaseDate || 'N/A'}</p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -234,20 +411,59 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
                   Sale Details
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Buyer</p>
-                    <p className="font-medium">{vehicle.buyerName || `${vehicle.buyerFirstName} ${vehicle.buyerLastName}` || 'N/A'}</p>
+                  <div className="space-y-2">
+                    <Label className="text-sm text-muted-foreground">Buyer First Name</Label>
+                    {isEditing ? (
+                      <Input
+                        value={editData.buyerFirstName || ''}
+                        onChange={(e) => setEditData({...editData, buyerFirstName: e.target.value})}
+                        placeholder="First Name"
+                      />
+                    ) : (
+                      <p className="font-medium">{vehicle.buyerFirstName || 'N/A'}</p>
+                    )}
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Sale Price</p>
-                    <p className="font-medium">{vehicle.salePrice ? `$${parseFloat(vehicle.salePrice).toLocaleString()}` : 'N/A'}</p>
+                  <div className="space-y-2">
+                    <Label className="text-sm text-muted-foreground">Buyer Last Name</Label>
+                    {isEditing ? (
+                      <Input
+                        value={editData.buyerLastName || ''}
+                        onChange={(e) => setEditData({...editData, buyerLastName: e.target.value})}
+                        placeholder="Last Name"
+                      />
+                    ) : (
+                      <p className="font-medium">{vehicle.buyerLastName || 'N/A'}</p>
+                    )}
                   </div>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Sale Date</p>
-                  <p className="font-medium">{vehicle.saleDate || 'N/A'}</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm text-muted-foreground">Sale Price</Label>
+                    {isEditing ? (
+                      <Input
+                        type="number"
+                        value={editData.salePrice || ''}
+                        onChange={(e) => setEditData({...editData, salePrice: e.target.value})}
+                        placeholder="Sale Price"
+                      />
+                    ) : (
+                      <p className="font-medium">{vehicle.salePrice ? `$${parseFloat(vehicle.salePrice).toLocaleString()}` : 'N/A'}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm text-muted-foreground">Sale Date</Label>
+                    {isEditing ? (
+                      <Input
+                        type="date"
+                        value={editData.saleDate || ''}
+                        onChange={(e) => setEditData({...editData, saleDate: e.target.value})}
+                      />
+                    ) : (
+                      <p className="font-medium">{vehicle.saleDate || 'N/A'}</p>
+                    )}
+                  </div>
                 </div>
                 {vehicle.buyerAddress && (
                   <div>
@@ -263,6 +479,31 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
               </CardContent>
             </Card>
           )}
+
+          {/* Notes Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Notes
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground">Additional Notes</Label>
+                {isEditing ? (
+                  <textarea
+                    className="w-full min-h-20 p-3 border border-input rounded-md bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                    value={editData.notes || ''}
+                    onChange={(e) => setEditData({...editData, notes: e.target.value})}
+                    placeholder="Enter any additional notes..."
+                  />
+                ) : (
+                  <p className="font-medium">{vehicle.notes || 'No notes available'}</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </DialogContent>
     </Dialog>
