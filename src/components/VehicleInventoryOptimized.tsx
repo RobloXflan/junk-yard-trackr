@@ -1,9 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { VehicleDetailsDialog } from "./VehicleDetailsDialog";
 import { useVehicleStorePaginated } from "@/hooks/useVehicleStorePaginated";
 import { Vehicle } from "@/stores/vehicleStore";
@@ -17,7 +19,8 @@ import {
   FileText,
   ExternalLink,
   Eye,
-  Loader2
+  Loader2,
+  Filter
 } from "lucide-react";
 
 interface VehicleInventoryOptimizedProps {
@@ -38,6 +41,13 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
 
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+
+  // Filter vehicles based on selected status filters
+  const filteredVehicles = vehicles.filter(vehicle => {
+    if (statusFilter.length === 0) return true;
+    return statusFilter.includes(vehicle.status);
+  });
 
   const handleVehicleClick = (vehicle: Vehicle) => {
     console.log('Vehicle selected:', vehicle.id);
@@ -91,6 +101,18 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
     }
   };
 
+  const getStatusCounts = () => {
+    const counts = {
+      yard: vehicles.filter(v => v.status === 'yard').length,
+      sold: vehicles.filter(v => v.status === 'sold').length,
+      'pick-your-part': vehicles.filter(v => v.status === 'pick-your-part').length,
+      'sa-recycling': vehicles.filter(v => v.status === 'sa-recycling').length,
+    };
+    return counts;
+  };
+
+  const statusCounts = getStatusCounts();
+
   return (
     <div className="space-y-6">
       {/* Search and Stats */}
@@ -105,13 +127,54 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
           />
         </div>
         <div className="text-sm text-muted-foreground">
-          {isLoading ? 'Loading...' : `${vehicles.length} of ${totalCount} vehicles`}
+          {isLoading ? 'Loading...' : `${filteredVehicles.length} of ${totalCount} vehicles`}
         </div>
       </div>
 
+      {/* Status Filter */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4" />
+              <span className="text-sm font-medium">Filter by Status:</span>
+            </div>
+            <ToggleGroup 
+              type="multiple" 
+              value={statusFilter} 
+              onValueChange={setStatusFilter}
+              className="justify-start"
+            >
+              <ToggleGroupItem value="yard" aria-label="In Yard" className="text-xs">
+                In Yard ({statusCounts.yard})
+              </ToggleGroupItem>
+              <ToggleGroupItem value="sold" aria-label="Sold" className="text-xs">
+                Sold ({statusCounts.sold})
+              </ToggleGroupItem>
+              <ToggleGroupItem value="pick-your-part" aria-label="Pick Your Part" className="text-xs">
+                Pick Your Part ({statusCounts['pick-your-part']})
+              </ToggleGroupItem>
+              <ToggleGroupItem value="sa-recycling" aria-label="SA Recycling" className="text-xs">
+                SA Recycling ({statusCounts['sa-recycling']})
+              </ToggleGroupItem>
+            </ToggleGroup>
+            {statusFilter.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setStatusFilter([])}
+                className="text-xs"
+              >
+                Clear Filters
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Vehicle Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {vehicles.map((vehicle) => (
+        {filteredVehicles.map((vehicle) => (
           <Card key={vehicle.id} className="cursor-pointer hover:shadow-md transition-shadow">
             <CardContent className="p-4 space-y-3">
               {/* Header with status */}
@@ -195,7 +258,7 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
       </div>
 
       {/* Load More Button */}
-      {hasMore && !searchTerm.trim() && (
+      {hasMore && !searchTerm.trim() && statusFilter.length === 0 && (
         <div className="flex justify-center">
           <Button
             variant="outline"
@@ -216,12 +279,12 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
       )}
 
       {/* Empty State */}
-      {vehicles.length === 0 && !isLoading && (
+      {filteredVehicles.length === 0 && !isLoading && (
         <div className="text-center py-12">
           <Car className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold mb-2">No vehicles found</h3>
           <p className="text-muted-foreground">
-            {searchTerm ? 'Try adjusting your search terms' : 'Start by adding your first vehicle'}
+            {searchTerm || statusFilter.length > 0 ? 'Try adjusting your search or filter settings' : 'Start by adding your first vehicle'}
           </p>
         </div>
       )}
