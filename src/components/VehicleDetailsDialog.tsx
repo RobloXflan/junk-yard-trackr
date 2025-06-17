@@ -25,7 +25,8 @@ import {
 import { Vehicle, CarImage } from '@/stores/vehicleStore';
 import { useVehicleStore } from '@/hooks/useVehicleStore';
 import { CarImagesUpload } from '@/components/CarImagesUpload';
-import { SoldDialog } from '@/components/forms/SoldDialog';
+import { BuyerSelector } from '@/components/forms/BuyerSelector';
+import { Buyer } from '@/hooks/useBuyers';
 import { toast } from 'sonner';
 
 interface VehicleDetailsDialogProps {
@@ -44,7 +45,7 @@ export function VehicleDetailsDialog({
   isViewOnly = false 
 }: VehicleDetailsDialogProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [soldDialogOpen, setSoldDialogOpen] = useState(false);
+  const [buyerSelectorOpen, setBuyerSelectorOpen] = useState(false);
   const { updateVehicleCarImages } = useVehicleStore();
 
   if (!vehicle) return null;
@@ -71,7 +72,7 @@ export function VehicleDetailsDialog({
 
   const handleStatusChange = async (newStatus: Vehicle['status']) => {
     if (newStatus === 'sold') {
-      setSoldDialogOpen(true);
+      setBuyerSelectorOpen(true);
     } else if (onStatusUpdate) {
       try {
         await onStatusUpdate(vehicle.id, newStatus);
@@ -81,16 +82,21 @@ export function VehicleDetailsDialog({
     }
   };
 
-  const handleSoldConfirm = async (soldData: {
-    buyerFirstName: string;
-    buyerLastName: string;
-    salePrice: string;
-    saleDate: string;
-  }) => {
+  const handleBuyerSelected = async (buyer: Buyer, salePrice: string, saleDate: string) => {
     if (onStatusUpdate) {
       try {
+        const soldData = {
+          buyerFirstName: buyer.first_name,
+          buyerLastName: buyer.last_name,
+          buyerAddress: buyer.address,
+          buyerCity: buyer.city || '',
+          buyerState: buyer.state || 'CA',
+          buyerZip: buyer.zip_code || '',
+          salePrice,
+          saleDate
+        };
         await onStatusUpdate(vehicle.id, 'sold', soldData);
-        setSoldDialogOpen(false);
+        setBuyerSelectorOpen(false);
       } catch (error) {
         console.error('Error updating to sold:', error);
       }
@@ -273,6 +279,17 @@ export function VehicleDetailsDialog({
                     <p className="text-sm text-muted-foreground">Sale Date</p>
                     <p className="font-medium">{vehicle.saleDate || 'N/A'}</p>
                   </div>
+                  {vehicle.buyerAddress && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Buyer Address</p>
+                      <p className="font-medium">
+                        {vehicle.buyerAddress}
+                        {vehicle.buyerCity && `, ${vehicle.buyerCity}`}
+                        {vehicle.buyerState && `, ${vehicle.buyerState}`}
+                        {vehicle.buyerZip && ` ${vehicle.buyerZip}`}
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -373,16 +390,10 @@ export function VehicleDetailsDialog({
         </DialogContent>
       </Dialog>
 
-      <SoldDialog
-        open={soldDialogOpen}
-        onOpenChange={setSoldDialogOpen}
-        onConfirm={handleSoldConfirm}
-        initialData={{
-          buyerFirstName: vehicle.buyerFirstName || "",
-          buyerLastName: vehicle.buyerLastName || "",
-          salePrice: vehicle.salePrice || "",
-          saleDate: vehicle.saleDate || new Date().toISOString().split('T')[0]
-        }}
+      <BuyerSelector
+        open={buyerSelectorOpen}
+        onOpenChange={setBuyerSelectorOpen}
+        onSelectBuyer={handleBuyerSelected}
       />
     </>
   );
