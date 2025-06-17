@@ -3,13 +3,28 @@ import { useVehicleStorePaginated } from "@/hooks/useVehicleStorePaginated";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Car, Hash, FileText, Image, Search } from "lucide-react";
+import { Car, Hash, FileText, Image, Search, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { PublicLogin } from "@/components/PublicLogin";
 
 export function PublicInventory() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { vehicles, isLoading, searchTerm, setSearchTerm, loadMore, hasMore } = useVehicleStorePaginated();
   const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
+
+  const handleLogin = () => {
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+  };
+
+  // Show login form if not authenticated
+  if (!isAuthenticated) {
+    return <PublicLogin onLogin={handleLogin} />;
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -47,10 +62,20 @@ export function PublicInventory() {
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Vehicle Inventory</h1>
-          <p className="text-gray-600">Browse our current vehicle inventory</p>
+        {/* Header with Logout */}
+        <div className="mb-8 flex justify-between items-center">
+          <div className="text-center flex-1">
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">Vehicle Inventory</h1>
+            <p className="text-gray-600">Browse our current vehicle inventory</p>
+          </div>
+          <Button 
+            onClick={handleLogout}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <LogOut className="w-4 h-4" />
+            Logout
+          </Button>
         </div>
 
         {/* Search */}
