@@ -17,6 +17,10 @@ interface VehicleDetailsDialogProps {
     buyerLastName: string;
     salePrice: string;
     saleDate: string;
+    buyerAddress?: string;
+    buyerCity?: string;
+    buyerState?: string;
+    buyerZip?: string;
   }) => void;
 }
 
@@ -28,6 +32,10 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
     buyerLastName: string;
     salePrice: string;
     saleDate: string;
+    buyerAddress?: string;
+    buyerCity?: string;
+    buyerState?: string;
+    buyerZip?: string;
   } | null>(null);
 
   // Reset state when vehicle changes or dialog opens/closes
@@ -59,11 +67,17 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
   };
 
   const handleBuyerSelect = (buyer: Buyer, salePrice: string, saleDate: string) => {
+    console.log('Buyer selected in dialog:', buyer);
+    
     setPendingSoldData({
       buyerFirstName: buyer.first_name,
       buyerLastName: buyer.last_name,
       salePrice,
-      saleDate
+      saleDate,
+      buyerAddress: buyer.address,
+      buyerCity: buyer.city || undefined,
+      buyerState: buyer.state || undefined,
+      buyerZip: buyer.zip_code || undefined
     });
     setSelectedStatus('sold');
     setBuyerSelectorOpen(false);
@@ -80,6 +94,8 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
   };
 
   const handleSave = () => {
+    console.log('Saving vehicle with data:', { selectedStatus, pendingSoldData });
+    
     if (selectedStatus === 'sold' && pendingSoldData) {
       onSave(vehicle.id, selectedStatus, pendingSoldData);
     } else {
@@ -221,6 +237,13 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
                         <p className="text-sm">Buyer: {pendingSoldData.buyerFirstName} {pendingSoldData.buyerLastName}</p>
                         <p className="text-sm">Sale Price: ${pendingSoldData.salePrice}</p>
                         <p className="text-sm">Date: {pendingSoldData.saleDate}</p>
+                        {pendingSoldData.buyerAddress && (
+                          <p className="text-sm">Address: {pendingSoldData.buyerAddress}
+                            {pendingSoldData.buyerCity && `, ${pendingSoldData.buyerCity}`}
+                            {pendingSoldData.buyerState && `, ${pendingSoldData.buyerState}`}
+                            {pendingSoldData.buyerZip && ` ${pendingSoldData.buyerZip}`}
+                          </p>
+                        )}
                       </div>
                     </div>
                   )}

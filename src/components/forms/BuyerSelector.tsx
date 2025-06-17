@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -70,6 +69,7 @@ export function BuyerSelector({ open, onOpenChange, onSelectBuyer }: BuyerSelect
       return;
     }
 
+    // Pass the buyer with full address information
     onSelectBuyer(selectedBuyer, salePrice, saleDate);
     onOpenChange(false);
     setSelectedBuyer(null);

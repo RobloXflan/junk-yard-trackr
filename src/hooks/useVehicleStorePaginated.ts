@@ -224,7 +224,48 @@ export function useVehicleStorePaginated() {
     buyerLastName: string;
     salePrice: string;
     saleDate: string;
+    buyerAddress?: string;
+    buyerCity?: string;
+    buyerState?: string;
+    buyerZip?: string;
   }) => {
+    console.log('updateVehicleStatus called with:', { vehicleId, newStatus, soldData });
+    
+    // Optimistic update - update UI immediately
+    setVehicles(prevVehicles => {
+      return prevVehicles.map(vehicle => {
+        if (vehicle.id === vehicleId) {
+          const updatedVehicle = { ...vehicle, status: newStatus };
+          
+          if (newStatus === 'sold' && soldData) {
+            updatedVehicle.buyerFirstName = soldData.buyerFirstName;
+            updatedVehicle.buyerLastName = soldData.buyerLastName;
+            updatedVehicle.buyerName = `${soldData.buyerFirstName} ${soldData.buyerLastName}`;
+            updatedVehicle.salePrice = soldData.salePrice;
+            updatedVehicle.saleDate = soldData.saleDate;
+            updatedVehicle.buyerAddress = soldData.buyerAddress;
+            updatedVehicle.buyerCity = soldData.buyerCity;
+            updatedVehicle.buyerState = soldData.buyerState;
+            updatedVehicle.buyerZip = soldData.buyerZip;
+          } else if (newStatus !== 'sold') {
+            // Clear sold data if status is not sold
+            updatedVehicle.buyerFirstName = undefined;
+            updatedVehicle.buyerLastName = undefined;
+            updatedVehicle.buyerName = undefined;
+            updatedVehicle.salePrice = undefined;
+            updatedVehicle.saleDate = undefined;
+            updatedVehicle.buyerAddress = undefined;
+            updatedVehicle.buyerCity = undefined;
+            updatedVehicle.buyerState = undefined;
+            updatedVehicle.buyerZip = undefined;
+          }
+          
+          return updatedVehicle;
+        }
+        return vehicle;
+      });
+    });
+
     try {
       const updateData: any = {
         status: newStatus,
@@ -237,35 +278,42 @@ export function useVehicleStorePaginated() {
         updateData.buyer_name = `${soldData.buyerFirstName} ${soldData.buyerLastName}`;
         updateData.sale_price = soldData.salePrice;
         updateData.sale_date = soldData.saleDate;
+        
+        // Include buyer address information
+        if (soldData.buyerAddress) updateData.buyer_address = soldData.buyerAddress;
+        if (soldData.buyerCity) updateData.buyer_city = soldData.buyerCity;
+        if (soldData.buyerState) updateData.buyer_state = soldData.buyerState;
+        if (soldData.buyerZip) updateData.buyer_zip = soldData.buyerZip;
       } else if (newStatus !== 'sold') {
         updateData.buyer_first_name = null;
         updateData.buyer_last_name = null;
         updateData.buyer_name = null;
         updateData.sale_price = null;
         updateData.sale_date = null;
+        updateData.buyer_address = null;
+        updateData.buyer_city = null;
+        updateData.buyer_state = null;
+        updateData.buyer_zip = null;
       }
+
+      console.log('Updating database with:', updateData);
 
       const { error } = await supabase
         .from('vehicles')
         .update(updateData)
         .eq('id', vehicleId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database update failed:', error);
+        // Revert optimistic update on failure
+        await refreshVehicles();
+        throw error;
+      }
 
-      setVehicles(prev => prev.map(vehicle => 
-        vehicle.id === vehicleId 
-          ? { 
-              ...vehicle, 
-              status: newStatus,
-              ...(soldData && {
-                buyerFirstName: soldData.buyerFirstName,
-                buyerLastName: soldData.buyerLastName,
-                salePrice: soldData.salePrice,
-                saleDate: soldData.saleDate
-              })
-            }
-          : vehicle
-      ));
+      console.log('Database update successful');
+      
+      // Force refresh to ensure UI is in sync with database
+      await refreshVehicles();
 
     } catch (error) {
       console.error('Failed to update vehicle status:', error);
@@ -274,6 +322,7 @@ export function useVehicleStorePaginated() {
   };
 
   const refreshVehicles = async () => {
+    console.log('Refreshing vehicles data...');
     setCurrentPage(1);
     await loadVehicles(1, searchTerm, false);
   };
