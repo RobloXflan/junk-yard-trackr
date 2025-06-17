@@ -1,11 +1,11 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, LogOut, CheckCircle, XCircle } from "lucide-react";
+import { ViewOnlyVehicleDialog } from "@/components/ViewOnlyVehicleDialog";
+import { Search, LogOut, CheckCircle, XCircle, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Vehicle {
@@ -18,6 +18,7 @@ interface Vehicle {
   paperwork: string;
   title_present: boolean;
   bill_of_sale: boolean;
+  documents: any[];
 }
 
 interface ViewOnlyInventoryProps {
@@ -30,6 +31,8 @@ export const ViewOnlyInventory = ({ onLogout, username }: ViewOnlyInventoryProps
   const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -53,7 +56,7 @@ export const ViewOnlyInventory = ({ onLogout, username }: ViewOnlyInventoryProps
     try {
       const { data, error } = await supabase
         .from("vehicles")
-        .select("id, year, make, model, vehicle_id, status, paperwork, title_present, bill_of_sale")
+        .select("id, year, make, model, vehicle_id, status, paperwork, title_present, bill_of_sale, documents")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -69,6 +72,7 @@ export const ViewOnlyInventory = ({ onLogout, username }: ViewOnlyInventoryProps
         paperwork: vehicle.paperwork || '',
         title_present: Boolean(vehicle.title_present),
         bill_of_sale: Boolean(vehicle.bill_of_sale),
+        documents: vehicle.documents || [],
       }));
 
       setVehicles(transformedData);
@@ -83,6 +87,11 @@ export const ViewOnlyInventory = ({ onLogout, username }: ViewOnlyInventoryProps
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleVehicleClick = (vehicle: Vehicle) => {
+    setSelectedVehicle(vehicle);
+    setDialogOpen(true);
   };
 
   const getStatusColor = (status: string) => {
@@ -152,7 +161,11 @@ export const ViewOnlyInventory = ({ onLogout, username }: ViewOnlyInventoryProps
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredVehicles.map((vehicle) => (
-              <Card key={vehicle.id} className="hover:shadow-lg transition-shadow">
+              <Card 
+                key={vehicle.id} 
+                className="hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => handleVehicleClick(vehicle)}
+              >
                 <CardHeader>
                   <CardTitle className="text-lg">
                     {vehicle.year} {vehicle.make} {vehicle.model}
@@ -190,6 +203,30 @@ export const ViewOnlyInventory = ({ onLogout, username }: ViewOnlyInventoryProps
                       <span className="text-sm">Bill of Sale</span>
                     </div>
                   </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      {vehicle.documents && vehicle.documents.length > 0 ? (
+                        <>
+                          <Eye className="w-4 h-4" />
+                          <span>{vehicle.documents.length} document(s)</span>
+                        </>
+                      ) : (
+                        <span className="text-gray-400">No documents</span>
+                      )}
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleVehicleClick(vehicle);
+                      }}
+                    >
+                      <Eye className="w-4 h-4 mr-1" />
+                      View Details
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -204,6 +241,12 @@ export const ViewOnlyInventory = ({ onLogout, username }: ViewOnlyInventoryProps
           </div>
         )}
       </div>
+
+      <ViewOnlyVehicleDialog 
+        vehicle={selectedVehicle}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+      />
     </div>
   );
 };
