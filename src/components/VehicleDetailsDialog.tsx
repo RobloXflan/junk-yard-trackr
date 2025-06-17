@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,7 @@ import { Save, X, ExternalLink, FileText } from "lucide-react";
 import { BuyerSelector } from "@/components/forms/BuyerSelector";
 import { Buyer } from "@/hooks/useBuyers";
 import { toast } from "sonner";
+import { CarImagesUpload } from "@/components/CarImagesUpload";
 
 interface VehicleDetailsDialogProps {
   vehicle: Vehicle | null;
@@ -39,6 +39,7 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
     buyerZip?: string;
   } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [carImages, setCarImages] = useState(vehicle?.carImages || []);
 
   // Reset state when vehicle changes or dialog opens/closes
   useEffect(() => {
@@ -47,6 +48,7 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
       setPendingSoldData(null);
       setBuyerSelectorOpen(false);
       setIsSaving(false);
+      setCarImages(vehicle.carImages || []);
     }
   }, [vehicle, isOpen]);
 
@@ -193,14 +195,14 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
   return (
     <>
       <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {vehicle.year} {vehicle.make} {vehicle.model}
             </DialogTitle>
           </DialogHeader>
           
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             {/* Vehicle Details - Takes 1 column */}
             <div className="space-y-4">
               <div>
@@ -315,6 +317,16 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
                   </p>
                 </div>
               )}
+            </div>
+
+            {/* Car Images - Takes 1 column */}
+            <div className="space-y-4">
+              <CarImagesUpload
+                vehicleId={vehicle.id}
+                currentImages={carImages}
+                onImagesUpdate={setCarImages}
+                disabled={isSaving}
+              />
             </div>
 
             {/* Documents - Takes 2 columns */}

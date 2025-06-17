@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface UploadedDocument {
@@ -7,6 +6,14 @@ export interface UploadedDocument {
   url: string;
   name: string;
   size: number;
+}
+
+export interface CarImage {
+  id: string;
+  url: string;
+  name: string;
+  size: number;
+  uploadedAt: string;
 }
 
 export interface Vehicle {
@@ -37,6 +44,7 @@ export interface Vehicle {
   status: 'yard' | 'sold' | 'pick-your-part' | 'sa-recycling';
   createdAt: string;
   documents?: UploadedDocument[];
+  carImages?: CarImage[];
 }
 
 class VehicleStore {
@@ -144,7 +152,8 @@ class VehicleStore {
           paperworkOther: vehicle.paperwork_other || undefined,
           status: (vehicle.status as Vehicle['status']) || 'yard',
           createdAt: vehicle.created_at,
-          documents: this.deserializeDocuments(vehicle.documents)
+          documents: this.deserializeDocuments(vehicle.documents),
+          carImages: vehicle.car_images ? this.deserializeDocuments(vehicle.car_images) : []
         };
         
         console.log('Processed vehicle documents:', processedVehicle.documents);
@@ -187,7 +196,8 @@ class VehicleStore {
         paperwork: vehicleData.paperwork,
         paperwork_other: vehicleData.paperworkOther,
         status: vehicleData.destination === 'sold' || vehicleData.destination === 'buyer' ? 'sold' : 'yard',
-        documents: vehicleData.documents ? this.serializeDocuments(vehicleData.documents) : []
+        documents: vehicleData.documents ? this.serializeDocuments(vehicleData.documents) : [],
+        carImages: vehicleData.carImages ? this.serializeDocuments(vehicleData.carImages) : []
       };
 
       console.log('Serialized documents for storage:', newVehicle.documents);
@@ -290,7 +300,8 @@ class VehicleStore {
     // Return a deep copy to prevent external modifications
     return this.vehicles.map(vehicle => ({
       ...vehicle,
-      documents: vehicle.documents ? [...vehicle.documents] : []
+      documents: vehicle.documents ? [...vehicle.documents] : [],
+      carImages: vehicle.carImages ? [...vehicle.carImages] : []
     }));
   }
 
