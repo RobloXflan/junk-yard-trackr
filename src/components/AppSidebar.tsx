@@ -1,5 +1,5 @@
 
-import { Car, FileText, BarChart3, Upload, Users, Settings } from "lucide-react";
+import { Car, FileText, BarChart3, Upload, Users, Settings, Clock } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -29,6 +29,11 @@ const menuItems = [
     title: "Vehicle Inventory",
     page: "inventory",
     icon: Car,
+  },
+  {
+    title: "Pending Releases",
+    page: "pending-releases",
+    icon: Clock,
   },
   {
     title: "Documents",

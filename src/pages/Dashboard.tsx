@@ -1,5 +1,5 @@
-
 import { DashboardStats } from "@/components/DashboardStats";
+import { PendingReleasesStats } from "@/components/PendingReleasesStats";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, Plus } from "lucide-react";
 
@@ -14,6 +14,8 @@ export function Dashboard() {
       </div>
 
       <DashboardStats />
+      
+      <PendingReleasesStats />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="shadow-business">

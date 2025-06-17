@@ -8,6 +8,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { Dashboard } from "@/pages/Dashboard";
 import { Intake } from "@/pages/Intake";
 import { InventoryOptimized } from "@/pages/InventoryOptimized";
+import { PendingReleases } from "@/pages/PendingReleases";
 import { Menu } from "lucide-react";
 import { useState } from "react";
 
@@ -24,6 +25,8 @@ const App = () => {
         return <Intake />;
       case 'inventory':
         return <InventoryOptimized onNavigate={setCurrentPage} />;
+      case 'pending-releases':
+        return <PendingReleases />;
       default:
         return <Dashboard />;
     }
@@ -73,6 +76,16 @@ const App = () => {
                       }`}
                     >
                       Inventory
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage("pending-releases")}
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                        currentPage === "pending-releases"
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      }`}
+                    >
+                      Pending Releases
                     </button>
                   </nav>
                 </div>
