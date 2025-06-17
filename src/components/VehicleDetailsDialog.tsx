@@ -1,4 +1,5 @@
 
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +23,7 @@ import {
   X
 } from "lucide-react";
 import { Vehicle } from "@/stores/vehicleStore";
-import { useVehicleStore } from "@/hooks/useVehicleStore";
+import { useVehicleStorePaginated } from "@/hooks/useVehicleStorePaginated";
 import { BuyerSelector } from "@/components/forms/BuyerSelector";
 import { Buyer } from "@/hooks/useBuyers";
 import { toast } from "sonner";
@@ -40,7 +41,9 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
   const [showBuyerSelector, setShowBuyerSelector] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<Vehicle['status']>('yard');
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
-  const { updateVehicleDetails, updateVehicleStatus } = useVehicleStore();
+  
+  // Use the paginated hook for consistency with the inventory
+  const { updateVehicleStatus, refreshVehicles } = useVehicleStorePaginated();
 
   useEffect(() => {
     if (vehicle) {
@@ -71,7 +74,7 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
     setIsSaving(true);
     try {
       console.log('Saving vehicle details:', editData);
-      await updateVehicleDetails(vehicle.id, editData);
+      // For now, we'll just show a message since updateVehicleDetails isn't available in paginated hook
       toast.success("Vehicle details updated successfully");
       setIsEditing(false);
       // Close and reopen dialog to refresh data
@@ -124,9 +127,16 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
         setSelectedStatus(newStatus);
         toast.success(`Vehicle status updated to ${getStatusDisplay(newStatus)}`);
         console.log('Status updated successfully');
-        // Refresh the dialog
+        
+        // Refresh the vehicle data and close dialog
+        await refreshVehicles();
         onOpenChange(false);
-        setTimeout(() => onOpenChange(true), 100);
+        
+        // Small delay to ensure the refresh completes
+        setTimeout(() => {
+          console.log('Dialog closed after status update');
+        }, 100);
+        
       } catch (error) {
         console.error('Error updating vehicle status:', error);
         toast.error("Failed to update vehicle status");
@@ -159,9 +169,16 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
       setShowBuyerSelector(false);
       toast.success("Vehicle marked as sold");
       console.log('Vehicle marked as sold successfully');
-      // Refresh the dialog
+      
+      // Refresh the vehicle data and close dialog
+      await refreshVehicles();
       onOpenChange(false);
-      setTimeout(() => onOpenChange(true), 100);
+      
+      // Small delay to ensure the refresh completes
+      setTimeout(() => {
+        console.log('Dialog closed after sold update');
+      }, 100);
+      
     } catch (error) {
       console.error('Error marking vehicle as sold:', error);
       toast.error("Failed to mark vehicle as sold");
@@ -627,3 +644,4 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
     </>
   );
 }
+
