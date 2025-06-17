@@ -583,7 +583,12 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
         open={showSoldDialog}
         onOpenChange={setShowSoldDialog}
         onConfirm={handleSoldConfirm}
-        vehicle={vehicle}
+        initialData={{
+          buyerFirstName: vehicle.buyerFirstName || '',
+          buyerLastName: vehicle.buyerLastName || '',
+          salePrice: vehicle.salePrice || '',
+          saleDate: vehicle.saleDate || new Date().toISOString().split('T')[0]
+        }}
       />
     </>
   );
