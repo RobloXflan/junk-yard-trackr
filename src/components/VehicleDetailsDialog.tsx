@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +15,7 @@ import { CarImagesUpload } from "./CarImagesUpload";
 import { useVehicleStore } from "@/hooks/useVehicleStore";
 
 interface VehicleDetailsDialogProps {
-  vehicle: Vehicle;
+  vehicle: Vehicle | null;
   isOpen: boolean;
   onClose: () => void;
   onStatusUpdate?: (vehicleId: string, newStatus: Vehicle['status'], soldData?: any) => Promise<void>;
@@ -32,17 +33,21 @@ export function VehicleDetailsDialog({
 }: VehicleDetailsDialogProps) {
   const { updateVehicleStatus: fallbackUpdateStatus, updateVehicleDetails: fallbackUpdateDetails, refreshVehicles: fallbackRefresh } = useVehicleStore();
   
-  const [localVehicle, setLocalVehicle] = useState<Vehicle>(vehicle);
+  const [localVehicle, setLocalVehicle] = useState<Vehicle | null>(vehicle);
   const [isEditing, setIsEditing] = useState(false);
-  const [editedVehicle, setEditedVehicle] = useState<Vehicle>(vehicle);
-  const [selectedStatus, setSelectedStatus] = useState<Vehicle['status']>(vehicle.status);
+  const [editedVehicle, setEditedVehicle] = useState<Vehicle | null>(vehicle);
+  const [selectedStatus, setSelectedStatus] = useState<Vehicle['status']>(vehicle?.status || 'yard');
   const [showSoldDialog, setShowSoldDialog] = useState(false);
 
   useEffect(() => {
     setLocalVehicle(vehicle);
     setEditedVehicle(vehicle);
-    setSelectedStatus(vehicle.status);
+    setSelectedStatus(vehicle?.status || 'yard');
   }, [vehicle]);
+
+  if (!vehicle || !localVehicle || !editedVehicle) {
+    return null;
+  }
 
   const handleStatusChange = async (newStatus: Vehicle['status']) => {
     if (newStatus === 'sold') {
@@ -205,10 +210,10 @@ export function VehicleDetailsDialog({
     try {
       // This would typically be handled by a separate function
       // but for now we'll just update the local state
-      setLocalVehicle(prev => ({
+      setLocalVehicle(prev => prev ? ({
         ...prev,
         carImages
-      }));
+      }) : null);
       
       toast({
         title: "Images Updated",
@@ -494,7 +499,7 @@ export function VehicleDetailsDialog({
               </Label>
               <CarImagesUpload 
                 vehicleId={localVehicle.id}
-                initialImages={localVehicle.carImages || []}
+                carImages={localVehicle.carImages || []}
                 onImagesUpdate={handleCarImagesUpdate}
               />
             </div>
@@ -503,7 +508,7 @@ export function VehicleDetailsDialog({
       </Dialog>
       
       <SoldDialog
-        isOpen={showSoldDialog}
+        open={showSoldDialog}
         onClose={() => setShowSoldDialog(false)}
         onSubmit={handleSoldSubmit}
         vehicle={localVehicle}

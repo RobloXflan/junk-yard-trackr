@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -258,8 +259,10 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
 
       <VehicleDetailsDialog
         vehicle={selectedVehicle}
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
+        isOpen={isDialogOpen}
+        onClose={handleCloseDialog}
+        onStatusUpdate={handleStatusUpdate}
+        refreshVehicles={refreshVehicles}
       />
     </div>
   );

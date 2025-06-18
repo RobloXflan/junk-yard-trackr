@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -372,8 +373,10 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
 
       <VehicleDetailsDialog
         vehicle={selectedVehicle}
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
+        isOpen={isDialogOpen}
+        onClose={handleCloseDialog}
+        onStatusUpdate={handleStatusUpdate}
+        refreshVehicles={refreshVehicles}
       />
     </div>
   );
