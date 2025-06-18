@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,10 +9,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, Edit, Save, X, FileText, Upload } from "lucide-react";
 import { Vehicle } from "@/stores/vehicleStore";
-import { SoldDialog } from "./forms/SoldDialog";
+import { BuyerSelector } from "./forms/BuyerSelector";
 import { toast } from "@/hooks/use-toast";
 import { CarImagesUpload } from "./CarImagesUpload";
 import { useVehicleStore } from "@/hooks/useVehicleStore";
+import { Buyer } from "@/hooks/useBuyers";
 
 interface VehicleDetailsDialogProps {
   vehicle: Vehicle | null;
@@ -36,7 +38,7 @@ export function VehicleDetailsDialog({
   const [isEditing, setIsEditing] = useState(false);
   const [editedVehicle, setEditedVehicle] = useState<Vehicle | null>(vehicle);
   const [selectedStatus, setSelectedStatus] = useState<Vehicle['status']>(vehicle?.status || 'yard');
-  const [showSoldDialog, setShowSoldDialog] = useState(false);
+  const [showBuyerSelector, setShowBuyerSelector] = useState(false);
 
   useEffect(() => {
     setLocalVehicle(vehicle);
@@ -50,7 +52,7 @@ export function VehicleDetailsDialog({
 
   const handleStatusChange = async (newStatus: Vehicle['status']) => {
     if (newStatus === 'sold') {
-      setShowSoldDialog(true);
+      setShowBuyerSelector(true);
       return;
     }
 
@@ -105,37 +107,39 @@ export function VehicleDetailsDialog({
     }
   };
 
-  const handleSoldSubmit = async (soldData: {
-    buyerFirstName: string;
-    buyerLastName: string;
-    salePrice: string;
-    saleDate: string;
-    buyerAddress?: string;
-    buyerCity?: string;
-    buyerState?: string;
-    buyerZip?: string;
-  }) => {
+  const handleBuyerSelected = async (buyer: Buyer, salePrice: string, saleDate: string) => {
     try {
-      console.log('Updating vehicle to sold status with data:', soldData);
+      console.log('Updating vehicle to sold status with buyer:', buyer);
+      
+      const soldData = {
+        buyerFirstName: buyer.first_name,
+        buyerLastName: buyer.last_name,
+        salePrice,
+        saleDate,
+        buyerAddress: buyer.address,
+        buyerCity: buyer.city,
+        buyerState: buyer.state,
+        buyerZip: buyer.zip_code,
+      };
       
       // Update local state immediately
       const updatedVehicle = {
         ...localVehicle,
         status: 'sold' as Vehicle['status'],
-        buyerFirstName: soldData.buyerFirstName,
-        buyerLastName: soldData.buyerLastName,
-        buyerName: `${soldData.buyerFirstName} ${soldData.buyerLastName}`,
-        salePrice: soldData.salePrice,
-        saleDate: soldData.saleDate,
-        buyerAddress: soldData.buyerAddress,
-        buyerCity: soldData.buyerCity,
-        buyerState: soldData.buyerState,
-        buyerZip: soldData.buyerZip,
+        buyerFirstName: buyer.first_name,
+        buyerLastName: buyer.last_name,
+        buyerName: `${buyer.first_name} ${buyer.last_name}`,
+        salePrice,
+        saleDate,
+        buyerAddress: buyer.address,
+        buyerCity: buyer.city,
+        buyerState: buyer.state,
+        buyerZip: buyer.zip_code,
       };
       
       setLocalVehicle(updatedVehicle);
       setSelectedStatus('sold');
-      setShowSoldDialog(false);
+      setShowBuyerSelector(false);
 
       // Use provided update function or fallback to hook
       const updateFunction = onStatusUpdate || fallbackUpdateStatus;
@@ -151,7 +155,7 @@ export function VehicleDetailsDialog({
 
       toast({
         title: "Vehicle Sold",
-        description: `Vehicle sold to ${soldData.buyerFirstName} ${soldData.buyerLastName}`,
+        description: `Vehicle sold to ${buyer.first_name} ${buyer.last_name}`,
       });
 
     } catch (error) {
@@ -160,7 +164,7 @@ export function VehicleDetailsDialog({
       // Revert local state on error
       setLocalVehicle(vehicle);
       setSelectedStatus(vehicle.status);
-      setShowSoldDialog(false);
+      setShowBuyerSelector(false);
       
       toast({
         title: "Error",
@@ -426,6 +430,25 @@ export function VehicleDetailsDialog({
                   </div>
 
                   <div className="space-y-2">
+                    <Label htmlFor="buyerAddress" className="text-foreground font-medium">Buyer Address</Label>
+                    <div className="p-2 border rounded-md bg-muted/20">
+                      {localVehicle.buyerAddress ? (
+                        <div>
+                          <div>{localVehicle.buyerAddress}</div>
+                          {(localVehicle.buyerCity || localVehicle.buyerState || localVehicle.buyerZip) && (
+                            <div className="text-sm text-muted-foreground">
+                              {localVehicle.buyerCity && localVehicle.buyerCity}
+                              {localVehicle.buyerCity && localVehicle.buyerState && ', '}
+                              {localVehicle.buyerState && localVehicle.buyerState}
+                              {localVehicle.buyerZip && ` ${localVehicle.buyerZip}`}
+                            </div>
+                          )}
+                        </div>
+                      ) : 'N/A'}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
                     <Label htmlFor="saleDate" className="text-foreground font-medium">Sale Date</Label>
                     <div className="p-2 border rounded-md bg-muted/20 flex items-center">
                       <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
@@ -506,10 +529,10 @@ export function VehicleDetailsDialog({
         </DialogContent>
       </Dialog>
       
-      <SoldDialog
-        open={showSoldDialog}
-        onOpenChange={(open) => setShowSoldDialog(open)}
-        onConfirm={handleSoldSubmit}
+      <BuyerSelector
+        open={showBuyerSelector}
+        onOpenChange={(open) => setShowBuyerSelector(open)}
+        onSelectBuyer={handleBuyerSelected}
       />
     </>
   );
