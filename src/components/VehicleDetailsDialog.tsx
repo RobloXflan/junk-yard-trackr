@@ -126,18 +126,16 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
         
         // Update local state immediately for smooth UI
         const updatedVehicle = { ...localVehicle, status: newStatus };
-        if (newStatus !== 'sold') {
-          // Clear sold data if status is not sold
-          updatedVehicle.buyerFirstName = undefined;
-          updatedVehicle.buyerLastName = undefined;
-          updatedVehicle.buyerName = undefined;
-          updatedVehicle.salePrice = undefined;
-          updatedVehicle.saleDate = undefined;
-          updatedVehicle.buyerAddress = undefined;
-          updatedVehicle.buyerCity = undefined;
-          updatedVehicle.buyerState = undefined;
-          updatedVehicle.buyerZip = undefined;
-        }
+        // Clear sold data if status is not sold
+        updatedVehicle.buyerFirstName = undefined;
+        updatedVehicle.buyerLastName = undefined;
+        updatedVehicle.buyerName = undefined;
+        updatedVehicle.salePrice = undefined;
+        updatedVehicle.saleDate = undefined;
+        updatedVehicle.buyerAddress = undefined;
+        updatedVehicle.buyerCity = undefined;
+        updatedVehicle.buyerState = undefined;
+        updatedVehicle.buyerZip = undefined;
         
         setLocalVehicle(updatedVehicle);
         setSelectedStatus(newStatus);
