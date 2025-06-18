@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -499,7 +498,7 @@ export function VehicleDetailsDialog({
               </Label>
               <CarImagesUpload 
                 vehicleId={localVehicle.id}
-                carImages={localVehicle.carImages || []}
+                currentImages={localVehicle.carImages || []}
                 onImagesUpdate={handleCarImagesUpdate}
               />
             </div>
@@ -509,8 +508,8 @@ export function VehicleDetailsDialog({
       
       <SoldDialog
         open={showSoldDialog}
-        onClose={() => setShowSoldDialog(false)}
-        onSubmit={handleSoldSubmit}
+        onOpenChange={(open) => setShowSoldDialog(open)}
+        onConfirm={handleSoldSubmit}
         vehicle={localVehicle}
       />
     </>
