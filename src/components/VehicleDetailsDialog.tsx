@@ -1,5 +1,3 @@
-
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,6 +39,7 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
   const [showBuyerSelector, setShowBuyerSelector] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<Vehicle['status']>('yard');
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [localVehicle, setLocalVehicle] = useState<Vehicle | null>(null);
   
   // Use the paginated hook for consistency with the inventory
   const { updateVehicleStatus, refreshVehicles } = useVehicleStorePaginated();
@@ -48,6 +47,7 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
   useEffect(() => {
     if (vehicle) {
       console.log('Vehicle data in dialog:', vehicle);
+      setLocalVehicle(vehicle);
       setEditData({
         vehicleId: vehicle.vehicleId,
         licensePlate: vehicle.licensePlate || '',
@@ -68,7 +68,7 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
     }
   }, [vehicle]);
 
-  if (!vehicle) return null;
+  if (!localVehicle) return null;
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -109,7 +109,7 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
   };
 
   const handleStatusChange = async (newStatus: Vehicle['status']) => {
-    console.log('Status change requested:', newStatus, 'for vehicle:', vehicle.id);
+    console.log('Status change requested:', newStatus, 'for vehicle:', localVehicle.id);
     
     if (isUpdatingStatus) {
       console.log('Status update already in progress, ignoring');
@@ -123,25 +123,39 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
       setIsUpdatingStatus(true);
       try {
         console.log('Updating status to:', newStatus);
-        await updateVehicleStatus(vehicle.id, newStatus);
+        
+        // Update local state immediately for smooth UI
+        const updatedVehicle = { ...localVehicle, status: newStatus };
+        if (newStatus !== 'sold') {
+          // Clear sold data if status is not sold
+          updatedVehicle.buyerFirstName = undefined;
+          updatedVehicle.buyerLastName = undefined;
+          updatedVehicle.buyerName = undefined;
+          updatedVehicle.salePrice = undefined;
+          updatedVehicle.saleDate = undefined;
+          updatedVehicle.buyerAddress = undefined;
+          updatedVehicle.buyerCity = undefined;
+          updatedVehicle.buyerState = undefined;
+          updatedVehicle.buyerZip = undefined;
+        }
+        
+        setLocalVehicle(updatedVehicle);
         setSelectedStatus(newStatus);
+        
+        // Update the database
+        await updateVehicleStatus(localVehicle.id, newStatus);
         toast.success(`Vehicle status updated to ${getStatusDisplay(newStatus)}`);
         console.log('Status updated successfully');
         
-        // Refresh the vehicle data and close dialog
-        await refreshVehicles();
-        onOpenChange(false);
-        
-        // Small delay to ensure the refresh completes
-        setTimeout(() => {
-          console.log('Dialog closed after status update');
-        }, 100);
+        // Refresh the inventory in the background without closing dialog
+        refreshVehicles();
         
       } catch (error) {
         console.error('Error updating vehicle status:', error);
         toast.error("Failed to update vehicle status");
-        // Reset the selected status back to original
-        setSelectedStatus(vehicle.status);
+        // Reset the selected status back to original on error
+        setSelectedStatus(localVehicle.status);
+        setLocalVehicle(vehicle);
       } finally {
         setIsUpdatingStatus(false);
       }
@@ -164,25 +178,39 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
       };
 
       console.log('Updating vehicle to sold with data:', soldData);
-      await updateVehicleStatus(vehicle.id, 'sold', soldData);
+      
+      // Update local state immediately
+      const updatedVehicle = { 
+        ...localVehicle, 
+        status: 'sold' as Vehicle['status'],
+        buyerFirstName: buyer.first_name,
+        buyerLastName: buyer.last_name,
+        buyerName: `${buyer.first_name} ${buyer.last_name}`,
+        salePrice,
+        saleDate,
+        buyerAddress: buyer.address,
+        buyerCity: buyer.city || '',
+        buyerState: buyer.state || 'CA',
+        buyerZip: buyer.zip_code || ''
+      };
+      
+      setLocalVehicle(updatedVehicle);
       setSelectedStatus('sold');
       setShowBuyerSelector(false);
+      
+      // Update the database
+      await updateVehicleStatus(localVehicle.id, 'sold', soldData);
       toast.success("Vehicle marked as sold");
       console.log('Vehicle marked as sold successfully');
       
-      // Refresh the vehicle data and close dialog
-      await refreshVehicles();
-      onOpenChange(false);
-      
-      // Small delay to ensure the refresh completes
-      setTimeout(() => {
-        console.log('Dialog closed after sold update');
-      }, 100);
+      // Refresh the inventory in the background without closing dialog
+      refreshVehicles();
       
     } catch (error) {
       console.error('Error marking vehicle as sold:', error);
       toast.error("Failed to mark vehicle as sold");
-      setSelectedStatus(vehicle.status);
+      setSelectedStatus(localVehicle.status);
+      setLocalVehicle(vehicle);
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -243,7 +271,7 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
             <div className="flex items-center justify-between">
               <DialogTitle className="flex items-center gap-2">
                 <Car className="w-5 h-5" />
-                {vehicle.year} {vehicle.make} {vehicle.model}
+                {localVehicle.year} {localVehicle.make} {localVehicle.model}
               </DialogTitle>
               <div className="flex items-center gap-2">
                 <Badge className={`${getStatusColor(selectedStatus)} text-white`}>
@@ -318,22 +346,22 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
             </Card>
 
             {/* Car Images Section */}
-            {vehicle.carImages && vehicle.carImages.length > 0 && (
+            {localVehicle.carImages && localVehicle.carImages.length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Car className="w-4 h-4" />
-                    Car Images ({vehicle.carImages.length})
+                    Car Images ({localVehicle.carImages.length})
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {vehicle.carImages.map((image, index) => (
+                    {localVehicle.carImages.map((image, index) => (
                       <div key={image.id} className="relative group">
                         <div className="aspect-square overflow-hidden rounded-lg border bg-muted">
                           <img
                             src={image.url}
-                            alt={`${vehicle.year} ${vehicle.make} ${vehicle.model} - Image ${index + 1}`}
+                            alt={`${localVehicle.year} ${localVehicle.make} ${localVehicle.model} - Image ${index + 1}`}
                             className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
                             onClick={() => window.open(image.url, '_blank')}
                             onError={(e) => {
@@ -381,7 +409,7 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
                         placeholder="Vehicle ID"
                       />
                     ) : (
-                      <p className="font-medium">{vehicle.vehicleId}</p>
+                      <p className="font-medium">{localVehicle.vehicleId}</p>
                     )}
                   </div>
                   <div className="space-y-2">
@@ -393,7 +421,7 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
                         placeholder="License Plate"
                       />
                     ) : (
-                      <p className="font-medium">{vehicle.licensePlate || 'N/A'}</p>
+                      <p className="font-medium">{localVehicle.licensePlate || 'N/A'}</p>
                     )}
                   </div>
                 </div>
@@ -408,7 +436,7 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
                         placeholder="Year"
                       />
                     ) : (
-                      <p className="font-medium">{vehicle.year}</p>
+                      <p className="font-medium">{localVehicle.year}</p>
                     )}
                   </div>
                   <div className="space-y-2">
@@ -420,7 +448,7 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
                         placeholder="Make"
                       />
                     ) : (
-                      <p className="font-medium">{vehicle.make}</p>
+                      <p className="font-medium">{localVehicle.make}</p>
                     )}
                   </div>
                   <div className="space-y-2">
@@ -432,7 +460,7 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
                         placeholder="Model"
                       />
                     ) : (
-                      <p className="font-medium">{vehicle.model}</p>
+                      <p className="font-medium">{localVehicle.model}</p>
                     )}
                   </div>
                 </div>
@@ -458,7 +486,7 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
                         placeholder="Driver Name"
                       />
                     ) : (
-                      <p className="font-medium">{vehicle.sellerName || 'N/A'}</p>
+                      <p className="font-medium">{localVehicle.sellerName || 'N/A'}</p>
                     )}
                   </div>
                   <div className="space-y-2">
@@ -471,7 +499,7 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
                         placeholder="Purchase Price"
                       />
                     ) : (
-                      <p className="font-medium">{vehicle.purchasePrice ? `$${parseFloat(vehicle.purchasePrice).toLocaleString()}` : 'N/A'}</p>
+                      <p className="font-medium">{localVehicle.purchasePrice ? `$${parseFloat(localVehicle.purchasePrice).toLocaleString()}` : 'N/A'}</p>
                     )}
                   </div>
                 </div>
@@ -484,7 +512,7 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
                       onChange={(e) => setEditData({...editData, purchaseDate: e.target.value})}
                     />
                   ) : (
-                    <p className="font-medium">{vehicle.purchaseDate || 'N/A'}</p>
+                    <p className="font-medium">{localVehicle.purchaseDate || 'N/A'}</p>
                   )}
                 </div>
               </CardContent>
@@ -501,13 +529,13 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
               <CardContent className="space-y-3">
                 <div>
                   <p className="text-sm text-muted-foreground">Paperwork Status</p>
-                  <p className="font-medium">{formatPaperworkDisplay(vehicle.paperwork, vehicle.paperworkOther)}</p>
+                  <p className="font-medium">{formatPaperworkDisplay(localVehicle.paperwork, localVehicle.paperworkOther)}</p>
                 </div>
-                {vehicle.documents && vehicle.documents.length > 0 && (
+                {localVehicle.documents && localVehicle.documents.length > 0 && (
                   <div className="mt-4">
-                    <h4 className="text-sm font-medium mb-2">Documents ({vehicle.documents.length})</h4>
+                    <h4 className="text-sm font-medium mb-2">Documents ({localVehicle.documents.length})</h4>
                     <div className="space-y-2">
-                      {vehicle.documents.map((doc: any, index: number) => (
+                      {localVehicle.documents.map((doc: any, index: number) => (
                         <div key={index} className="flex items-center justify-between p-2 bg-muted rounded-lg">
                           <div className="flex items-center gap-2">
                             <FileText className="w-4 h-4" />
@@ -530,7 +558,7 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
             </Card>
 
             {/* Sale Information (if sold) */}
-            {vehicle.status === 'sold' && (
+            {localVehicle.status === 'sold' && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -549,7 +577,7 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
                           placeholder="First Name"
                         />
                       ) : (
-                        <p className="font-medium">{vehicle.buyerFirstName || 'N/A'}</p>
+                        <p className="font-medium">{localVehicle.buyerFirstName || 'N/A'}</p>
                       )}
                     </div>
                     <div className="space-y-2">
@@ -561,7 +589,7 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
                           placeholder="Last Name"
                         />
                       ) : (
-                        <p className="font-medium">{vehicle.buyerLastName || 'N/A'}</p>
+                        <p className="font-medium">{localVehicle.buyerLastName || 'N/A'}</p>
                       )}
                     </div>
                   </div>
@@ -576,7 +604,7 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
                           placeholder="Sale Price"
                         />
                       ) : (
-                        <p className="font-medium">{vehicle.salePrice ? `$${parseFloat(vehicle.salePrice).toLocaleString()}` : 'N/A'}</p>
+                        <p className="font-medium">{localVehicle.salePrice ? `$${parseFloat(localVehicle.salePrice).toLocaleString()}` : 'N/A'}</p>
                       )}
                     </div>
                     <div className="space-y-2">
@@ -588,18 +616,18 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
                           onChange={(e) => setEditData({...editData, saleDate: e.target.value})}
                         />
                       ) : (
-                        <p className="font-medium">{vehicle.saleDate || 'N/A'}</p>
+                        <p className="font-medium">{localVehicle.saleDate || 'N/A'}</p>
                       )}
                     </div>
                   </div>
-                  {vehicle.buyerAddress && (
+                  {localVehicle.buyerAddress && (
                     <div>
                       <p className="text-sm text-muted-foreground">Buyer Address</p>
                       <p className="font-medium">
-                        {vehicle.buyerAddress}
-                        {vehicle.buyerCity && `, ${vehicle.buyerCity}`}
-                        {vehicle.buyerState && `, ${vehicle.buyerState}`}
-                        {vehicle.buyerZip && ` ${vehicle.buyerZip}`}
+                        {localVehicle.buyerAddress}
+                        {localVehicle.buyerCity && `, ${localVehicle.buyerCity}`}
+                        {localVehicle.buyerState && `, ${localVehicle.buyerState}`}
+                        {localVehicle.buyerZip && ` ${localVehicle.buyerZip}`}
                       </p>
                     </div>
                   )}
@@ -626,7 +654,7 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
                       placeholder="Enter any additional notes..."
                     />
                   ) : (
-                    <p className="font-medium">{vehicle.notes || 'No notes available'}</p>
+                    <p className="font-medium">{localVehicle.notes || 'No notes available'}</p>
                   )}
                 </div>
               </CardContent>
@@ -644,4 +672,3 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange }: VehicleDet
     </>
   );
 }
-
