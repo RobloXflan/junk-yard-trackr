@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,9 +25,16 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<Vehicle['status'] | 'all'>('all');
   const { vehicles, updateVehicleStatus, refreshVehicles, isLoading } = useVehicleStore();
 
   const filteredVehicles = vehicles.filter((vehicle) => {
+    // Apply status filter first
+    if (statusFilter !== 'all' && vehicle.status !== statusFilter) {
+      return false;
+    }
+
+    // Then apply search filter
     if (!searchTerm.trim()) return true;
     
     const search = searchTerm.toLowerCase().trim();
@@ -55,6 +61,14 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
     
     return false;
   });
+
+  const statusCounts = {
+    all: vehicles.length,
+    yard: vehicles.filter(v => v.status === 'yard').length,
+    sold: vehicles.filter(v => v.status === 'sold').length,
+    'pick-your-part': vehicles.filter(v => v.status === 'pick-your-part').length,
+    'sa-recycling': vehicles.filter(v => v.status === 'sa-recycling').length,
+  };
 
   const handleAddVehicle = () => {
     onNavigate('intake');
@@ -141,11 +155,75 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
         </CardContent>
       </Card>
 
+      {/* Status Filter Buttons */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={statusFilter === 'all' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('all')}
+              className="flex items-center gap-2"
+            >
+              All Vehicles
+              <Badge variant="secondary" className="ml-1">
+                {statusCounts.all}
+              </Badge>
+            </Button>
+            <Button
+              variant={statusFilter === 'yard' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('yard')}
+              className="flex items-center gap-2"
+            >
+              In Yard
+              <Badge variant="secondary" className="ml-1">
+                {statusCounts.yard}
+              </Badge>
+            </Button>
+            <Button
+              variant={statusFilter === 'sold' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('sold')}
+              className="flex items-center gap-2"
+            >
+              Sold
+              <Badge variant="secondary" className="ml-1">
+                {statusCounts.sold}
+              </Badge>
+            </Button>
+            <Button
+              variant={statusFilter === 'pick-your-part' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('pick-your-part')}
+              className="flex items-center gap-2"
+            >
+              Pick Your Part
+              <Badge variant="secondary" className="ml-1">
+                {statusCounts['pick-your-part']}
+              </Badge>
+            </Button>
+            <Button
+              variant={statusFilter === 'sa-recycling' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('sa-recycling')}
+              className="flex items-center gap-2"
+            >
+              SA Recycling
+              <Badge variant="secondary" className="ml-1">
+                {statusCounts['sa-recycling']}
+              </Badge>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Vehicle List */}
       <Card>
         <CardHeader>
           <CardTitle>
-            Vehicles ({searchTerm ? `${filteredVehicles.length} of ${vehicles.length}` : vehicles.length})
+            Vehicles ({statusFilter === 'all' ? 
+              (searchTerm ? `${filteredVehicles.length} of ${vehicles.length}` : vehicles.length) :
+              `${filteredVehicles.length} ${statusFilter === 'yard' ? 'In Yard' : 
+                statusFilter === 'sold' ? 'Sold' :
+                statusFilter === 'pick-your-part' ? 'Pick Your Part' :
+                'SA Recycling'} vehicles`
+            })
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -166,11 +244,26 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
               <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">No vehicles found</h3>
               <p className="text-muted-foreground mb-4">
-                No vehicles match your search criteria. Try adjusting your search terms.
+                {statusFilter !== 'all' ? 
+                  `No vehicles with status "${statusFilter === 'yard' ? 'In Yard' : 
+                    statusFilter === 'sold' ? 'Sold' :
+                    statusFilter === 'pick-your-part' ? 'Pick Your Part' :
+                    'SA Recycling'}" found.` :
+                  'No vehicles match your search criteria. Try adjusting your search terms.'
+                }
               </p>
-              <Button variant="outline" onClick={() => setSearchTerm("")}>
-                Clear Search
-              </Button>
+              <div className="flex gap-2 justify-center">
+                {statusFilter !== 'all' && (
+                  <Button variant="outline" onClick={() => setStatusFilter('all')}>
+                    Show All Vehicles
+                  </Button>
+                )}
+                {searchTerm && (
+                  <Button variant="outline" onClick={() => setSearchTerm("")}>
+                    Clear Search
+                  </Button>
+                )}
+              </div>
             </div>
           ) : (
             <Table>

@@ -53,6 +53,7 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loadingDocuments, setLoadingDocuments] = useState(false);
   const [editingPaperworkId, setEditingPaperworkId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<Vehicle['status'] | 'all'>('all');
   
   const { 
     vehicles, 
@@ -67,6 +68,22 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
     loadVehicleDocuments,
     updateVehiclePaperwork
   } = useVehicleStorePaginated();
+
+  // Filter vehicles by status
+  const filteredVehicles = vehicles.filter((vehicle) => {
+    if (statusFilter !== 'all' && vehicle.status !== statusFilter) {
+      return false;
+    }
+    return true;
+  });
+
+  const statusCounts = {
+    all: vehicles.length,
+    yard: vehicles.filter(v => v.status === 'yard').length,
+    sold: vehicles.filter(v => v.status === 'sold').length,
+    'pick-your-part': vehicles.filter(v => v.status === 'pick-your-part').length,
+    'sa-recycling': vehicles.filter(v => v.status === 'sa-recycling').length,
+  };
 
   const paperworkOptions = [
     { value: "title", label: "Title" },
@@ -203,12 +220,70 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
           {searchTerm && (
             <div className="mt-2 text-sm text-muted-foreground">
               {isSearching ? (
-                <>Showing {vehicles.length} vehicle{vehicles.length !== 1 ? 's' : ''} matching "{searchTerm}"</>
+                <>Showing {filteredVehicles.length} vehicle{filteredVehicles.length !== 1 ? 's' : ''} matching "{searchTerm}"</>
               ) : (
-                <>Showing {vehicles.length} of {totalCount} vehicles matching "{searchTerm}"</>
+                <>Showing {filteredVehicles.length} of {totalCount} vehicles matching "{searchTerm}"</>
               )}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Status Filter Buttons */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={statusFilter === 'all' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('all')}
+              className="flex items-center gap-2"
+            >
+              All Vehicles
+              <Badge variant="secondary" className="ml-1">
+                {statusCounts.all}
+              </Badge>
+            </Button>
+            <Button
+              variant={statusFilter === 'yard' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('yard')}
+              className="flex items-center gap-2"
+            >
+              In Yard
+              <Badge variant="secondary" className="ml-1">
+                {statusCounts.yard}
+              </Badge>
+            </Button>
+            <Button
+              variant={statusFilter === 'sold' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('sold')}
+              className="flex items-center gap-2"
+            >
+              Sold
+              <Badge variant="secondary" className="ml-1">
+                {statusCounts.sold}
+              </Badge>
+            </Button>
+            <Button
+              variant={statusFilter === 'pick-your-part' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('pick-your-part')}
+              className="flex items-center gap-2"
+            >
+              Pick Your Part
+              <Badge variant="secondary" className="ml-1">
+                {statusCounts['pick-your-part']}
+              </Badge>
+            </Button>
+            <Button
+              variant={statusFilter === 'sa-recycling' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('sa-recycling')}
+              className="flex items-center gap-2"
+            >
+              SA Recycling
+              <Badge variant="secondary" className="ml-1">
+                {statusCounts['sa-recycling']}
+              </Badge>
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -216,7 +291,13 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
       <Card>
         <CardHeader>
           <CardTitle>
-            Vehicles ({isSearching ? vehicles.length : `${vehicles.length}${totalCount > vehicles.length ? ` of ${totalCount}` : ''}`})
+            Vehicles ({statusFilter === 'all' ? 
+              (isSearching ? filteredVehicles.length : `${filteredVehicles.length}${totalCount > filteredVehicles.length ? ` of ${totalCount}` : ''}`) :
+              `${filteredVehicles.length} ${statusFilter === 'yard' ? 'In Yard' : 
+                statusFilter === 'sold' ? 'Sold' :
+                statusFilter === 'pick-your-part' ? 'Pick Your Part' :
+                'SA Recycling'} vehicles`
+            })
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -238,6 +319,32 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
                 </Button>
               )}
             </div>
+          ) : filteredVehicles.length === 0 ? (
+            <div className="text-center py-12">
+              <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No vehicles found</h3>
+              <p className="text-muted-foreground mb-4">
+                {statusFilter !== 'all' ? 
+                  `No vehicles with status "${statusFilter === 'yard' ? 'In Yard' : 
+                    statusFilter === 'sold' ? 'Sold' :
+                    statusFilter === 'pick-your-part' ? 'Pick Your Part' :
+                    'SA Recycling'}" found.` :
+                  'No vehicles match your search criteria.'
+                }
+              </p>
+              <div className="flex gap-2 justify-center">
+                {statusFilter !== 'all' && (
+                  <Button variant="outline" onClick={() => setStatusFilter('all')}>
+                    Show All Vehicles
+                  </Button>
+                )}
+                {searchTerm && (
+                  <Button variant="outline" onClick={() => setSearchTerm("")}>
+                    Clear Search
+                  </Button>
+                )}
+              </div>
+            </div>
           ) : (
             <>
               <Table>
@@ -255,7 +362,7 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {vehicles.map((vehicle) => (
+                  {filteredVehicles.map((vehicle) => (
                     <TableRow key={vehicle.id}>
                       <TableCell>
                         <div>
@@ -342,7 +449,7 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
               </Table>
               
               {/* Load More Button - Only show when not searching and there are more items */}
-              {hasMore && !isSearching && (
+              {hasMore && !isSearching && statusFilter === 'all' && (
                 <div className="flex justify-center mt-6">
                   <Button 
                     variant="outline" 
