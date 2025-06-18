@@ -510,7 +510,6 @@ export function VehicleDetailsDialog({
         open={showSoldDialog}
         onOpenChange={(open) => setShowSoldDialog(open)}
         onConfirm={handleSoldSubmit}
-        vehicle={localVehicle}
       />
     </>
   );
