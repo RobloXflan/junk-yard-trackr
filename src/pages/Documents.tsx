@@ -130,23 +130,64 @@ export function Documents() {
     );
   };
 
+  const extractFilePathFromUrl = (url: string, basePath: string): string | null => {
+    try {
+      if (!url) return null;
+      
+      // Try to extract the file path from the URL
+      // Supabase storage URLs typically follow this pattern:
+      // https://project.supabase.co/storage/v1/object/public/bucket-name/path/to/file
+      const urlParts = url.split('/');
+      const bucketIndex = urlParts.findIndex(part => part === 'pdf-documents');
+      
+      if (bucketIndex !== -1 && bucketIndex < urlParts.length - 1) {
+        // Get everything after the bucket name
+        const pathParts = urlParts.slice(bucketIndex + 1);
+        return pathParts.join('/');
+      }
+      
+      // Fallback: try to construct the path based on the expected structure
+      return null;
+    } catch (error) {
+      console.error('Error extracting file path from URL:', url, error);
+      return null;
+    }
+  };
+
   const handlePageDelete = async (pageId: string) => {
     try {
       const pageToDelete = unassignedPages?.find(p => p.id === pageId);
       if (!pageToDelete) return;
 
-      // Delete from storage
+      console.log('Deleting page:', pageToDelete);
+
+      // Delete from storage - use the file paths directly if possible
+      const filesToDelete = [];
+      
       if (pageToDelete.thumbnail_url) {
-        const thumbnailPath = new URL(pageToDelete.thumbnail_url).pathname.split('/').pop();
+        const thumbnailPath = extractFilePathFromUrl(pageToDelete.thumbnail_url, 'thumbnails');
         if (thumbnailPath) {
-          await PDFProcessingService.deleteFromStorage(`thumbnails/${pageToDelete.batch_id}/${thumbnailPath}`);
+          filesToDelete.push(thumbnailPath);
         }
       }
       
       if (pageToDelete.full_page_url) {
-        const fullPagePath = new URL(pageToDelete.full_page_url).pathname.split('/').pop();
+        const fullPagePath = extractFilePathFromUrl(pageToDelete.full_page_url, 'pages');
         if (fullPagePath) {
-          await PDFProcessingService.deleteFromStorage(`pages/${pageToDelete.batch_id}/${fullPagePath}`);
+          filesToDelete.push(fullPagePath);
+        }
+      }
+
+      // Delete files from storage
+      if (filesToDelete.length > 0) {
+        console.log('Deleting files from storage:', filesToDelete);
+        const { error: storageError } = await supabase.storage
+          .from('pdf-documents')
+          .remove(filesToDelete);
+        
+        if (storageError) {
+          console.error('Storage deletion error:', storageError);
+          // Continue with database deletion even if storage deletion fails
         }
       }
 
@@ -181,25 +222,32 @@ export function Documents() {
     try {
       if (!unassignedPages || unassignedPages.length === 0) return;
 
-      // Delete all files from storage
-      const deletePromises = unassignedPages.flatMap(page => {
-        const promises = [];
+      // Collect all file paths to delete
+      const filesToDelete = [];
+      
+      unassignedPages.forEach(page => {
         if (page.thumbnail_url) {
-          const thumbnailPath = new URL(page.thumbnail_url).pathname.split('/').pop();
-          if (thumbnailPath) {
-            promises.push(PDFProcessingService.deleteFromStorage(`thumbnails/${page.batch_id}/${thumbnailPath}`));
-          }
+          const thumbnailPath = extractFilePathFromUrl(page.thumbnail_url, 'thumbnails');
+          if (thumbnailPath) filesToDelete.push(thumbnailPath);
         }
         if (page.full_page_url) {
-          const fullPagePath = new URL(page.full_page_url).pathname.split('/').pop();
-          if (fullPagePath) {
-            promises.push(PDFProcessingService.deleteFromStorage(`pages/${page.batch_id}/${fullPagePath}`));
-          }
+          const fullPagePath = extractFilePathFromUrl(page.full_page_url, 'pages');
+          if (fullPagePath) filesToDelete.push(fullPagePath);
         }
-        return promises;
       });
 
-      await Promise.all(deletePromises);
+      // Delete all files from storage
+      if (filesToDelete.length > 0) {
+        console.log('Deleting all files from storage:', filesToDelete);
+        const { error: storageError } = await supabase.storage
+          .from('pdf-documents')
+          .remove(filesToDelete);
+        
+        if (storageError) {
+          console.error('Bulk storage deletion error:', storageError);
+          // Continue with database deletion even if storage deletion fails
+        }
+      }
 
       // Delete all pages from database
       const { error } = await supabase
