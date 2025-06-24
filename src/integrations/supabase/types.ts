@@ -124,6 +124,7 @@ export type Database = {
       pdf_batches: {
         Row: {
           created_at: string
+          file_path: string | null
           filename: string
           id: string
           processed_pages: number
@@ -134,6 +135,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          file_path?: string | null
           filename: string
           id?: string
           processed_pages?: number
@@ -144,6 +146,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          file_path?: string | null
           filename?: string
           id?: string
           processed_pages?: number
@@ -159,6 +162,7 @@ export type Database = {
           assigned_vehicle_id: string | null
           batch_id: string
           created_at: string
+          file_size: number | null
           full_page_url: string | null
           id: string
           page_number: number
@@ -170,6 +174,7 @@ export type Database = {
           assigned_vehicle_id?: string | null
           batch_id: string
           created_at?: string
+          file_size?: number | null
           full_page_url?: string | null
           id?: string
           page_number: number
@@ -181,6 +186,7 @@ export type Database = {
           assigned_vehicle_id?: string | null
           batch_id?: string
           created_at?: string
+          file_size?: number | null
           full_page_url?: string | null
           id?: string
           page_number?: number
