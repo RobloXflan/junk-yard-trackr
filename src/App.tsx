@@ -9,6 +9,7 @@ import { Dashboard } from "@/pages/Dashboard";
 import { Intake } from "@/pages/Intake";
 import { InventoryOptimized } from "@/pages/InventoryOptimized";
 import { PendingReleases } from "@/pages/PendingReleases";
+import { Documents } from "@/pages/Documents";
 import { PublicInventory } from "@/pages/PublicInventory";
 import { SiteAuth } from "@/components/SiteAuth";
 import { ViewOnlyInventory } from "@/components/ViewOnlyInventory";
