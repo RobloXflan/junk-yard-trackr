@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import * as pdfjsLib from 'pdfjs-dist';
+import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist';
 
 // Set up PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
@@ -30,7 +31,7 @@ class PdfProcessingService {
       const arrayBuffer = await file.arrayBuffer();
       
       // Load PDF document
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const pdf: PDFDocumentProxy = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
       const totalPages = pdf.numPages;
 
       // Update batch with total pages
@@ -41,7 +42,7 @@ class PdfProcessingService {
 
       // Process each page
       for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-        const page = await pdf.getPage(pageNum);
+        const page: PDFPageProxy = await pdf.getPage(pageNum);
         
         // Generate thumbnail
         const viewport = page.getViewport({ scale: 0.5 });
@@ -56,13 +57,7 @@ class PdfProcessingService {
           viewport: viewport
         }).promise;
 
-        // Convert canvas to blob
-        const thumbnailBlob = await new Promise<Blob>((resolve) => {
-          canvas.toBlob((blob) => resolve(blob!), 'image/jpeg', 0.8);
-        });
-
-        // Here you would upload the thumbnail to Supabase Storage
-        // For now, we'll store a data URL
+        // Convert canvas to data URL
         const thumbnailDataUrl = canvas.toDataURL('image/jpeg', 0.8);
 
         // Create page record
