@@ -1,5 +1,4 @@
-
-import { Car, FileText, BarChart3, Upload, Users, Settings, Clock } from "lucide-react";
+import { Car, FileText, BarChart3, Upload, Users, Settings, Clock, Plus } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -17,38 +16,28 @@ import {
 const menuItems = [
   {
     title: "Dashboard",
-    page: "dashboard",
+    url: "/dashboard",
     icon: BarChart3,
   },
   {
-    title: "Vehicle Intake",
-    page: "intake",
-    icon: Upload,
+    title: "Documents", 
+    url: "/documents",
+    icon: FileText,
   },
   {
-    title: "Vehicle Inventory",
-    page: "inventory",
+    title: "Vehicle Intake",
+    url: "/intake", 
+    icon: Plus,
+  },
+  {
+    title: "Inventory",
+    url: "/inventory-optimized",
     icon: Car,
   },
   {
     title: "Pending Releases",
-    page: "pending-releases",
+    url: "/pending-releases",
     icon: Clock,
-  },
-  {
-    title: "Documents",
-    page: "documents",
-    icon: FileText,
-  },
-  {
-    title: "Users",
-    page: "users",
-    icon: Users,
-  },
-  {
-    title: "Settings",
-    page: "settings",
-    icon: Settings,
   },
 ];
 
@@ -90,10 +79,10 @@ export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton 
-                    onClick={() => handleNavigation(item.page)}
-                    isActive={currentPage === item.page}
+                    onClick={() => handleNavigation(item.url)}
+                    isActive={currentPage === item.url}
                     className={`hover:bg-slate-100 cursor-pointer ${
-                      currentPage === item.page 
+                      currentPage === item.url 
                         ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' 
                         : 'text-slate-700'
                     }`}

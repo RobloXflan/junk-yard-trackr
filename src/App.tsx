@@ -1,182 +1,42 @@
-
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { useState } from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/AppSidebar";
+import { Toaster } from "@/components/ui/toaster";
+import { useToast } from "@/hooks/use-toast";
 import { Dashboard } from "@/pages/Dashboard";
+import { Index } from "@/pages/Index";
 import { Intake } from "@/pages/Intake";
+import { Inventory } from "@/pages/Inventory";
 import { InventoryOptimized } from "@/pages/InventoryOptimized";
 import { PendingReleases } from "@/pages/PendingReleases";
 import { PublicInventory } from "@/pages/PublicInventory";
-import { SiteAuth } from "@/components/SiteAuth";
-import { ViewOnlyInventory } from "@/components/ViewOnlyInventory";
-import { Menu } from "lucide-react";
-import { useState } from "react";
+import { NotFound } from "@/pages/NotFound";
+import Documents from "@/pages/Documents";
 
 const queryClient = new QueryClient();
 
-type UserType = 'admin' | 'viewer' | null;
+function App() {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const { toast } = useToast();
 
-const App = () => {
-  const [currentPage, setCurrentPage] = useState("dashboard");
-  const [userType, setUserType] = useState<UserType>(null);
-  const [username, setUsername] = useState("");
-
-  // Check if we're on the public inventory route
-  const isPublicInventory = window.location.pathname === "/public-inventory";
-
-  const handleAuthentication = (type: UserType, user?: string) => {
-    setUserType(type);
-    if (user) setUsername(user);
-  };
-
-  const handleLogout = () => {
-    // Clear remembered user data from localStorage
-    localStorage.removeItem('rememberedUser');
-    setUserType(null);
-    setUsername("");
-    setCurrentPage("dashboard");
-  };
-
-  const renderPage = () => {
-    switch (currentPage) {
-      case 'dashboard':
-        return <Dashboard />;
-      case 'intake':
-        return <Intake />;
-      case 'inventory':
-        return <InventoryOptimized onNavigate={setCurrentPage} />;
-      case 'pending-releases':
-        return <PendingReleases />;
-      case 'public-inventory':
-        return <PublicInventory />;
-      default:
-        return <Dashboard />;
-    }
-  };
-
-  // Handle URL-based routing for public inventory
-  if (isPublicInventory) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <PublicInventory />
-        </TooltipProvider>
-      </QueryClientProvider>
-    );
-  }
-
-  // Show login if not authenticated
-  if (!userType) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <SiteAuth onAuthenticated={(type) => {
-            handleAuthentication(type, type === 'admin' ? 'America Main' : 'ChocoXflan');
-          }} />
-        </TooltipProvider>
-      </QueryClientProvider>
-    );
-  }
-
-  // Show view-only inventory for viewer users
-  if (userType === 'viewer') {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <ViewOnlyInventory onLogout={handleLogout} username={username} />
-        </TooltipProvider>
-      </QueryClientProvider>
-    );
-  }
-
-  // Show full admin interface for admin users
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <SidebarProvider>
-          <div className="min-h-screen flex w-full bg-background">
-            <AppSidebar currentPage={currentPage} onNavigate={setCurrentPage} />
-            <main className="flex-1 flex flex-col">
-              <header className="border-b bg-card px-4 py-3 lg:px-6">
-                <div className="flex items-center gap-4">
-                  <SidebarTrigger className="lg:hidden">
-                    <Menu className="w-5 h-5" />
-                  </SidebarTrigger>
-                  <nav className="hidden lg:flex items-center space-x-4">
-                    <button
-                      onClick={() => setCurrentPage("dashboard")}
-                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                        currentPage === "dashboard"
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                      }`}
-                    >
-                      Dashboard
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage("intake")}
-                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                        currentPage === "intake"
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                      }`}
-                    >
-                      Vehicle Intake
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage("inventory")}
-                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                        currentPage === "inventory"
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                      }`}
-                    >
-                      Inventory
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage("pending-releases")}
-                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                        currentPage === "pending-releases"
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                      }`}
-                    >
-                      Pending Releases
-                    </button>
-                  </nav>
-                  <div className="ml-auto flex items-center gap-4">
-                    <span className="text-sm text-muted-foreground">
-                      Welcome, {username}
-                    </span>
-                    <button
-                      onClick={handleLogout}
-                      className="text-sm text-muted-foreground hover:text-foreground"
-                    >
-                      Logout
-                    </button>
-                  </div>
-                </div>
-              </header>
-              <div className="flex-1 p-4 lg:p-6">
-                {renderPage()}
-              </div>
-            </main>
-          </div>
-        </SidebarProvider>
-      </TooltipProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/intake" element={<Intake />} />
+          <Route path="/inventory" element={<Inventory />} />
+          <Route path="/inventory-optimized" element={<InventoryOptimized />} />
+          <Route path="/pending-releases" element={<PendingReleases />} />
+          <Route path="/public-inventory" element={<PublicInventory />} />
+          <Route path="/documents" element={<Documents />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+      <Toaster />
     </QueryClientProvider>
   );
-};
+}
 
 export default App;
