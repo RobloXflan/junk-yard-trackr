@@ -1,16 +1,17 @@
+
 import { useVehicleStorePaginated } from "@/hooks/useVehicleStorePaginated";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Copy, Car, User, Calendar, MapPin, Hash, CreditCard, Clock, ExternalLink, CheckCircle } from "lucide-react";
+import { Copy, Car, User, Calendar, MapPin, Hash, CreditCard, CheckCircle, RefreshCw, Undo } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-export function PendingReleases() {
+export function Released() {
   const { vehicles, isLoading, updateVehicleStatus } = useVehicleStorePaginated();
   const { toast } = useToast();
 
-  // Filter vehicles with status 'sold'
-  const soldVehicles = vehicles.filter(vehicle => vehicle.status === 'sold');
+  // Filter vehicles with status 'released' (vehicles that were marked as released from pending releases)
+  const releasedVehicles = vehicles.filter(vehicle => vehicle.status === 'released');
 
   const copyToClipboard = async (text: string, label: string) => {
     try {
@@ -28,21 +29,17 @@ export function PendingReleases() {
     }
   };
 
-  const handleRelease = () => {
-    window.open("https://www.dmv.ca.gov/wasapp/nrl/nrlApplication.do", "_blank");
-  };
-
-  const handleMarkReleased = async (vehicleId: string) => {
+  const handleMoveToYard = async (vehicleId: string) => {
     try {
-      await updateVehicleStatus(vehicleId, 'released');
+      await updateVehicleStatus(vehicleId, 'yard');
       toast({
-        title: "Vehicle marked as released",
-        description: "Vehicle has been moved to the Released section",
+        title: "Vehicle moved to yard",
+        description: "Vehicle has been moved back to yard inventory",
       });
     } catch (error) {
-      console.error('Error marking vehicle as released:', error);
+      console.error('Error moving vehicle to yard:', error);
       toast({
-        title: "Failed to mark vehicle as released",
+        title: "Failed to move vehicle",
         description: "Could not update vehicle status",
         variant: "destructive",
       });
@@ -53,9 +50,9 @@ export function PendingReleases() {
     return (
       <div className="space-y-6 animate-fade-in">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Pending Releases</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Released Vehicles</h1>
           <p className="text-muted-foreground">
-            Vehicles sold and pending release documentation
+            Vehicles that have been released and processed
           </p>
         </div>
         <div className="text-center py-8">
@@ -69,25 +66,25 @@ export function PendingReleases() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Pending Releases</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Released Vehicles</h1>
         <p className="text-muted-foreground">
-          Vehicles sold and pending release documentation
+          Vehicles that have been released and processed ({releasedVehicles.length} total)
         </p>
       </div>
 
-      {soldVehicles.length === 0 ? (
+      {releasedVehicles.length === 0 ? (
         <Card>
           <CardContent className="text-center py-8">
-            <Clock className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-semibold mb-2">No Pending Releases</h3>
+            <CheckCircle className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+            <h3 className="text-lg font-semibold mb-2">No Released Vehicles</h3>
             <p className="text-muted-foreground">
-              No sold vehicles pending release documentation at this time.
+              No vehicles have been marked as released yet.
             </p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {soldVehicles.map((vehicle) => (
+          {releasedVehicles.map((vehicle) => (
             <Card key={vehicle.id} className="shadow-business hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex justify-between items-start">
@@ -95,17 +92,7 @@ export function PendingReleases() {
                     <Car className="w-5 h-5" />
                     {vehicle.year} {vehicle.make} {vehicle.model}
                   </CardTitle>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="default">Sold</Badge>
-                    <Button
-                      size="sm"
-                      onClick={handleRelease}
-                      className="bg-blue-600 hover:bg-blue-700"
-                    >
-                      <ExternalLink className="w-4 h-4 mr-1" />
-                      Release
-                    </Button>
-                  </div>
+                  <Badge className="bg-green-100 text-green-800">Released</Badge>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -149,12 +136,12 @@ export function PendingReleases() {
                 </div>
 
                 {/* Buyer Information */}
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
-                    Buyer Information
-                  </h4>
-                  
-                  {(vehicle.buyerFirstName || vehicle.buyerLastName) && (
+                {(vehicle.buyerFirstName || vehicle.buyerLastName) && (
+                  <div className="space-y-3">
+                    <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                      Buyer Information
+                    </h4>
+                    
                     <div className="flex items-center justify-between p-2 bg-muted rounded">
                       <div className="flex items-center gap-2">
                         <User className="w-4 h-4 text-muted-foreground" />
@@ -169,41 +156,41 @@ export function PendingReleases() {
                         <Copy className="w-4 h-4" />
                       </Button>
                     </div>
-                  )}
 
-                  {/* Buyer Address */}
-                  {(vehicle.buyerAddress || vehicle.buyerCity || vehicle.buyerState || vehicle.buyerZip) && (
-                    <div className="flex items-center justify-between p-2 bg-muted rounded">
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">Address:</span>
-                        <span className="text-sm">
-                          {[
-                            vehicle.buyerAddress,
-                            vehicle.buyerCity,
-                            vehicle.buyerState,
-                            vehicle.buyerZip
-                          ].filter(Boolean).join(', ')}
-                        </span>
+                    {/* Buyer Address */}
+                    {(vehicle.buyerAddress || vehicle.buyerCity || vehicle.buyerState || vehicle.buyerZip) && (
+                      <div className="flex items-center justify-between p-2 bg-muted rounded">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm font-medium">Address:</span>
+                          <span className="text-sm">
+                            {[
+                              vehicle.buyerAddress,
+                              vehicle.buyerCity,
+                              vehicle.buyerState,
+                              vehicle.buyerZip
+                            ].filter(Boolean).join(', ')}
+                          </span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const fullAddress = [
+                              vehicle.buyerAddress,
+                              vehicle.buyerCity,
+                              vehicle.buyerState,
+                              vehicle.buyerZip
+                            ].filter(Boolean).join(', ');
+                            copyToClipboard(fullAddress, "Buyer Address");
+                          }}
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          const fullAddress = [
-                            vehicle.buyerAddress,
-                            vehicle.buyerCity,
-                            vehicle.buyerState,
-                            vehicle.buyerZip
-                          ].filter(Boolean).join(', ');
-                          copyToClipboard(fullAddress, "Buyer Address");
-                        }}
-                      >
-                        <Copy className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Sale Information */}
                 <div className="space-y-3">
@@ -277,12 +264,12 @@ export function PendingReleases() {
                   </Button>
 
                   <Button
-                    variant="default"
-                    className="w-full bg-green-600 hover:bg-green-700"
-                    onClick={() => handleMarkReleased(vehicle.id)}
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => handleMoveToYard(vehicle.id)}
                   >
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Mark Released
+                    <Undo className="w-4 h-4 mr-2" />
+                    Move Back to Yard
                   </Button>
                 </div>
               </CardContent>

@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,6 +10,7 @@ import { Intake } from "@/pages/Intake";
 import { InventoryOptimized } from "@/pages/InventoryOptimized";
 import { PendingReleases } from "@/pages/PendingReleases";
 import { Documents } from "@/pages/Documents";
+import { Released } from "@/pages/Released";
 import { PublicInventory } from "@/pages/PublicInventory";
 import { SiteAuth } from "@/components/SiteAuth";
 import { ViewOnlyInventory } from "@/components/ViewOnlyInventory";
@@ -52,6 +54,8 @@ const App = () => {
         return <PendingReleases />;
       case 'documents':
         return <Documents />;
+      case 'released':
+        return <Released />;
       case 'public-inventory':
         return <PublicInventory />;
       default:
@@ -155,6 +159,16 @@ const App = () => {
                       }`}
                     >
                       Pending Releases
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage("released")}
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                        currentPage === "released"
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      }`}
+                    >
+                      Released
                     </button>
                     {/* Only show Documents tab for admin users */}
                     {userType === 'admin' && (
