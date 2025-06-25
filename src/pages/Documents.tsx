@@ -1,10 +1,9 @@
-
 import React, { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Upload, FileText, CheckCircle, Trash2 } from 'lucide-react';
+import { Upload, FileText, CheckCircle, Trash2, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PDFUploadZone } from '@/components/PDFUploadZone';
 import { PDFPageGallery } from '@/components/PDFPageGallery';
@@ -18,6 +17,7 @@ export function Documents() {
   const [showIntakeDialog, setShowIntakeDialog] = useState(false);
   const [uploadingPDFs, setUploadingPDFs] = useState<string[]>([]);
   const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
+  const [processingError, setProcessingError] = useState<string | null>(null);
 
   // Fetch unassigned PDF pages
   const { data: unassignedPages, isLoading, refetch } = useQuery({
@@ -37,15 +37,19 @@ export function Documents() {
   const handlePDFUpload = useCallback(async (file: File) => {
     const uploadId = `${file.name}_${Date.now()}`;
     setUploadingPDFs(prev => [...prev, uploadId]);
+    setProcessingError(null);
 
     try {
-      console.log('Starting PDF upload:', file.name);
+      console.log('=== Starting PDF Upload Process ===');
+      console.log('File:', file.name, 'Size:', file.size, 'Type:', file.type);
+      
       toast({
         title: "Processing PDF",
-        description: `Uploading and processing ${file.name}...`,
+        description: `Processing ${file.name}...`,
       });
 
-      // Create batch record
+      // Create batch record first
+      console.log('Creating batch record...');
       const { data: batch, error: batchError } = await supabase
         .from('pdf_batches')
         .insert({
@@ -56,65 +60,105 @@ export function Documents() {
         .select()
         .single();
 
-      if (batchError) throw batchError;
-
-      // Process the PDF to extract pages
-      const processedPages = await PDFProcessingService.processPDF(file);
-      
-      // Upload original PDF file
-      const pdfPath = `pdfs/${batch.id}/${file.name}`;
-      const pdfUrl = await PDFProcessingService.uploadToStorage(file, pdfPath);
-
-      // Upload each page
-      const pageInserts = [];
-      for (const processedPage of processedPages) {
-        const thumbnailPath = `thumbnails/${batch.id}/page-${processedPage.pageNumber}.jpg`;
-        const fullPagePath = `pages/${batch.id}/page-${processedPage.pageNumber}.jpg`;
-        
-        const [thumbnailUrl, fullPageUrl] = await Promise.all([
-          PDFProcessingService.uploadToStorage(processedPage.thumbnailBlob, thumbnailPath),
-          PDFProcessingService.uploadToStorage(processedPage.fullPageBlob, fullPagePath)
-        ]);
-
-        pageInserts.push({
-          batch_id: batch.id,
-          page_number: processedPage.pageNumber,
-          thumbnail_url: thumbnailUrl,
-          full_page_url: fullPageUrl,
-          status: 'unassigned',
-          file_size: processedPage.fullPageBlob.size
-        });
+      if (batchError) {
+        console.error('Batch creation error:', batchError);
+        throw new Error(`Failed to create batch: ${batchError.message}`);
       }
 
-      // Insert all pages
+      console.log('Batch created:', batch.id);
+
+      // Process the PDF
+      console.log('Starting PDF processing...');
+      const processedPages = await PDFProcessingService.processPDF(file);
+      console.log(`PDF processed successfully: ${processedPages.length} pages`);
+      
+      // Upload original PDF file
+      console.log('Uploading original PDF...');
+      const pdfPath = `pdfs/${batch.id}/${file.name}`;
+      const pdfUrl = await PDFProcessingService.uploadToStorage(file, pdfPath);
+      console.log('Original PDF uploaded:', pdfUrl);
+
+      // Upload each page with progress tracking
+      const pageInserts = [];
+      let successCount = 0;
+      
+      for (let i = 0; i < processedPages.length; i++) {
+        const processedPage = processedPages[i];
+        
+        try {
+          console.log(`Uploading page ${processedPage.pageNumber}...`);
+          
+          const thumbnailPath = `thumbnails/${batch.id}/page-${processedPage.pageNumber}.jpg`;
+          const fullPagePath = `pages/${batch.id}/page-${processedPage.pageNumber}.jpg`;
+          
+          const [thumbnailUrl, fullPageUrl] = await Promise.all([
+            PDFProcessingService.uploadToStorage(processedPage.thumbnailBlob, thumbnailPath),
+            PDFProcessingService.uploadToStorage(processedPage.fullPageBlob, fullPagePath)
+          ]);
+
+          pageInserts.push({
+            batch_id: batch.id,
+            page_number: processedPage.pageNumber,
+            thumbnail_url: thumbnailUrl,
+            full_page_url: fullPageUrl,
+            status: 'unassigned',
+            file_size: processedPage.fullPageBlob.size
+          });
+          
+          successCount++;
+          console.log(`Page ${processedPage.pageNumber} uploaded successfully`);
+          
+        } catch (pageError) {
+          console.error(`Failed to upload page ${processedPage.pageNumber}:`, pageError);
+          // Continue with other pages
+        }
+      }
+
+      if (pageInserts.length === 0) {
+        throw new Error('No pages could be uploaded successfully');
+      }
+
+      // Insert all successfully processed pages
+      console.log(`Inserting ${pageInserts.length} pages into database...`);
       const { error: pagesError } = await supabase
         .from('pdf_pages')
         .insert(pageInserts);
 
-      if (pagesError) throw pagesError;
+      if (pagesError) {
+        console.error('Pages insertion error:', pagesError);
+        throw new Error(`Failed to save pages: ${pagesError.message}`);
+      }
 
       // Update batch with completion info
       await supabase
         .from('pdf_batches')
         .update({ 
           total_pages: processedPages.length,
-          processed_pages: processedPages.length,
+          processed_pages: successCount,
           status: 'completed',
           file_path: pdfPath
         })
         .eq('id', batch.id);
 
+      console.log('=== PDF Upload Process Completed Successfully ===');
+      
       toast({
         title: "PDF Processed Successfully",
-        description: `${processedPages.length} pages are ready for assignment.`,
+        description: `${successCount} pages are ready for assignment.`,
       });
 
       refetch();
+      
     } catch (error) {
-      console.error('PDF upload error:', error);
+      console.error('=== PDF Upload Process Failed ===');
+      console.error('Error details:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      setProcessingError(errorMessage);
+      
       toast({
         title: "Upload Failed",
-        description: "Failed to process PDF. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -134,19 +178,14 @@ export function Documents() {
     try {
       if (!url) return null;
       
-      // Try to extract the file path from the URL
-      // Supabase storage URLs typically follow this pattern:
-      // https://project.supabase.co/storage/v1/object/public/bucket-name/path/to/file
       const urlParts = url.split('/');
       const bucketIndex = urlParts.findIndex(part => part === 'pdf-documents');
       
       if (bucketIndex !== -1 && bucketIndex < urlParts.length - 1) {
-        // Get everything after the bucket name
         const pathParts = urlParts.slice(bucketIndex + 1);
         return pathParts.join('/');
       }
       
-      // Fallback: try to construct the path based on the expected structure
       return null;
     } catch (error) {
       console.error('Error extracting file path from URL:', url, error);
@@ -161,7 +200,6 @@ export function Documents() {
 
       console.log('Deleting page:', pageToDelete);
 
-      // Delete from storage - use the file paths directly if possible
       const filesToDelete = [];
       
       if (pageToDelete.thumbnail_url) {
@@ -178,7 +216,6 @@ export function Documents() {
         }
       }
 
-      // Delete files from storage
       if (filesToDelete.length > 0) {
         console.log('Deleting files from storage:', filesToDelete);
         const { error: storageError } = await supabase.storage
@@ -187,11 +224,9 @@ export function Documents() {
         
         if (storageError) {
           console.error('Storage deletion error:', storageError);
-          // Continue with database deletion even if storage deletion fails
         }
       }
 
-      // Delete from database
       const { error } = await supabase
         .from('pdf_pages')
         .delete()
@@ -199,7 +234,6 @@ export function Documents() {
 
       if (error) throw error;
 
-      // Remove from selected pages if it was selected
       setSelectedPages(prev => prev.filter(id => id !== pageId));
 
       toast({
@@ -222,7 +256,6 @@ export function Documents() {
     try {
       if (!unassignedPages || unassignedPages.length === 0) return;
 
-      // Collect all file paths to delete
       const filesToDelete = [];
       
       unassignedPages.forEach(page => {
@@ -236,7 +269,6 @@ export function Documents() {
         }
       });
 
-      // Delete all files from storage
       if (filesToDelete.length > 0) {
         console.log('Deleting all files from storage:', filesToDelete);
         const { error: storageError } = await supabase.storage
@@ -245,11 +277,9 @@ export function Documents() {
         
         if (storageError) {
           console.error('Bulk storage deletion error:', storageError);
-          // Continue with database deletion even if storage deletion fails
         }
       }
 
-      // Delete all pages from database
       const { error } = await supabase
         .from('pdf_pages')
         .delete()
@@ -289,7 +319,6 @@ export function Documents() {
 
   const handleIntakeComplete = async (vehicleId: string) => {
     try {
-      // Mark selected pages as assigned to the vehicle
       const { error } = await supabase
         .from('pdf_pages')
         .update({ 
@@ -346,6 +375,17 @@ export function Documents() {
         </CardHeader>
         <CardContent>
           <PDFUploadZone onUpload={handlePDFUpload} />
+          {processingError && (
+            <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-destructive mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-destructive">Processing Error</p>
+                  <p className="text-sm text-destructive/80">{processingError}</p>
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
