@@ -188,7 +188,7 @@ class VehicleStore {
           paperwork: vehicle.paperwork || undefined,
           paperworkOther: vehicle.paperwork_other || undefined,
           status: (vehicle.status as Vehicle['status']) || 'yard',
-          isReleased: Boolean(vehicle.is_released), // Map the new field
+          isReleased: Boolean(vehicle.is_released), // Now properly accessing the database column
           createdAt: vehicle.created_at,
           documents: this.deserializeDocuments(vehicle.documents),
           carImages: this.deserializeCarImages(vehicle.car_images)

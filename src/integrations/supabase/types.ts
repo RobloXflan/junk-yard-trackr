@@ -336,6 +336,7 @@ export type Database = {
           destination: string | null
           documents: Json | null
           id: string
+          is_released: boolean | null
           license_plate: string | null
           make: string
           model: string
@@ -367,6 +368,7 @@ export type Database = {
           destination?: string | null
           documents?: Json | null
           id?: string
+          is_released?: boolean | null
           license_plate?: string | null
           make: string
           model: string
@@ -398,6 +400,7 @@ export type Database = {
           destination?: string | null
           documents?: Json | null
           id?: string
+          is_released?: boolean | null
           license_plate?: string | null
           make?: string
           model?: string
