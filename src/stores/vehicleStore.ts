@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface UploadedDocument {
@@ -41,7 +42,7 @@ export interface Vehicle {
   notes?: string;
   paperwork?: string;
   paperworkOther?: string;
-  status: 'yard' | 'sold' | 'pick-your-part' | 'sa-recycling';
+  status: 'yard' | 'sold' | 'pick-your-part' | 'sa-recycling' | 'released';
   createdAt: string;
   documents?: UploadedDocument[];
   carImages?: CarImage[];
