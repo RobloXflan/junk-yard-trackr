@@ -1,17 +1,20 @@
 
+
 import { useVehicleStorePaginated } from "@/hooks/useVehicleStorePaginated";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Copy, Car, User, Calendar, MapPin, Hash, CreditCard, CheckCircle, RefreshCw, Undo } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useVehicleStore } from "@/hooks/useVehicleStore";
 
 export function Released() {
-  const { vehicles, isLoading, updateVehicleStatus } = useVehicleStorePaginated();
+  const { vehicles, isLoading } = useVehicleStorePaginated();
+  const { unmarkVehicleAsReleased } = useVehicleStore();
   const { toast } = useToast();
 
-  // Filter vehicles with status 'released' (vehicles that were marked as released from pending releases)
-  const releasedVehicles = vehicles.filter(vehicle => vehicle.status === 'released');
+  // Filter vehicles that are sold and have been marked as released
+  const releasedVehicles = vehicles.filter(vehicle => vehicle.status === 'sold' && vehicle.isReleased);
 
   const copyToClipboard = async (text: string, label: string) => {
     try {
@@ -29,15 +32,15 @@ export function Released() {
     }
   };
 
-  const handleMoveToYard = async (vehicleId: string) => {
+  const handleMoveToPending = async (vehicleId: string) => {
     try {
-      await updateVehicleStatus(vehicleId, 'yard');
+      await unmarkVehicleAsReleased(vehicleId);
       toast({
-        title: "Vehicle moved to yard",
-        description: "Vehicle has been moved back to yard inventory",
+        title: "Vehicle moved to pending releases",
+        description: "Vehicle has been moved back to pending releases",
       });
     } catch (error) {
-      console.error('Error moving vehicle to yard:', error);
+      console.error('Error moving vehicle to pending:', error);
       toast({
         title: "Failed to move vehicle",
         description: "Could not update vehicle status",
@@ -92,7 +95,10 @@ export function Released() {
                     <Car className="w-5 h-5" />
                     {vehicle.year} {vehicle.make} {vehicle.model}
                   </CardTitle>
-                  <Badge className="bg-green-100 text-green-800">Released</Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-blue-100 text-blue-800">Sold</Badge>
+                    <Badge className="bg-green-100 text-green-800">Released</Badge>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -266,10 +272,10 @@ export function Released() {
                   <Button
                     variant="outline"
                     className="w-full"
-                    onClick={() => handleMoveToYard(vehicle.id)}
+                    onClick={() => handleMoveToPending(vehicle.id)}
                   >
                     <Undo className="w-4 h-4 mr-2" />
-                    Move Back to Yard
+                    Move to Pending Releases
                   </Button>
                 </div>
               </CardContent>
@@ -280,3 +286,4 @@ export function Released() {
     </div>
   );
 }
+

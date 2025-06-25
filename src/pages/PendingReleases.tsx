@@ -4,13 +4,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Copy, Car, User, Calendar, MapPin, Hash, CreditCard, Clock, ExternalLink, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useVehicleStore } from "@/hooks/useVehicleStore";
 
 export function PendingReleases() {
-  const { vehicles, isLoading, updateVehicleStatus } = useVehicleStorePaginated();
+  const { vehicles, isLoading } = useVehicleStorePaginated();
+  const { markVehicleAsReleased } = useVehicleStore();
   const { toast } = useToast();
 
-  // Filter vehicles with status 'sold'
-  const soldVehicles = vehicles.filter(vehicle => vehicle.status === 'sold');
+  // Filter vehicles with status 'sold' that haven't been released yet
+  const soldVehicles = vehicles.filter(vehicle => vehicle.status === 'sold' && !vehicle.isReleased);
 
   const copyToClipboard = async (text: string, label: string) => {
     try {
@@ -34,7 +36,7 @@ export function PendingReleases() {
 
   const handleMarkReleased = async (vehicleId: string) => {
     try {
-      await updateVehicleStatus(vehicleId, 'released');
+      await markVehicleAsReleased(vehicleId);
       toast({
         title: "Vehicle marked as released",
         description: "Vehicle has been moved to the Released section",

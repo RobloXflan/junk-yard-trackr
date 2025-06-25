@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface UploadedDocument {
@@ -42,7 +41,8 @@ export interface Vehicle {
   notes?: string;
   paperwork?: string;
   paperworkOther?: string;
-  status: 'yard' | 'sold' | 'pick-your-part' | 'sa-recycling' | 'released';
+  status: 'yard' | 'sold' | 'pick-your-part' | 'sa-recycling';
+  isReleased?: boolean; // New field to track if a sold vehicle has been released
   createdAt: string;
   documents?: UploadedDocument[];
   carImages?: CarImage[];
@@ -178,12 +178,17 @@ class VehicleStore {
           buyerName: vehicle.buyer_name || undefined,
           buyerFirstName: vehicle.buyer_first_name || undefined,
           buyerLastName: vehicle.buyer_last_name || undefined,
+          buyerAddress: vehicle.buyer_address || undefined,
+          buyerCity: vehicle.buyer_city || undefined,
+          buyerState: vehicle.buyer_state || undefined,
+          buyerZip: vehicle.buyer_zip || undefined,
           saleDate: vehicle.sale_date || undefined,
           salePrice: vehicle.sale_price || undefined,
           notes: vehicle.notes || undefined,
           paperwork: vehicle.paperwork || undefined,
           paperworkOther: vehicle.paperwork_other || undefined,
           status: (vehicle.status as Vehicle['status']) || 'yard',
+          isReleased: Boolean(vehicle.is_released), // Map the new field
           createdAt: vehicle.created_at,
           documents: this.deserializeDocuments(vehicle.documents),
           carImages: this.deserializeCarImages(vehicle.car_images)
@@ -224,12 +229,17 @@ class VehicleStore {
         buyer_name: vehicleData.buyerName,
         buyer_first_name: vehicleData.buyerFirstName,
         buyer_last_name: vehicleData.buyerLastName,
+        buyer_address: vehicleData.buyerAddress,
+        buyer_city: vehicleData.buyerCity,
+        buyer_state: vehicleData.buyerState,
+        buyer_zip: vehicleData.buyerZip,
         sale_date: vehicleData.saleDate,
         sale_price: vehicleData.salePrice,
         notes: vehicleData.notes,
         paperwork: vehicleData.paperwork,
         paperwork_other: vehicleData.paperworkOther,
         status: vehicleData.destination === 'sold' || vehicleData.destination === 'buyer' ? 'sold' : 'yard',
+        is_released: false, // Default new vehicles to not released
         documents: vehicleData.documents ? this.serializeDocuments(vehicleData.documents) : [],
         car_images: vehicleData.carImages ? this.serializeCarImages(vehicleData.carImages) : []
       };
@@ -345,6 +355,94 @@ class VehicleStore {
       console.log('Vehicles reloaded after status update');
     } catch (error) {
       console.error('Failed to update vehicle status:', error);
+      throw error;
+    } finally {
+      // Always remove from update progress set
+      this.updateInProgress.delete(vehicleId);
+    }
+  }
+
+  async markVehicleAsReleased(vehicleId: string) {
+    // Prevent concurrent updates to the same vehicle
+    if (this.updateInProgress.has(vehicleId)) {
+      console.log('Update already in progress for vehicle:', vehicleId);
+      return;
+    }
+
+    this.updateInProgress.add(vehicleId);
+
+    try {
+      console.log('Marking vehicle as released for ID:', vehicleId);
+      
+      const updateData = {
+        is_released: true,
+        updated_at: new Date().toISOString()
+      };
+
+      console.log('Sending release update to Supabase for vehicle ID:', vehicleId, updateData);
+
+      const { error } = await supabase
+        .from('vehicles')
+        .update(updateData)
+        .eq('id', vehicleId);
+
+      if (error) {
+        console.error('Error marking vehicle as released:', error);
+        throw error;
+      }
+
+      console.log('Vehicle marked as released successfully in database for ID:', vehicleId);
+
+      // Reload vehicles to get the latest state from database
+      await this.loadVehicles();
+      
+      console.log('Vehicles reloaded after release update');
+    } catch (error) {
+      console.error('Failed to mark vehicle as released:', error);
+      throw error;
+    } finally {
+      // Always remove from update progress set
+      this.updateInProgress.delete(vehicleId);
+    }
+  }
+
+  async unmarkVehicleAsReleased(vehicleId: string) {
+    // Prevent concurrent updates to the same vehicle
+    if (this.updateInProgress.has(vehicleId)) {
+      console.log('Update already in progress for vehicle:', vehicleId);
+      return;
+    }
+
+    this.updateInProgress.add(vehicleId);
+
+    try {
+      console.log('Unmarking vehicle as released for ID:', vehicleId);
+      
+      const updateData = {
+        is_released: false,
+        updated_at: new Date().toISOString()
+      };
+
+      console.log('Sending unrelease update to Supabase for vehicle ID:', vehicleId, updateData);
+
+      const { error } = await supabase
+        .from('vehicles')
+        .update(updateData)
+        .eq('id', vehicleId);
+
+      if (error) {
+        console.error('Error unmarking vehicle as released:', error);
+        throw error;
+      }
+
+      console.log('Vehicle unmarked as released successfully in database for ID:', vehicleId);
+
+      // Reload vehicles to get the latest state from database
+      await this.loadVehicles();
+      
+      console.log('Vehicles reloaded after unrelease update');
+    } catch (error) {
+      console.error('Failed to unmark vehicle as released:', error);
       throw error;
     } finally {
       // Always remove from update progress set

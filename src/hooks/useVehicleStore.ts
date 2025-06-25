@@ -1,4 +1,5 @@
 
+
 import { useState, useEffect } from 'react';
 import { vehicleStore, Vehicle, CarImage } from '@/stores/vehicleStore';
 
@@ -50,6 +51,28 @@ export function useVehicleStore() {
         setIsLoading(false);
       }
     },
+    markVehicleAsReleased: async (vehicleId: string) => {
+      setIsLoading(true);
+      try {
+        await vehicleStore.markVehicleAsReleased(vehicleId);
+      } catch (error) {
+        console.error('Error marking vehicle as released:', error);
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    unmarkVehicleAsReleased: async (vehicleId: string) => {
+      setIsLoading(true);
+      try {
+        await vehicleStore.unmarkVehicleAsReleased(vehicleId);
+      } catch (error) {
+        console.error('Error unmarking vehicle as released:', error);
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
     updateVehicleDetails: async (vehicleId: string, updateData: Partial<Vehicle>) => {
       setIsLoading(true);
       try {
@@ -89,3 +112,4 @@ export function useVehicleStore() {
     getVehiclesAddedToday: vehicleStore.getVehiclesAddedToday.bind(vehicleStore),
   };
 }
+
