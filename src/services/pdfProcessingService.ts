@@ -1,4 +1,3 @@
-
 import * as pdfjsLib from 'pdfjs-dist';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -78,7 +77,7 @@ export class PDFProcessingService {
       const pdf = await this.loadPDFDocument(arrayBuffer);
       console.log('PDF loaded successfully:', {
         numPages: pdf.numPages,
-        fingerprint: pdf.fingerprint
+        fingerprints: pdf.fingerprints
       });
 
       if (pdf.numPages === 0) {
