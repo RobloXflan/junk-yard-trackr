@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Vehicle, CarImage } from '@/stores/vehicleStore';
@@ -8,14 +9,11 @@ interface PaginatedVehicleData {
   hasMore: boolean;
 }
 
-// Vehicle IDs that view-only users are allowed to see (specific vehicles from screenshot)
 const ALLOWED_VEHICLE_IDS_FOR_VIEW_ONLY = [
   '10905', '83002', '14202', '56957', '34536', '03762', '22964', '63753', '79967'
 ];
 
-// Cutoff date - vehicles created after this date will be shown to view-only users
-// This represents when the new policy started (vehicles added by America Main going forward)
-const VIEW_ONLY_CUTOFF_DATE = '2025-06-17T00:00:00Z'; // Today's date as the cutoff
+const VIEW_ONLY_CUTOFF_DATE = '2025-06-17T00:00:00Z';
 
 export function useVehicleStorePaginated(isViewOnly: boolean = false, username: string = '') {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -27,21 +25,17 @@ export function useVehicleStorePaginated(isViewOnly: boolean = false, username: 
   
   const ITEMS_PER_PAGE = 50;
 
-  // Helper function to check if a vehicle should be visible to view-only users
   const isVehicleAllowedForViewOnly = (vehicleId: string, createdAt: string): boolean => {
-    // If it's one of the specific allowed vehicle IDs, always show it
     if (ALLOWED_VEHICLE_IDS_FOR_VIEW_ONLY.includes(vehicleId)) {
       return true;
     }
     
-    // For new vehicles, check if they were created after the cutoff date
     const vehicleCreatedAt = new Date(createdAt);
     const cutoffDate = new Date(VIEW_ONLY_CUTOFF_DATE);
     
     return vehicleCreatedAt >= cutoffDate;
   };
 
-  // Helper function to properly deserialize car images from database
   const deserializeCarImages = (carImagesData: any): CarImage[] => {
     if (!carImagesData || !Array.isArray(carImagesData)) {
       return [];
@@ -152,7 +146,6 @@ export function useVehicleStorePaginated(isViewOnly: boolean = false, username: 
         documents: []
       }));
 
-      // Apply filtering for view-only users (not America Main)
       if (isViewOnly && username !== 'America Main') {
         console.log('Applying view-only filtering for user:', username);
         console.log('Filtering with allowed IDs:', ALLOWED_VEHICLE_IDS_FOR_VIEW_ONLY);
@@ -175,7 +168,6 @@ export function useVehicleStorePaginated(isViewOnly: boolean = false, username: 
         setVehicles(transformedVehicles);
       }
       
-      // For view-only users, adjust the total count based on filtering
       if (isViewOnly && username !== 'America Main') {
         setTotalCount(transformedVehicles.length);
       } else {
@@ -259,7 +251,6 @@ export function useVehicleStorePaginated(isViewOnly: boolean = false, username: 
     }
   };
 
-  // Debounced search
   useEffect(() => {
     const timer = setTimeout(() => {
       setCurrentPage(1);
@@ -269,7 +260,6 @@ export function useVehicleStorePaginated(isViewOnly: boolean = false, username: 
     return () => clearTimeout(timer);
   }, [searchTerm, isViewOnly, username]);
 
-  // Initial load
   useEffect(() => {
     loadVehicles(1, '', false);
   }, [isViewOnly, username]);
@@ -294,13 +284,15 @@ export function useVehicleStorePaginated(isViewOnly: boolean = false, username: 
   }) => {
     console.log('updateVehicleStatus called with:', { vehicleId, newStatus, soldData });
     
-    // Optimistic update - update UI immediately
+    // Optimistic update
     setVehicles(prevVehicles => {
       return prevVehicles.map(vehicle => {
         if (vehicle.id === vehicleId) {
           const updatedVehicle = { ...vehicle, status: newStatus };
           
           if (newStatus === 'sold' && soldData) {
+            // When sold, automatically go to Pending Releases (isReleased = false)
+            updatedVehicle.isReleased = false;
             updatedVehicle.buyerFirstName = soldData.buyerFirstName;
             updatedVehicle.buyerLastName = soldData.buyerLastName;
             updatedVehicle.buyerName = `${soldData.buyerFirstName} ${soldData.buyerLastName}`;
@@ -321,6 +313,7 @@ export function useVehicleStorePaginated(isViewOnly: boolean = false, username: 
             updatedVehicle.buyerCity = undefined;
             updatedVehicle.buyerState = undefined;
             updatedVehicle.buyerZip = undefined;
+            updatedVehicle.isReleased = false;
           }
           
           return updatedVehicle;
@@ -336,13 +329,14 @@ export function useVehicleStorePaginated(isViewOnly: boolean = false, username: 
       };
 
       if (newStatus === 'sold' && soldData) {
+        // When sold, automatically set to Pending Releases
+        updateData.is_released = false;
         updateData.buyer_first_name = soldData.buyerFirstName;
         updateData.buyer_last_name = soldData.buyerLastName;
         updateData.buyer_name = `${soldData.buyerFirstName} ${soldData.buyerLastName}`;
         updateData.sale_price = soldData.salePrice;
         updateData.sale_date = soldData.saleDate;
         
-        // Include buyer address information
         if (soldData.buyerAddress) updateData.buyer_address = soldData.buyerAddress;
         if (soldData.buyerCity) updateData.buyer_city = soldData.buyerCity;
         if (soldData.buyerState) updateData.buyer_state = soldData.buyerState;
@@ -357,6 +351,7 @@ export function useVehicleStorePaginated(isViewOnly: boolean = false, username: 
         updateData.buyer_city = null;
         updateData.buyer_state = null;
         updateData.buyer_zip = null;
+        updateData.is_released = false;
       }
 
       console.log('Updating database with:', updateData);
@@ -368,14 +363,11 @@ export function useVehicleStorePaginated(isViewOnly: boolean = false, username: 
 
       if (error) {
         console.error('Database update failed:', error);
-        // Revert optimistic update on failure
         await refreshVehicles();
         throw error;
       }
 
       console.log('Database update successful');
-      
-      // Force refresh to ensure UI is in sync with database
       await refreshVehicles();
 
     } catch (error) {
