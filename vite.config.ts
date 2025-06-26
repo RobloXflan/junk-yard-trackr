@@ -22,16 +22,14 @@ export default defineConfig(({ mode }) => ({
   },
   optimizeDeps: {
     include: ['pdfjs-dist'],
+    exclude: ['pdfjs-dist/build/pdf.worker.min.js']
   },
   worker: {
-    format: 'es',
+    format: 'iife',
+    plugins: []
   },
-  build: {
-    rollupOptions: {
-      external: (id) => {
-        // Don't bundle PDF.js worker
-        return id.includes('pdf.worker');
-      },
-    },
-  },
+  define: {
+    // Prevent Vite from trying to process the worker as an ES module
+    'import.meta.env.VITE_PDF_WORKER_SRC': JSON.stringify('/pdf.worker.min.js')
+  }
 }));

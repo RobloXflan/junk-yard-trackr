@@ -1,52 +1,26 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import { supabase } from '@/integrations/supabase/client';
 
-// Enhanced worker setup with multiple fallback strategies
+// Simple and reliable worker setup
 const setupWorker = () => {
   console.log('Setting up PDF.js worker...');
   
-  // Get the actual installed version
-  const version = pdfjsLib.version || '5.3.31';
-  console.log('PDF.js version:', version);
+  // Use the most reliable CDN source first
+  const workerSrc = 'https://unpkg.com/pdfjs-dist@5.3.31/build/pdf.worker.min.js';
   
-  const workerSources = [
-    // Primary CDN with correct version
-    `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.js`,
-    // Backup CDN
-    `https://cdn.jsdelivr.net/npm/pdfjs-dist@${version}/build/pdf.worker.min.js`,
-    // Unpkg as another fallback
-    `https://unpkg.com/pdfjs-dist@${version}/build/pdf.worker.min.js`,
-    // Local fallback
-    '/pdf.worker.min.js'
-  ];
-  
-  let workerSetupSuccess = false;
-  
-  for (const workerSrc of workerSources) {
-    try {
-      console.log('Trying worker source:', workerSrc);
-      pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
-      workerSetupSuccess = true;
-      console.log('Worker setup successful with:', workerSrc);
-      break;
-    } catch (error) {
-      console.warn('Worker source failed:', workerSrc, error);
-      continue;
-    }
-  }
-  
-  if (!workerSetupSuccess) {
-    console.error('All worker sources failed, PDF processing may not work properly');
-    throw new Error('Failed to setup PDF.js worker. Please check your internet connection and try again.');
+  try {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+    console.log('PDF.js worker configured successfully:', workerSrc);
+  } catch (error) {
+    console.error('Failed to set worker source:', error);
+    // Fallback to local worker
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+    console.log('Using local worker fallback');
   }
 };
 
-// Initialize worker setup
-try {
-  setupWorker();
-} catch (error) {
-  console.error('Initial worker setup failed:', error);
-}
+// Initialize worker setup immediately
+setupWorker();
 
 export interface ProcessedPage {
   pageNumber: number;
