@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -188,17 +187,31 @@ export function VehicleDetailsDialog({
         notes: editedVehicle.notes,
       };
 
+      console.log('Saving vehicle details:', updateData);
+
       // Use provided update function or fallback to hook
       const updateFunction = onVehicleUpdate || fallbackUpdateDetails;
       await updateFunction(vehicle.id, updateData);
 
-      setLocalVehicle(editedVehicle);
+      // Update local state immediately with the saved changes
+      const updatedVehicle = { ...localVehicle, ...updateData };
+      setLocalVehicle(updatedVehicle);
+      setEditedVehicle(updatedVehicle);
       setIsEditing(false);
+
+      // Refresh data in both possible data sources
+      if (refreshVehicles) {
+        await refreshVehicles();
+      }
+      if (fallbackRefresh) {
+        await fallbackRefresh();
+      }
 
       toast({
         title: "Vehicle Updated",
-        description: "Vehicle details have been updated",
+        description: "Vehicle details have been updated successfully",
       });
+
     } catch (error) {
       console.error('Failed to update vehicle details:', error);
       toast({
@@ -211,12 +224,10 @@ export function VehicleDetailsDialog({
 
   const handleCarImagesUpdate = async (carImages: any[]) => {
     try {
-      // This would typically be handled by a separate function
-      // but for now we'll just update the local state
-      setLocalVehicle(prev => prev ? ({
-        ...prev,
-        carImages
-      }) : null);
+      // Update local state immediately
+      const updatedVehicle = { ...localVehicle, carImages };
+      setLocalVehicle(updatedVehicle);
+      setEditedVehicle(updatedVehicle);
       
       toast({
         title: "Images Updated",
@@ -268,7 +279,10 @@ export function VehicleDetailsDialog({
                 </Button>
               ) : (
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setIsEditing(false)}>
+                  <Button variant="outline" size="sm" onClick={() => {
+                    setEditedVehicle(localVehicle);
+                    setIsEditing(false);
+                  }}>
                     <X className="w-4 h-4 mr-2" />
                     Cancel
                   </Button>
