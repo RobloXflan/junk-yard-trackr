@@ -301,6 +301,8 @@ export function useVehicleStorePaginated(isViewOnly: boolean = false, username: 
           const updatedVehicle = { ...vehicle, status: newStatus };
           
           if (newStatus === 'sold' && soldData) {
+            // When marking as sold, always set isReleased to false (goes to Pending Releases)
+            updatedVehicle.isReleased = false;
             updatedVehicle.buyerFirstName = soldData.buyerFirstName;
             updatedVehicle.buyerLastName = soldData.buyerLastName;
             updatedVehicle.buyerName = `${soldData.buyerFirstName} ${soldData.buyerLastName}`;
@@ -312,6 +314,7 @@ export function useVehicleStorePaginated(isViewOnly: boolean = false, username: 
             updatedVehicle.buyerZip = soldData.buyerZip;
           } else if (newStatus !== 'sold') {
             // Clear sold data if status is not sold
+            updatedVehicle.isReleased = false;
             updatedVehicle.buyerFirstName = undefined;
             updatedVehicle.buyerLastName = undefined;
             updatedVehicle.buyerName = undefined;
@@ -336,6 +339,8 @@ export function useVehicleStorePaginated(isViewOnly: boolean = false, username: 
       };
 
       if (newStatus === 'sold' && soldData) {
+        // When marking as sold, always set is_released to false (Pending Releases)
+        updateData.is_released = false;
         updateData.buyer_first_name = soldData.buyerFirstName;
         updateData.buyer_last_name = soldData.buyerLastName;
         updateData.buyer_name = `${soldData.buyerFirstName} ${soldData.buyerLastName}`;
@@ -348,6 +353,8 @@ export function useVehicleStorePaginated(isViewOnly: boolean = false, username: 
         if (soldData.buyerState) updateData.buyer_state = soldData.buyerState;
         if (soldData.buyerZip) updateData.buyer_zip = soldData.buyerZip;
       } else if (newStatus !== 'sold') {
+        // Clear sold data and reset is_released if status is not sold
+        updateData.is_released = false;
         updateData.buyer_first_name = null;
         updateData.buyer_last_name = null;
         updateData.buyer_name = null;

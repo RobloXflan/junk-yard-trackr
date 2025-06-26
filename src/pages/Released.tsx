@@ -1,5 +1,3 @@
-
-
 import { useVehicleStorePaginated } from "@/hooks/useVehicleStorePaginated";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,12 +7,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useVehicleStore } from "@/hooks/useVehicleStore";
 
 export function Released() {
-  const { vehicles, isLoading } = useVehicleStorePaginated();
+  const { vehicles, isLoading, refreshVehicles } = useVehicleStorePaginated();
   const { unmarkVehicleAsReleased } = useVehicleStore();
   const { toast } = useToast();
 
-  // Filter vehicles that are sold and have been marked as released
-  const releasedVehicles = vehicles.filter(vehicle => vehicle.status === 'sold' && vehicle.isReleased);
+  // Filter vehicles that are sold and have been marked as released (isReleased = true)
+  const releasedVehicles = vehicles.filter(vehicle => 
+    vehicle.status === 'sold' && vehicle.isReleased === true
+  );
 
   const copyToClipboard = async (text: string, label: string) => {
     try {
@@ -35,6 +35,8 @@ export function Released() {
   const handleMoveToPending = async (vehicleId: string) => {
     try {
       await unmarkVehicleAsReleased(vehicleId);
+      // Refresh the vehicles list to update the UI
+      await refreshVehicles();
       toast({
         title: "Vehicle moved to pending releases",
         description: "Vehicle has been moved back to pending releases",
@@ -286,4 +288,3 @@ export function Released() {
     </div>
   );
 }
-

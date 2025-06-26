@@ -7,12 +7,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useVehicleStore } from "@/hooks/useVehicleStore";
 
 export function PendingReleases() {
-  const { vehicles, isLoading } = useVehicleStorePaginated();
+  const { vehicles, isLoading, refreshVehicles } = useVehicleStorePaginated();
   const { markVehicleAsReleased } = useVehicleStore();
   const { toast } = useToast();
 
-  // Filter vehicles with status 'sold' that haven't been released yet
-  const soldVehicles = vehicles.filter(vehicle => vehicle.status === 'sold' && !vehicle.isReleased);
+  // Filter vehicles with status 'sold' that haven't been released yet (isReleased = false)
+  const soldVehicles = vehicles.filter(vehicle => 
+    vehicle.status === 'sold' && vehicle.isReleased === false
+  );
 
   const copyToClipboard = async (text: string, label: string) => {
     try {
@@ -37,6 +39,8 @@ export function PendingReleases() {
   const handleMarkReleased = async (vehicleId: string) => {
     try {
       await markVehicleAsReleased(vehicleId);
+      // Refresh the vehicles list to update the UI
+      await refreshVehicles();
       toast({
         title: "Vehicle marked as released",
         description: "Vehicle has been moved to the Released section",
