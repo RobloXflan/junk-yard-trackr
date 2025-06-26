@@ -93,6 +93,7 @@ export function useVehicleStorePaginated(isViewOnly: boolean = false, username: 
           paperwork,
           paperwork_other,
           status,
+          is_released,
           car_images,
           created_at,
           updated_at
@@ -145,6 +146,7 @@ export function useVehicleStorePaginated(isViewOnly: boolean = false, username: 
         paperwork: vehicle.paperwork || undefined,
         paperworkOther: vehicle.paperwork_other || undefined,
         status: (vehicle.status as Vehicle['status']) || 'yard',
+        isReleased: Boolean(vehicle.is_released),
         carImages: deserializeCarImages(vehicle.car_images),
         createdAt: vehicle.created_at,
         documents: []
