@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Upload, FileText, CheckCircle, Trash2, AlertCircle } from 'lucide-react';
+import { Upload, FileText, CheckCircle, Trash2, AlertCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PDFUploadZone } from '@/components/PDFUploadZone';
 import { PDFPageGallery } from '@/components/PDFPageGallery';
@@ -17,7 +17,7 @@ export function Documents() {
   const [showIntakeDialog, setShowIntakeDialog] = useState(false);
   const [uploadingPDFs, setUploadingPDFs] = useState<string[]>([]);
   const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
-  const [processingError, setProcessingError] = useState<string | null>(null);
+  const [processingStatus, setProcessingStatus] = useState<string>('');
 
   // Fetch unassigned PDF pages
   const { data: unassignedPages, isLoading, refetch } = useQuery({
@@ -37,19 +37,18 @@ export function Documents() {
   const handlePDFUpload = useCallback(async (file: File) => {
     const uploadId = `${file.name}_${Date.now()}`;
     setUploadingPDFs(prev => [...prev, uploadId]);
-    setProcessingError(null);
+    setProcessingStatus('Starting PDF processing...');
 
     try {
-      console.log('=== Starting PDF Upload Process ===');
-      console.log('File:', file.name, 'Size:', file.size, 'Type:', file.type);
+      console.log('🚀 Starting PDF upload process for:', file.name);
       
       toast({
         title: "Processing PDF",
         description: `Processing ${file.name}...`,
       });
 
-      // Create batch record first
-      console.log('Creating batch record...');
+      // Create batch record
+      setProcessingStatus('Creating batch record...');
       const { data: batch, error: batchError } = await supabase
         .from('pdf_batches')
         .insert({
@@ -61,33 +60,25 @@ export function Documents() {
         .single();
 
       if (batchError) {
-        console.error('Batch creation error:', batchError);
+        console.error('❌ Batch creation error:', batchError);
         throw new Error(`Failed to create batch: ${batchError.message}`);
       }
 
-      console.log('Batch created:', batch.id);
+      console.log('✅ Batch created:', batch.id);
 
       // Process the PDF
-      console.log('Starting PDF processing...');
+      setProcessingStatus('Processing PDF pages...');
       const processedPages = await PDFProcessingService.processPDF(file);
-      console.log(`PDF processed successfully: ${processedPages.length} pages`);
+      console.log(`🎉 PDF processed: ${processedPages.length} pages`);
       
-      // Upload original PDF file
-      console.log('Uploading original PDF...');
-      const pdfPath = `pdfs/${batch.id}/${file.name}`;
-      const pdfUrl = await PDFProcessingService.uploadToStorage(file, pdfPath);
-      console.log('Original PDF uploaded:', pdfUrl);
-
-      // Upload each page with progress tracking
+      // Upload pages with progress
       const pageInserts = [];
-      let successCount = 0;
       
       for (let i = 0; i < processedPages.length; i++) {
         const processedPage = processedPages[i];
+        setProcessingStatus(`Uploading page ${processedPage.pageNumber}/${processedPages.length}...`);
         
         try {
-          console.log(`Uploading page ${processedPage.pageNumber}...`);
-          
           const thumbnailPath = `thumbnails/${batch.id}/page-${processedPage.pageNumber}.jpg`;
           const fullPagePath = `pages/${batch.id}/page-${processedPage.pageNumber}.jpg`;
           
@@ -105,12 +96,10 @@ export function Documents() {
             file_size: processedPage.fullPageBlob.size
           });
           
-          successCount++;
-          console.log(`Page ${processedPage.pageNumber} uploaded successfully`);
+          console.log(`✅ Page ${processedPage.pageNumber} uploaded`);
           
         } catch (pageError) {
-          console.error(`Failed to upload page ${processedPage.pageNumber}:`, pageError);
-          // Continue with other pages
+          console.error(`❌ Failed to upload page ${processedPage.pageNumber}:`, pageError);
         }
       }
 
@@ -118,43 +107,40 @@ export function Documents() {
         throw new Error('No pages could be uploaded successfully');
       }
 
-      // Insert all successfully processed pages
-      console.log(`Inserting ${pageInserts.length} pages into database...`);
+      // Insert pages into database
+      setProcessingStatus('Saving pages to database...');
       const { error: pagesError } = await supabase
         .from('pdf_pages')
         .insert(pageInserts);
 
       if (pagesError) {
-        console.error('Pages insertion error:', pagesError);
+        console.error('❌ Pages insertion error:', pagesError);
         throw new Error(`Failed to save pages: ${pagesError.message}`);
       }
 
-      // Update batch with completion info
+      // Update batch
       await supabase
         .from('pdf_batches')
         .update({ 
           total_pages: processedPages.length,
-          processed_pages: successCount,
-          status: 'completed',
-          file_path: pdfPath
+          processed_pages: pageInserts.length,
+          status: 'completed'
         })
         .eq('id', batch.id);
 
-      console.log('=== PDF Upload Process Completed Successfully ===');
+      console.log('🎉 PDF upload process completed successfully');
       
       toast({
         title: "PDF Processed Successfully",
-        description: `${successCount} pages are ready for assignment.`,
+        description: `${pageInserts.length} pages are ready for assignment.`,
       });
 
       refetch();
       
     } catch (error) {
-      console.error('=== PDF Upload Process Failed ===');
-      console.error('Error details:', error);
+      console.error('❌ PDF upload process failed:', error);
       
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      setProcessingError(errorMessage);
       
       toast({
         title: "Upload Failed",
@@ -163,6 +149,7 @@ export function Documents() {
       });
     } finally {
       setUploadingPDFs(prev => prev.filter(id => id !== uploadId));
+      setProcessingStatus('');
     }
   }, [toast, refetch]);
 
@@ -198,8 +185,6 @@ export function Documents() {
       const pageToDelete = unassignedPages?.find(p => p.id === pageId);
       if (!pageToDelete) return;
 
-      console.log('Deleting page:', pageToDelete);
-
       const filesToDelete = [];
       
       if (pageToDelete.thumbnail_url) {
@@ -217,7 +202,6 @@ export function Documents() {
       }
 
       if (filesToDelete.length > 0) {
-        console.log('Deleting files from storage:', filesToDelete);
         const { error: storageError } = await supabase.storage
           .from('pdf-documents')
           .remove(filesToDelete);
@@ -270,7 +254,6 @@ export function Documents() {
       });
 
       if (filesToDelete.length > 0) {
-        console.log('Deleting all files from storage:', filesToDelete);
         const { error: storageError } = await supabase.storage
           .from('pdf-documents')
           .remove(filesToDelete);
@@ -367,22 +350,20 @@ export function Documents() {
             <Upload className="w-5 h-5" />
             PDF Upload
             {isUploading && (
-              <span className="text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
                 Processing {uploadingPDFs.length} PDF(s)...
-              </span>
+              </div>
             )}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <PDFUploadZone onUpload={handlePDFUpload} />
-          {processingError && (
-            <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-destructive mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-destructive">Processing Error</p>
-                  <p className="text-sm text-destructive/80">{processingError}</p>
-                </div>
+          {processingStatus && (
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                <p className="text-sm text-blue-700">{processingStatus}</p>
               </div>
             </div>
           )}

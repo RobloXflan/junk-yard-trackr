@@ -2,10 +2,8 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import { supabase } from '@/integrations/supabase/client';
 
-// Simple, direct worker setup
-console.log('Setting up PDF.js worker...');
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
-console.log('PDF.js worker configured with version:', pdfjsLib.version);
+// Configure PDF.js worker with a simpler approach
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
 
 export interface ProcessedPage {
   pageNumber: number;
@@ -15,68 +13,61 @@ export interface ProcessedPage {
 
 export class PDFProcessingService {
   static async processPDF(file: File): Promise<ProcessedPage[]> {
-    console.log('=== PDF Processing Started ===');
-    console.log('File:', file.name, 'Size:', file.size, 'Type:', file.type);
+    console.log('🔄 Starting PDF processing for:', file.name);
     
-    // Basic validation
-    if (!file || file.size === 0) {
-      throw new Error('No file provided or file is empty');
-    }
-
-    if (file.type !== 'application/pdf') {
-      throw new Error('Invalid file type. Please upload a PDF file.');
-    }
-
-    if (file.size > 50 * 1024 * 1024) { // 50MB limit
-      throw new Error('File too large. Please upload a PDF smaller than 50MB.');
-    }
-
     try {
-      // Convert file to array buffer
-      console.log('Converting file to ArrayBuffer...');
-      const arrayBuffer = await file.arrayBuffer();
-      console.log('ArrayBuffer created, size:', arrayBuffer.byteLength);
+      // Basic validation
+      if (!file || file.size === 0) {
+        throw new Error('No file provided or file is empty');
+      }
 
-      // Load PDF document with minimal config
-      console.log('Loading PDF document...');
+      if (file.type !== 'application/pdf') {
+        throw new Error('Invalid file type. Please upload a PDF file.');
+      }
+
+      if (file.size > 20 * 1024 * 1024) { // 20MB limit
+        throw new Error('File too large. Please upload a PDF smaller than 20MB.');
+      }
+
+      // Convert file to array buffer
+      console.log('📄 Converting file to ArrayBuffer...');
+      const arrayBuffer = await file.arrayBuffer();
+      console.log('✅ ArrayBuffer created, size:', arrayBuffer.byteLength);
+
+      // Load PDF document
+      console.log('📖 Loading PDF document...');
       const loadingTask = pdfjsLib.getDocument({
         data: arrayBuffer,
-        verbosity: 1 // Show more logs for debugging
+        verbosity: 0,
+        disableAutoFetch: true,
+        disableStream: true
       });
 
       const pdf = await loadingTask.promise;
-      console.log('PDF loaded successfully! Pages:', pdf.numPages);
+      console.log('✅ PDF loaded! Total pages:', pdf.numPages);
 
       if (pdf.numPages === 0) {
         throw new Error('PDF contains no pages');
       }
 
-      if (pdf.numPages > 100) {
-        throw new Error(`PDF has too many pages (${pdf.numPages}). Maximum 100 pages allowed.`);
+      if (pdf.numPages > 50) {
+        throw new Error(`PDF has too many pages (${pdf.numPages}). Maximum 50 pages allowed.`);
       }
 
       const pages: ProcessedPage[] = [];
       
-      // Process pages one by one
+      // Process each page
       for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-        console.log(`Processing page ${pageNum}/${pdf.numPages}...`);
+        console.log(`🔄 Processing page ${pageNum}/${pdf.numPages}...`);
         
         try {
           const page = await pdf.getPage(pageNum);
-          console.log(`Got page ${pageNum}, rendering...`);
           
-          // Get viewport
-          const viewport = page.getViewport({ scale: 1 });
+          // Render thumbnail (200px max)
+          const thumbnailBlob = await this.renderPageToBlob(page, 200);
           
-          // Calculate scales
-          const thumbnailScale = Math.min(200 / viewport.width, 200 / viewport.height, 1);
-          const fullScale = Math.min(800 / viewport.width, 800 / viewport.height, 2);
-          
-          // Render both versions
-          const [thumbnailBlob, fullPageBlob] = await Promise.all([
-            this.renderPage(page, thumbnailScale),
-            this.renderPage(page, fullScale)
-          ]);
+          // Render full page (800px max)
+          const fullPageBlob = await this.renderPageToBlob(page, 800);
           
           pages.push({
             pageNumber: pageNum,
@@ -84,11 +75,11 @@ export class PDFProcessingService {
             fullPageBlob
           });
           
-          console.log(`Page ${pageNum} processed successfully`);
+          console.log(`✅ Page ${pageNum} processed successfully`);
           
         } catch (pageError) {
-          console.error(`Failed to process page ${pageNum}:`, pageError);
-          // Continue with other pages instead of failing completely
+          console.error(`❌ Failed to process page ${pageNum}:`, pageError);
+          // Continue with other pages
         }
       }
       
@@ -96,20 +87,28 @@ export class PDFProcessingService {
         throw new Error('No pages could be processed successfully');
       }
       
-      console.log(`=== PDF Processing Completed ===`);
-      console.log(`Successfully processed ${pages.length} of ${pdf.numPages} pages`);
+      console.log(`🎉 PDF processing completed! ${pages.length} pages processed`);
       return pages;
       
     } catch (error) {
-      console.error('=== PDF Processing Failed ===');
-      console.error('Error:', error);
+      console.error('❌ PDF Processing failed:', error);
       throw error;
     }
   }
 
-  private static async renderPage(page: pdfjsLib.PDFPageProxy, scale: number): Promise<Blob> {
+  private static async renderPageToBlob(page: pdfjsLib.PDFPageProxy, maxSize: number): Promise<Blob> {
     return new Promise((resolve, reject) => {
       try {
+        // Get original viewport
+        const originalViewport = page.getViewport({ scale: 1 });
+        
+        // Calculate scale to fit within maxSize
+        const scale = Math.min(
+          maxSize / originalViewport.width,
+          maxSize / originalViewport.height,
+          2 // Max scale of 2x
+        );
+        
         const viewport = page.getViewport({ scale });
         
         // Create canvas
@@ -142,7 +141,7 @@ export class PDFProcessingService {
               } else {
                 reject(new Error('Failed to create blob'));
               }
-            }, 'image/jpeg', 0.8);
+            }, 'image/jpeg', 0.85);
           })
           .catch(reject);
           
@@ -153,7 +152,7 @@ export class PDFProcessingService {
   }
   
   static async uploadToStorage(blob: Blob, path: string): Promise<string> {
-    console.log('Uploading to storage:', path);
+    console.log('📤 Uploading to storage:', path);
     
     const cleanPath = path.startsWith('/') ? path.slice(1) : path;
     
@@ -165,7 +164,7 @@ export class PDFProcessingService {
       });
     
     if (error) {
-      console.error('Storage upload error:', error);
+      console.error('❌ Storage upload error:', error);
       throw error;
     }
     
@@ -173,19 +172,7 @@ export class PDFProcessingService {
       .from('pdf-documents')
       .getPublicUrl(cleanPath);
     
+    console.log('✅ File uploaded successfully');
     return urlData.publicUrl;
-  }
-  
-  static async deleteFromStorage(path: string): Promise<void> {
-    const cleanPath = path.startsWith('/') ? path.slice(1) : path;
-    
-    const { error } = await supabase.storage
-      .from('pdf-documents')
-      .remove([cleanPath]);
-    
-    if (error) {
-      console.error('Storage deletion error:', error);
-      throw error;
-    }
   }
 }
