@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,6 +19,7 @@ export function Documents() {
   const [uploadingPDFs, setUploadingPDFs] = useState<string[]>([]);
   const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
   const [processingStatus, setProcessingStatus] = useState<string>('');
+  const [temporaryPages, setTemporaryPages] = useState<any[]>([]);
 
   // Fetch unassigned PDF pages
   const { data: unassignedPages, isLoading, refetch } = useQuery({
@@ -38,6 +40,7 @@ export function Documents() {
     const uploadId = `${file.name}_${Date.now()}`;
     setUploadingPDFs(prev => [...prev, uploadId]);
     setProcessingStatus('Starting PDF processing...');
+    setTemporaryPages([]);
 
     try {
       console.log('🚀 Starting PDF upload process for:', file.name);
@@ -47,95 +50,27 @@ export function Documents() {
         description: `Processing ${file.name}...`,
       });
 
-      // Create batch record
-      setProcessingStatus('Creating batch record...');
-      const { data: batch, error: batchError } = await supabase
-        .from('pdf_batches')
-        .insert({
-          filename: file.name,
-          total_pages: 0,
-          status: 'processing'
-        })
-        .select()
-        .single();
-
-      if (batchError) {
-        console.error('❌ Batch creation error:', batchError);
-        throw new Error(`Failed to create batch: ${batchError.message}`);
-      }
-
-      console.log('✅ Batch created:', batch.id);
-
-      // Process the PDF
       setProcessingStatus('Processing PDF pages...');
       const processedPages = await PDFProcessingService.processPDF(file);
       console.log(`🎉 PDF processed: ${processedPages.length} pages`);
       
-      // Upload pages with progress
-      const pageInserts = [];
-      
-      for (let i = 0; i < processedPages.length; i++) {
-        const processedPage = processedPages[i];
-        setProcessingStatus(`Uploading page ${processedPage.pageNumber}/${processedPages.length}...`);
-        
-        try {
-          const thumbnailPath = `thumbnails/${batch.id}/page-${processedPage.pageNumber}.jpg`;
-          const fullPagePath = `pages/${batch.id}/page-${processedPage.pageNumber}.jpg`;
-          
-          const [thumbnailUrl, fullPageUrl] = await Promise.all([
-            PDFProcessingService.uploadToStorage(processedPage.thumbnailBlob, thumbnailPath),
-            PDFProcessingService.uploadToStorage(processedPage.fullPageBlob, fullPagePath)
-          ]);
+      // Create temporary page objects for display
+      const tempPages = processedPages.map((page, index) => ({
+        id: `temp_${Date.now()}_${index}`,
+        page_number: page.pageNumber,
+        thumbnail_url: URL.createObjectURL(page.thumbnailBlob),
+        full_page_url: URL.createObjectURL(page.fullPageBlob),
+        pdf_batches: { filename: file.name },
+        status: 'unassigned'
+      }));
 
-          pageInserts.push({
-            batch_id: batch.id,
-            page_number: processedPage.pageNumber,
-            thumbnail_url: thumbnailUrl,
-            full_page_url: fullPageUrl,
-            status: 'unassigned',
-            file_size: processedPage.fullPageBlob.size
-          });
-          
-          console.log(`✅ Page ${processedPage.pageNumber} uploaded`);
-          
-        } catch (pageError) {
-          console.error(`❌ Failed to upload page ${processedPage.pageNumber}:`, pageError);
-        }
-      }
+      setTemporaryPages(tempPages);
+      setProcessingStatus('');
 
-      if (pageInserts.length === 0) {
-        throw new Error('No pages could be uploaded successfully');
-      }
-
-      // Insert pages into database
-      setProcessingStatus('Saving pages to database...');
-      const { error: pagesError } = await supabase
-        .from('pdf_pages')
-        .insert(pageInserts);
-
-      if (pagesError) {
-        console.error('❌ Pages insertion error:', pagesError);
-        throw new Error(`Failed to save pages: ${pagesError.message}`);
-      }
-
-      // Update batch
-      await supabase
-        .from('pdf_batches')
-        .update({ 
-          total_pages: processedPages.length,
-          processed_pages: pageInserts.length,
-          status: 'completed'
-        })
-        .eq('id', batch.id);
-
-      console.log('🎉 PDF upload process completed successfully');
-      
       toast({
         title: "PDF Processed Successfully",
-        description: `${pageInserts.length} pages are ready for assignment.`,
+        description: `${processedPages.length} pages are ready for viewing.`,
       });
-
-      refetch();
       
     } catch (error) {
       console.error('❌ PDF upload process failed:', error);
@@ -147,11 +82,13 @@ export function Documents() {
         description: errorMessage,
         variant: "destructive",
       });
+      
+      setTemporaryPages([]);
     } finally {
       setUploadingPDFs(prev => prev.filter(id => id !== uploadId));
       setProcessingStatus('');
     }
-  }, [toast, refetch]);
+  }, [toast]);
 
   const handlePageSelect = (pageId: string) => {
     setSelectedPages(prev => 
@@ -161,131 +98,25 @@ export function Documents() {
     );
   };
 
-  const extractFilePathFromUrl = (url: string, basePath: string): string | null => {
-    try {
-      if (!url) return null;
-      
-      const urlParts = url.split('/');
-      const bucketIndex = urlParts.findIndex(part => part === 'pdf-documents');
-      
-      if (bucketIndex !== -1 && bucketIndex < urlParts.length - 1) {
-        const pathParts = urlParts.slice(bucketIndex + 1);
-        return pathParts.join('/');
-      }
-      
-      return null;
-    } catch (error) {
-      console.error('Error extracting file path from URL:', url, error);
-      return null;
-    }
-  };
-
   const handlePageDelete = async (pageId: string) => {
-    try {
-      const pageToDelete = unassignedPages?.find(p => p.id === pageId);
-      if (!pageToDelete) return;
-
-      const filesToDelete = [];
-      
-      if (pageToDelete.thumbnail_url) {
-        const thumbnailPath = extractFilePathFromUrl(pageToDelete.thumbnail_url, 'thumbnails');
-        if (thumbnailPath) {
-          filesToDelete.push(thumbnailPath);
-        }
-      }
-      
-      if (pageToDelete.full_page_url) {
-        const fullPagePath = extractFilePathFromUrl(pageToDelete.full_page_url, 'pages');
-        if (fullPagePath) {
-          filesToDelete.push(fullPagePath);
-        }
-      }
-
-      if (filesToDelete.length > 0) {
-        const { error: storageError } = await supabase.storage
-          .from('pdf-documents')
-          .remove(filesToDelete);
-        
-        if (storageError) {
-          console.error('Storage deletion error:', storageError);
-        }
-      }
-
-      const { error } = await supabase
-        .from('pdf_pages')
-        .delete()
-        .eq('id', pageId);
-
-      if (error) throw error;
-
-      setSelectedPages(prev => prev.filter(id => id !== pageId));
-
-      toast({
-        title: "Page Deleted",
-        description: "Page has been successfully removed.",
-      });
-
-      refetch();
-    } catch (error) {
-      console.error('Page deletion error:', error);
-      toast({
-        title: "Deletion Failed",
-        description: "Failed to delete page. Please try again.",
-        variant: "destructive",
-      });
-    }
+    // Remove from temporary pages
+    setTemporaryPages(prev => prev.filter(p => p.id !== pageId));
+    setSelectedPages(prev => prev.filter(id => id !== pageId));
+    
+    toast({
+      title: "Page Removed",
+      description: "Page has been removed from the current session.",
+    });
   };
 
   const handleDeleteAllPages = async () => {
-    try {
-      if (!unassignedPages || unassignedPages.length === 0) return;
-
-      const filesToDelete = [];
-      
-      unassignedPages.forEach(page => {
-        if (page.thumbnail_url) {
-          const thumbnailPath = extractFilePathFromUrl(page.thumbnail_url, 'thumbnails');
-          if (thumbnailPath) filesToDelete.push(thumbnailPath);
-        }
-        if (page.full_page_url) {
-          const fullPagePath = extractFilePathFromUrl(page.full_page_url, 'pages');
-          if (fullPagePath) filesToDelete.push(fullPagePath);
-        }
-      });
-
-      if (filesToDelete.length > 0) {
-        const { error: storageError } = await supabase.storage
-          .from('pdf-documents')
-          .remove(filesToDelete);
-        
-        if (storageError) {
-          console.error('Bulk storage deletion error:', storageError);
-        }
-      }
-
-      const { error } = await supabase
-        .from('pdf_pages')
-        .delete()
-        .eq('status', 'unassigned');
-
-      if (error) throw error;
-
-      setSelectedPages([]);
-      
-      toast({
-        title: "All Pages Deleted",
-        description: `${unassignedPages.length} pages have been removed.`,
-      });
-
-      refetch();
-    } catch (error) {
-      console.error('Bulk deletion error:', error);
-      toast({
-        title: "Deletion Failed",
-        description: "Failed to delete all pages. Please try again.",
-        variant: "destructive",
-      });
-    }
+    setTemporaryPages([]);
+    setSelectedPages([]);
+    
+    toast({
+      title: "All Pages Cleared",
+      description: "All temporary pages have been cleared.",
+    });
   };
 
   const handleSendToIntake = () => {
@@ -301,36 +132,15 @@ export function Documents() {
   };
 
   const handleIntakeComplete = async (vehicleId: string) => {
-    try {
-      const { error } = await supabase
-        .from('pdf_pages')
-        .update({ 
-          status: 'assigned',
-          assigned_vehicle_id: vehicleId 
-        })
-        .in('id', selectedPages);
-
-      if (error) throw error;
-
-      toast({
-        title: "Pages Assigned Successfully",
-        description: `${selectedPages.length} pages assigned to vehicle.`,
-      });
-
-      setSelectedPages([]);
-      setShowIntakeDialog(false);
-      refetch();
-    } catch (error) {
-      console.error('Page assignment error:', error);
-      toast({
-        title: "Assignment Failed", 
-        description: "Failed to assign pages to vehicle.",
-        variant: "destructive",
-      });
-    }
+    toast({
+      title: "Feature Coming Soon",
+      description: "Vehicle assignment will be implemented next.",
+    });
+    setShowIntakeDialog(false);
   };
 
   const isUploading = uploadingPDFs.length > 0;
+  const allPages = [...(unassignedPages || []), ...temporaryPages];
 
   return (
     <div className="space-y-6">
@@ -376,10 +186,10 @@ export function Documents() {
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <FileText className="w-5 h-5" />
-              Unassigned Pages ({unassignedPages?.length || 0})
+              Pages ({allPages.length})
             </div>
             <div className="flex items-center gap-2">
-              {unassignedPages && unassignedPages.length > 0 && (
+              {allPages.length > 0 && (
                 <Button 
                   variant="outline"
                   onClick={() => setDeleteAllDialogOpen(true)}
@@ -401,13 +211,13 @@ export function Documents() {
         <CardContent>
           {isLoading ? (
             <div className="text-center py-8">Loading pages...</div>
-          ) : !unassignedPages || unassignedPages.length === 0 ? (
+          ) : allPages.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No unassigned pages. Upload a PDF to get started.
+              No pages available. Upload a PDF to get started.
             </div>
           ) : (
             <PDFPageGallery
-              pages={unassignedPages}
+              pages={allPages}
               selectedPages={selectedPages}
               onPageSelect={handlePageSelect}
               onPageDelete={handlePageDelete}
@@ -431,9 +241,9 @@ export function Documents() {
         isOpen={deleteAllDialogOpen}
         onClose={() => setDeleteAllDialogOpen(false)}
         onConfirm={handleDeleteAllPages}
-        title="Delete All Pages"
-        description={`Are you sure you want to delete all ${unassignedPages?.length || 0} unassigned pages? This action cannot be undone.`}
-        confirmText="Delete All"
+        title="Clear All Pages"
+        description={`Are you sure you want to clear all ${allPages.length} pages? This action cannot be undone.`}
+        confirmText="Clear All"
       />
     </div>
   );
