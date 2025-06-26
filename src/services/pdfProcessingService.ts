@@ -1,22 +1,13 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import { supabase } from '@/integrations/supabase/client';
 
-// Simple and reliable worker setup
+// Simple local worker setup - no external dependencies
 const setupWorker = () => {
-  console.log('Setting up PDF.js worker...');
+  console.log('Setting up PDF.js worker with local fallback...');
   
-  // Use the most reliable CDN source first
-  const workerSrc = 'https://unpkg.com/pdfjs-dist@5.3.31/build/pdf.worker.min.js';
-  
-  try {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
-    console.log('PDF.js worker configured successfully:', workerSrc);
-  } catch (error) {
-    console.error('Failed to set worker source:', error);
-    // Fallback to local worker
-    pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
-    console.log('Using local worker fallback');
-  }
+  // Use local worker file directly
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+  console.log('PDF.js worker configured to use local worker');
 };
 
 // Initialize worker setup immediately
@@ -56,13 +47,13 @@ export class PDFProcessingService {
     }
 
     try {
-      // Retry worker setup if needed
+      // Ensure worker is set up
       if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
-        console.log('Worker not set up, retrying...');
+        console.log('Worker not set up, configuring...');
         setupWorker();
       }
 
-      // Convert file to array buffer with enhanced error handling
+      // Convert file to array buffer
       console.log('Converting file to ArrayBuffer...');
       const arrayBuffer = await this.fileToArrayBuffer(file);
       console.log('ArrayBuffer created, size:', arrayBuffer.byteLength);
@@ -79,7 +70,7 @@ export class PDFProcessingService {
         console.warn('PDF header not found, attempting to process anyway...');
       }
 
-      // Load PDF document with enhanced options
+      // Load PDF document
       console.log('Loading PDF document...');
       const pdf = await this.loadPDFDocument(arrayBuffer);
       console.log('PDF loaded successfully:', {
@@ -98,7 +89,7 @@ export class PDFProcessingService {
       const pages: ProcessedPage[] = [];
       console.log(`Processing ${pdf.numPages} pages...`);
       
-      // Process pages with better error recovery
+      // Process pages
       for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
         try {
           console.log(`Processing page ${pageNum}/${pdf.numPages}...`);
@@ -107,7 +98,6 @@ export class PDFProcessingService {
           console.log(`Page ${pageNum} processed successfully`);
         } catch (pageError) {
           console.error(`Failed to process page ${pageNum}:`, pageError);
-          // Continue with other pages but log the failure
           continue;
         }
       }
@@ -125,23 +115,10 @@ export class PDFProcessingService {
       console.error('Error details:', error);
       
       if (error instanceof Error) {
-        // Provide more specific error messages for worker issues
-        if (error.message.includes('worker') || error.message.includes('Worker')) {
-          throw new Error('PDF processing worker failed to load. Please refresh the page and try again. If the issue persists, check your internet connection.');
-        }
-        if (error.message.includes('Invalid PDF structure')) {
-          throw new Error('The PDF file appears to be corrupted or has an invalid structure. Please try a different PDF.');
-        }
-        if (error.message.includes('password')) {
-          throw new Error('This PDF is password-protected. Please provide an unprotected PDF file.');
-        }
-        if (error.message.includes('MissingPDFException')) {
-          throw new Error('The file is not a valid PDF or is corrupted. Please check the file and try again.');
-        }
         throw error;
       }
       
-      throw new Error('An unexpected error occurred while processing the PDF. Please try a different file.');
+      throw new Error('An unexpected error occurred while processing the PDF.');
     }
   }
 
@@ -170,15 +147,10 @@ export class PDFProcessingService {
   }
 
   private static async loadPDFDocument(arrayBuffer: ArrayBuffer): Promise<pdfjsLib.PDFDocumentProxy> {
-    const version = pdfjsLib.version || '5.3.31';
-    
     const loadingTask = pdfjsLib.getDocument({
       data: arrayBuffer,
       verbosity: 0,
       useSystemFonts: true,
-      standardFontDataUrl: `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/standard_fonts/`,
-      cMapUrl: `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/cmaps/`,
-      cMapPacked: true,
       disableAutoFetch: false,
       disableStream: false,
       disableRange: false,
