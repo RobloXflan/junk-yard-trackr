@@ -1,25 +1,52 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import { supabase } from '@/integrations/supabase/client';
 
-// Set up PDF.js worker with multiple fallback options
+// Enhanced worker setup with multiple fallback strategies
 const setupWorker = () => {
-  try {
-    // Try the primary CDN first
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-  } catch (error) {
-    console.warn('Primary worker setup failed, trying fallback:', error);
+  console.log('Setting up PDF.js worker...');
+  
+  // Get the actual installed version
+  const version = pdfjsLib.version || '5.3.31';
+  console.log('PDF.js version:', version);
+  
+  const workerSources = [
+    // Primary CDN with correct version
+    `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.js`,
+    // Backup CDN
+    `https://cdn.jsdelivr.net/npm/pdfjs-dist@${version}/build/pdf.worker.min.js`,
+    // Unpkg as another fallback
+    `https://unpkg.com/pdfjs-dist@${version}/build/pdf.worker.min.js`,
+    // Local fallback
+    '/pdf.worker.min.js'
+  ];
+  
+  let workerSetupSuccess = false;
+  
+  for (const workerSrc of workerSources) {
     try {
-      // Fallback to a specific version
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    } catch (fallbackError) {
-      console.error('All worker setups failed:', fallbackError);
-      // Last resort - try local worker
-      pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+      console.log('Trying worker source:', workerSrc);
+      pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+      workerSetupSuccess = true;
+      console.log('Worker setup successful with:', workerSrc);
+      break;
+    } catch (error) {
+      console.warn('Worker source failed:', workerSrc, error);
+      continue;
     }
+  }
+  
+  if (!workerSetupSuccess) {
+    console.error('All worker sources failed, PDF processing may not work properly');
+    throw new Error('Failed to setup PDF.js worker. Please check your internet connection and try again.');
   }
 };
 
-setupWorker();
+// Initialize worker setup
+try {
+  setupWorker();
+} catch (error) {
+  console.error('Initial worker setup failed:', error);
+}
 
 export interface ProcessedPage {
   pageNumber: number;
@@ -50,11 +77,17 @@ export class PDFProcessingService {
       throw new Error('Invalid file type. Please upload a PDF file.');
     }
 
-    if (file.size > 100 * 1024 * 1024) { // Increased to 100MB
+    if (file.size > 100 * 1024 * 1024) { // 100MB limit
       throw new Error('File too large. Please upload a PDF smaller than 100MB.');
     }
 
     try {
+      // Retry worker setup if needed
+      if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+        console.log('Worker not set up, retrying...');
+        setupWorker();
+      }
+
       // Convert file to array buffer with enhanced error handling
       console.log('Converting file to ArrayBuffer...');
       const arrayBuffer = await this.fileToArrayBuffer(file);
@@ -84,7 +117,7 @@ export class PDFProcessingService {
         throw new Error('PDF contains no pages');
       }
 
-      if (pdf.numPages > 200) { // Increased limit
+      if (pdf.numPages > 200) {
         throw new Error(`PDF has too many pages (${pdf.numPages}). Maximum 200 pages allowed.`);
       }
 
@@ -118,7 +151,10 @@ export class PDFProcessingService {
       console.error('Error details:', error);
       
       if (error instanceof Error) {
-        // Provide more specific error messages
+        // Provide more specific error messages for worker issues
+        if (error.message.includes('worker') || error.message.includes('Worker')) {
+          throw new Error('PDF processing worker failed to load. Please refresh the page and try again. If the issue persists, check your internet connection.');
+        }
         if (error.message.includes('Invalid PDF structure')) {
           throw new Error('The PDF file appears to be corrupted or has an invalid structure. Please try a different PDF.');
         }
@@ -160,12 +196,14 @@ export class PDFProcessingService {
   }
 
   private static async loadPDFDocument(arrayBuffer: ArrayBuffer): Promise<pdfjsLib.PDFDocumentProxy> {
+    const version = pdfjsLib.version || '5.3.31';
+    
     const loadingTask = pdfjsLib.getDocument({
       data: arrayBuffer,
       verbosity: 0,
       useSystemFonts: true,
-      standardFontDataUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/standard_fonts/',
-      cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
+      standardFontDataUrl: `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/standard_fonts/`,
+      cMapUrl: `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/cmaps/`,
       cMapPacked: true,
       disableAutoFetch: false,
       disableStream: false,
