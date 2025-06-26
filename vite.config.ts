@@ -25,8 +25,7 @@ export default defineConfig(({ mode }) => ({
     exclude: ['pdfjs-dist/build/pdf.worker.min.js']
   },
   worker: {
-    format: 'iife',
-    plugins: []
+    format: 'iife'
   },
   define: {
     // Prevent Vite from trying to process the worker as an ES module
