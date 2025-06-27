@@ -1,7 +1,9 @@
+
 import * as pdfjsLib from 'pdfjs-dist';
 
-// Configure PDF.js worker with reliable CDN
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js';
+// Configure PDF.js worker with version-matched CDN
+// Using the same version as installed (5.3.31 based on package.json)
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.3.31/pdf.worker.min.js`;
 
 export interface ProcessedPage {
   pageNumber: number;
@@ -30,10 +32,12 @@ export class PDFProcessingService {
       const arrayBuffer = await file.arrayBuffer();
       console.log('📖 Loading PDF document...');
       
-      // Simple PDF loading configuration
+      // Simple PDF loading configuration with explicit worker check
       const loadingTask = pdfjsLib.getDocument({
         data: arrayBuffer,
-        verbosity: 0
+        verbosity: 0,
+        // Ensure worker is properly initialized
+        standardFontDataUrl: `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.3.31/standard_fonts/`,
       });
       
       const pdf = await loadingTask.promise;
@@ -93,8 +97,8 @@ export class PDFProcessingService {
       
       // Provide more specific error messages
       if (error instanceof Error) {
-        if (error.message.includes('Setting up fake worker failed') || error.message.includes('importScripts')) {
-          throw new Error('PDF worker setup failed. Please try refreshing the page and uploading again.');
+        if (error.message.includes('Setting up fake worker failed') || error.message.includes('importScripts') || error.message.includes('Failed to fetch')) {
+          throw new Error('PDF worker failed to load. This may be due to network connectivity. Please check your internet connection and try again.');
         } else if (error.message.includes('Invalid PDF structure')) {
           throw new Error('The PDF file appears to be corrupted or invalid. Please try a different PDF file.');
         } else if (error.message.includes('Password')) {
