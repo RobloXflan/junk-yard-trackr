@@ -1,80 +1,105 @@
-import React, { useState, useCallback } from 'react';
+
+import React, { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Upload, FileText, CheckCircle, Trash2, Filter, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { PDFUploadZone } from '@/components/PDFUploadZone';
-import { DocumentPage, DocumentPageData } from '@/components/DocumentPage';
+import { ServerPDFUploadZone } from '@/components/ServerPDFUploadZone';
+import { PageThumbnailGallery, PageThumbnailData } from '@/components/PageThumbnailGallery';
 import { PagePreviewDialog } from '@/components/PagePreviewDialog';
 import { VehicleAssignmentDialog } from '@/components/VehicleAssignmentDialog';
 import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog';
 import { PDFProcessingService } from '@/services/pdfProcessingService';
+import { supabase } from '@/integrations/supabase/client';
 
 export function Documents() {
   const { toast } = useToast();
   const [selectedPages, setSelectedPages] = useState<string[]>([]);
   const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
-  const [previewPage, setPreviewPage] = useState<DocumentPageData | null>(null);
-  const [uploadingPDFs, setUploadingPDFs] = useState<string[]>([]);
+  const [previewPage, setPreviewPage] = useState<PageThumbnailData | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
   const [processingStatus, setProcessingStatus] = useState<string>('');
-  const [processingProgress, setProcessingProgress] = useState<{ current: number; total: number } | null>(null);
-  const [documentPages, setDocumentPages] = useState<DocumentPageData[]>([]);
+  const [documentPages, setDocumentPages] = useState<PageThumbnailData[]>([]);
   const [processingError, setProcessingError] = useState<string>('');
   
   // Filters
   const [showOnlyUnassigned, setShowOnlyUnassigned] = useState(false);
   const [sortBy, setSortBy] = useState<'date' | 'page'>('date');
 
+  // Load existing pages on component mount
+  useEffect(() => {
+    loadExistingPages();
+  }, []);
+
+  const loadExistingPages = async () => {
+    try {
+      const { data: pages, error } = await supabase
+        .from('pdf_pages')
+        .select(`
+          *,
+          pdf_batches(filename)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const transformedPages: PageThumbnailData[] = pages.map(page => ({
+        id: page.id,
+        pageNumber: page.page_number,
+        thumbnailUrl: page.thumbnail_url || '',
+        fullPageUrl: page.full_page_url || '',
+        filename: page.pdf_batches?.filename || 'Unknown',
+        status: page.status as 'unassigned' | 'assigned',
+        assignedVehicleId: page.assigned_vehicle_id || undefined,
+      }));
+
+      setDocumentPages(transformedPages);
+    } catch (error) {
+      console.error('Failed to load existing pages:', error);
+      toast({
+        title: "Error Loading Pages",
+        description: "Failed to load existing document pages.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handlePDFUpload = useCallback(async (file: File) => {
-    const uploadId = `${file.name}_${Date.now()}`;
-    setUploadingPDFs(prev => [...prev, uploadId]);
+    setIsUploading(true);
     setProcessingStatus(`Processing ${file.name}...`);
-    setProcessingProgress(null);
     setProcessingError('');
 
     try {
-      console.log('🚀 Starting PDF upload process for:', file.name);
+      console.log('🚀 Starting server-side PDF upload process for:', file.name);
       
       toast({
         title: "Processing PDF",
         description: `Processing ${file.name}... This may take a moment.`,
       });
 
-      setProcessingStatus(`Extracting pages from ${file.name}...`);
-      const processedPages = await PDFProcessingService.processPDF(file);
-      console.log(`🎉 PDF processed: ${processedPages.length} pages extracted`);
+      const processedBatch = await PDFProcessingService.processPDF(file);
+      console.log(`🎉 PDF processed: ${processedBatch.pages.length} pages extracted`);
       
-      setProcessingStatus('Creating page thumbnails...');
-      setProcessingProgress({ current: 0, total: processedPages.length });
-      
-      // Create document page objects for display
-      const newPages: DocumentPageData[] = processedPages.map((page, index) => {
-        const thumbnailUrl = URL.createObjectURL(page.thumbnailBlob);
-        const fullPageUrl = URL.createObjectURL(page.fullPageBlob);
-        
-        setProcessingProgress(prev => prev ? { ...prev, current: index + 1 } : null);
-        
-        return {
-          id: `page_${Date.now()}_${index}`,
-          pageNumber: page.pageNumber,
-          thumbnailUrl,
-          fullPageUrl,
-          filename: file.name,
-          isAssigned: false
-        };
-      });
+      // Convert to PageThumbnailData format
+      const newPages: PageThumbnailData[] = processedBatch.pages.map(page => ({
+        id: page.id,
+        pageNumber: page.pageNumber,
+        thumbnailUrl: page.thumbnailUrl,
+        fullPageUrl: page.fullPageUrl,
+        filename: processedBatch.filename,
+        status: page.status,
+        assignedVehicleId: undefined,
+      }));
 
-      setDocumentPages(prev => [...prev, ...newPages]);
+      setDocumentPages(prev => [...newPages, ...prev]);
       setProcessingStatus('');
-      setProcessingProgress(null);
 
       toast({
         title: "PDF Processed Successfully! 🎉",
-        description: `${processedPages.length} pages extracted from ${file.name} and ready for assignment.`,
+        description: `${processedBatch.pages.length} pages extracted from ${file.name} and ready for assignment.`,
       });
       
     } catch (error) {
@@ -89,9 +114,8 @@ export function Documents() {
         variant: "destructive",
       });
     } finally {
-      setUploadingPDFs(prev => prev.filter(id => id !== uploadId));
+      setIsUploading(false);
       setProcessingStatus('');
-      setProcessingProgress(null);
     }
   }, [toast]);
 
@@ -108,72 +132,85 @@ export function Documents() {
     );
   };
 
-  const handlePagePreview = (page: DocumentPageData) => {
+  const handlePagePreview = (page: PageThumbnailData) => {
     setPreviewPage(page);
     setShowPreviewDialog(true);
   };
 
-  const handleAssignPages = (vehicleId: string, vehicleInfo: string) => {
-    // Update the selected pages as assigned
-    setDocumentPages(prev => prev.map(page => 
-      selectedPages.includes(page.id) 
-        ? { 
-            ...page, 
-            isAssigned: true, 
-            assignedVehicleId: vehicleId,
-            assignedVehicleInfo: vehicleInfo
-          }
-        : page
-    ));
+  const handleAssignPages = async (vehicleId: string, vehicleInfo: string) => {
+    try {
+      // Update pages in database
+      const { error } = await supabase
+        .from('pdf_pages')
+        .update({
+          status: 'assigned',
+          assigned_vehicle_id: vehicleId,
+        })
+        .in('id', selectedPages);
 
-    // Clear selection
-    setSelectedPages([]);
-    setShowAssignmentDialog(false);
+      if (error) throw error;
 
-    toast({
-      title: "Pages Assigned Successfully",
-      description: `${selectedPages.length} page(s) assigned to ${vehicleInfo}`,
-    });
+      // Update local state
+      setDocumentPages(prev => prev.map(page => 
+        selectedPages.includes(page.id) 
+          ? { 
+              ...page, 
+              status: 'assigned' as const,
+              assignedVehicleId: vehicleId,
+              assignedVehicleInfo: vehicleInfo
+            }
+          : page
+      ));
+
+      // Clear selection
+      setSelectedPages([]);
+      setShowAssignmentDialog(false);
+
+      toast({
+        title: "Pages Assigned Successfully",
+        description: `${selectedPages.length} page(s) assigned to ${vehicleInfo}`,
+      });
+    } catch (error) {
+      console.error('Failed to assign pages:', error);
+      toast({
+        title: "Assignment Failed",
+        description: "Failed to assign pages to vehicle.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleDeleteAllPages = () => {
-    // Clean up blob URLs to prevent memory leaks
-    documentPages.forEach(page => {
-      URL.revokeObjectURL(page.thumbnailUrl);
-      URL.revokeObjectURL(page.fullPageUrl);
-    });
-    
-    setDocumentPages([]);
-    setSelectedPages([]);
-    setDeleteAllDialogOpen(false);
-    
-    toast({
-      title: "All Pages Cleared",
-      description: "All document pages have been cleared.",
-    });
-  };
+  const handleDeleteAllPages = async () => {
+    try {
+      // Delete from database
+      const { error } = await supabase
+        .from('pdf_pages')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
 
-  const handleUnassignPage = (pageId: string) => {
-    setDocumentPages(prev => prev.map(page => 
-      page.id === pageId 
-        ? { 
-            ...page, 
-            isAssigned: false, 
-            assignedVehicleId: undefined,
-            assignedVehicleInfo: undefined
-          }
-        : page
-    ));
+      if (error) throw error;
 
-    toast({
-      title: "Page Unassigned",
-      description: "Page has been unassigned and is now available for selection.",
-    });
+      setDocumentPages([]);
+      setSelectedPages([]);
+      setDeleteAllDialogOpen(false);
+      
+      toast({
+        title: "All Pages Cleared",
+        description: "All document pages have been cleared.",
+      });
+    } catch (error) {
+      console.error('Failed to delete pages:', error);
+      toast({
+        title: "Delete Failed",
+        description: "Failed to clear pages.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Filter and sort pages
   const filteredPages = documentPages
-    .filter(page => showOnlyUnassigned ? !page.isAssigned : true)
+    .filter(page => showOnlyUnassigned ? page.status === 'unassigned' : true)
     .sort((a, b) => {
       if (sortBy === 'page') {
         return a.pageNumber - b.pageNumber;
@@ -182,9 +219,8 @@ export function Documents() {
       return b.id.localeCompare(a.id);
     });
 
-  const unassignedCount = documentPages.filter(p => !p.isAssigned).length;
-  const assignedCount = documentPages.filter(p => p.isAssigned).length;
-  const isUploading = uploadingPDFs.length > 0;
+  const unassignedCount = documentPages.filter(p => p.status === 'unassigned').length;
+  const assignedCount = documentPages.filter(p => p.status === 'assigned').length;
 
   return (
     <div className="space-y-6">
@@ -192,7 +228,7 @@ export function Documents() {
         <div>
           <h1 className="text-3xl font-bold">Document Intake</h1>
           <p className="text-muted-foreground">
-            Upload PDFs and assign pages to vehicles
+            Upload PDFs and assign pages to vehicles - Powered by server-side processing
           </p>
         </div>
       </div>
@@ -202,7 +238,7 @@ export function Documents() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Upload className="w-5 h-5" />
-            PDF Upload & Auto-Split
+            PDF Upload & Auto-Split (Server-Side)
             {isUploading && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -212,7 +248,7 @@ export function Documents() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <PDFUploadZone onUpload={handlePDFUpload} />
+          <ServerPDFUploadZone onUpload={handlePDFUpload} isUploading={isUploading} />
           
           {/* Processing Status */}
           {processingStatus && (
@@ -221,22 +257,8 @@ export function Documents() {
                 <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
                 <p className="text-sm text-blue-700 font-medium">{processingStatus}</p>
               </div>
-              {processingProgress && (
-                <div className="mt-2">
-                  <div className="flex justify-between text-xs text-blue-600">
-                    <span>Progress: {processingProgress.current}/{processingProgress.total}</span>
-                    <span>{Math.round((processingProgress.current / processingProgress.total) * 100)}%</span>
-                  </div>
-                  <div className="w-full bg-blue-200 rounded-full h-2 mt-1">
-                    <div 
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${(processingProgress.current / processingProgress.total) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              )}
               <p className="text-xs text-blue-600 mt-1">
-                Each page is processed individually for optimal quality
+                Server-side processing ensures reliable PDF splitting without browser compatibility issues
               </p>
             </div>
           )}
@@ -325,34 +347,18 @@ export function Documents() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {filteredPages.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p className="text-lg font-medium">
-                {documentPages.length === 0 ? 'No document pages available' : 'No pages match your filters'}
-              </p>
-              <p className="text-sm">
-                {documentPages.length === 0 ? 'Upload a PDF to automatically split it into individual pages' : 'Try adjusting your filters to see more pages'}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Click pages to select them, then assign to vehicles. Use the eye button to preview full-size pages.
-              </p>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-                {filteredPages.map((page) => (
-                  <DocumentPage
-                    key={page.id}
-                    page={page}
-                    isSelected={selectedPages.includes(page.id)}
-                    onSelect={handlePageSelect}
-                    onPreview={handlePagePreview}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Click pages to select them, then assign to vehicles. Use the eye button to preview full-size pages.
+            </p>
+            <PageThumbnailGallery
+              pages={filteredPages}
+              selectedPages={selectedPages}
+              onPageSelect={handlePageSelect}
+              onPreview={handlePagePreview}
+              showOnlyUnassigned={showOnlyUnassigned}
+            />
+          </div>
         </CardContent>
       </Card>
 
