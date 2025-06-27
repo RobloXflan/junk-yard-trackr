@@ -1,5 +1,9 @@
 
-// Simplified PDF processing without external worker dependencies
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Configure PDF.js to use the local worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+
 export interface ProcessedPage {
   pageNumber: number;
   thumbnailBlob: Blob;
@@ -20,99 +24,69 @@ export class PDFProcessingService {
         throw new Error('Invalid file type. Please upload a PDF file.');
       }
 
-      if (file.size > 10 * 1024 * 1024) { // 10MB limit
-        throw new Error('File too large. Please upload a PDF smaller than 10MB.');
+      if (file.size > 50 * 1024 * 1024) { // 50MB limit
+        throw new Error('File too large. Please upload a PDF smaller than 50MB.');
       }
 
-      // Use a different approach - convert PDF to images using a simple method
-      const pages = await this.convertPDFToImages(file);
+      const arrayBuffer = await file.arrayBuffer();
+      console.log('📖 Loading PDF document...');
       
-      console.log(`🎉 PDF processing completed! ${pages.length} pages processed`);
+      const pdf = await pdfjsLib.getDocument({
+        data: arrayBuffer,
+        verbosity: 0,
+        disableWorker: false
+      }).promise;
+      
+      console.log('✅ PDF loaded! Total pages:', pdf.numPages);
+      
+      if (pdf.numPages === 0) {
+        throw new Error('PDF contains no pages');
+      }
+
+      if (pdf.numPages > 50) {
+        throw new Error(`PDF has too many pages (${pdf.numPages}). Maximum 50 pages allowed.`);
+      }
+
+      const pages: ProcessedPage[] = [];
+      
+      // Process each page sequentially to avoid memory issues
+      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        console.log(`🔄 Processing page ${pageNum}/${pdf.numPages}...`);
+        
+        try {
+          const page = await pdf.getPage(pageNum);
+          
+          // Create thumbnail (200px max dimension)
+          const thumbnailBlob = await this.renderPageToBlob(page, 200);
+          
+          // Create full page (800px max dimension)
+          const fullPageBlob = await this.renderPageToBlob(page, 800);
+          
+          pages.push({
+            pageNumber: pageNum,
+            thumbnailBlob,
+            fullPageBlob
+          });
+          
+          console.log(`✅ Page ${pageNum} processed successfully`);
+          
+        } catch (pageError) {
+          console.error(`❌ Failed to process page ${pageNum}:`, pageError);
+          // Continue with other pages instead of failing completely
+        }
+      }
+      
+      if (pages.length === 0) {
+        throw new Error('No pages could be processed successfully');
+      }
+      
+      console.log(`🎉 PDF processing completed! ${pages.length} pages processed out of ${pdf.numPages}`);
       return pages;
       
     } catch (error) {
       console.error('❌ PDF Processing failed:', error);
-      throw error;
+      throw new Error(`PDF processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-  }
-
-  private static async convertPDFToImages(file: File): Promise<ProcessedPage[]> {
-    return new Promise((resolve, reject) => {
-      const fileReader = new FileReader();
-      
-      fileReader.onload = async (e) => {
-        try {
-          const arrayBuffer = e.target?.result as ArrayBuffer;
-          
-          // Import PDF.js dynamically with proper configuration
-          const pdfjsLib = await import('pdfjs-dist');
-          
-          // Configure worker with a simpler approach
-          pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
-          
-          console.log('📖 Loading PDF document...');
-          const pdf = await pdfjsLib.getDocument({
-            data: arrayBuffer,
-            verbosity: 0
-          }).promise;
-          
-          console.log('✅ PDF loaded! Total pages:', pdf.numPages);
-          
-          if (pdf.numPages === 0) {
-            throw new Error('PDF contains no pages');
-          }
-
-          if (pdf.numPages > 20) {
-            throw new Error(`PDF has too many pages (${pdf.numPages}). Maximum 20 pages allowed.`);
-          }
-
-          const pages: ProcessedPage[] = [];
-          
-          // Process each page
-          for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-            console.log(`🔄 Processing page ${pageNum}/${pdf.numPages}...`);
-            
-            try {
-              const page = await pdf.getPage(pageNum);
-              
-              // Render thumbnail (150px max)
-              const thumbnailBlob = await this.renderPageToBlob(page, 150);
-              
-              // Render full page (600px max)
-              const fullPageBlob = await this.renderPageToBlob(page, 600);
-              
-              pages.push({
-                pageNumber: pageNum,
-                thumbnailBlob,
-                fullPageBlob
-              });
-              
-              console.log(`✅ Page ${pageNum} processed successfully`);
-              
-            } catch (pageError) {
-              console.error(`❌ Failed to process page ${pageNum}:`, pageError);
-              // Continue with other pages
-            }
-          }
-          
-          if (pages.length === 0) {
-            throw new Error('No pages could be processed successfully');
-          }
-          
-          resolve(pages);
-          
-        } catch (error) {
-          console.error('❌ PDF conversion failed:', error);
-          reject(error);
-        }
-      };
-      
-      fileReader.onerror = () => {
-        reject(new Error('Failed to read PDF file'));
-      };
-      
-      fileReader.readAsArrayBuffer(file);
-    });
   }
 
   private static async renderPageToBlob(page: any, maxSize: number): Promise<Blob> {
@@ -121,11 +95,10 @@ export class PDFProcessingService {
         // Get original viewport
         const originalViewport = page.getViewport({ scale: 1 });
         
-        // Calculate scale to fit within maxSize
+        // Calculate scale to fit within maxSize while maintaining aspect ratio
         const scale = Math.min(
           maxSize / originalViewport.width,
-          maxSize / originalViewport.height,
-          1.5 // Max scale
+          maxSize / originalViewport.height
         );
         
         const viewport = page.getViewport({ scale });
@@ -139,8 +112,8 @@ export class PDFProcessingService {
           return;
         }
         
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
+        canvas.width = Math.floor(viewport.width);
+        canvas.height = Math.floor(viewport.height);
         
         // Set white background
         context.fillStyle = '#FFFFFF';
@@ -158,24 +131,19 @@ export class PDFProcessingService {
               if (blob) {
                 resolve(blob);
               } else {
-                reject(new Error('Failed to create blob'));
+                reject(new Error('Failed to create blob from canvas'));
               }
-            }, 'image/jpeg', 0.8);
+            }, 'image/jpeg', 0.85);
           })
-          .catch(reject);
+          .catch((error) => {
+            console.error('Render task failed:', error);
+            reject(error);
+          });
           
       } catch (error) {
+        console.error('Canvas rendering failed:', error);
         reject(error);
       }
     });
-  }
-  
-  static async uploadToStorage(blob: Blob, path: string): Promise<string> {
-    console.log('📤 Uploading to storage:', path);
-    
-    // For now, create a temporary URL for display
-    const url = URL.createObjectURL(blob);
-    console.log('✅ Temporary URL created');
-    return url;
   }
 }

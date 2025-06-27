@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -39,7 +38,7 @@ export function Documents() {
   const handlePDFUpload = useCallback(async (file: File) => {
     const uploadId = `${file.name}_${Date.now()}`;
     setUploadingPDFs(prev => [...prev, uploadId]);
-    setProcessingStatus('Starting PDF processing...');
+    setProcessingStatus(`Processing ${file.name}...`);
     setTemporaryPages([]);
 
     try {
@@ -47,38 +46,45 @@ export function Documents() {
       
       toast({
         title: "Processing PDF",
-        description: `Processing ${file.name}...`,
+        description: `Processing ${file.name}... This may take a moment.`,
       });
 
-      setProcessingStatus('Processing PDF pages...');
+      setProcessingStatus(`Extracting pages from ${file.name}...`);
       const processedPages = await PDFProcessingService.processPDF(file);
-      console.log(`🎉 PDF processed: ${processedPages.length} pages`);
+      console.log(`🎉 PDF processed: ${processedPages.length} pages extracted`);
       
-      // Create temporary page objects for display
-      const tempPages = processedPages.map((page, index) => ({
-        id: `temp_${Date.now()}_${index}`,
-        page_number: page.pageNumber,
-        thumbnail_url: URL.createObjectURL(page.thumbnailBlob),
-        full_page_url: URL.createObjectURL(page.fullPageBlob),
-        pdf_batches: { filename: file.name },
-        status: 'unassigned'
-      }));
+      setProcessingStatus('Creating page thumbnails...');
+      
+      // Create temporary page objects for immediate display
+      const tempPages = processedPages.map((page, index) => {
+        const thumbnailUrl = URL.createObjectURL(page.thumbnailBlob);
+        const fullPageUrl = URL.createObjectURL(page.fullPageBlob);
+        
+        return {
+          id: `temp_${Date.now()}_${index}`,
+          page_number: page.pageNumber,
+          thumbnail_url: thumbnailUrl,
+          full_page_url: fullPageUrl,
+          pdf_batches: { filename: file.name },
+          status: 'unassigned'
+        };
+      });
 
       setTemporaryPages(tempPages);
       setProcessingStatus('');
 
       toast({
-        title: "PDF Processed Successfully",
-        description: `${processedPages.length} pages are ready for viewing.`,
+        title: "PDF Processed Successfully! 🎉",
+        description: `${processedPages.length} pages extracted from ${file.name} and ready for viewing.`,
       });
       
     } catch (error) {
       console.error('❌ PDF upload process failed:', error);
       
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred during PDF processing';
       
       toast({
-        title: "Upload Failed",
+        title: "PDF Processing Failed",
         description: errorMessage,
         variant: "destructive",
       });
@@ -148,7 +154,7 @@ export function Documents() {
         <div>
           <h1 className="text-3xl font-bold">Documents</h1>
           <p className="text-muted-foreground">
-            Upload and process vehicle paperwork PDFs
+            Upload and process vehicle paperwork PDFs - extract individual pages
           </p>
         </div>
       </div>
@@ -158,11 +164,11 @@ export function Documents() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Upload className="w-5 h-5" />
-            PDF Upload
+            PDF Upload & Page Extraction
             {isUploading && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Processing {uploadingPDFs.length} PDF(s)...
+                Processing...
               </div>
             )}
           </CardTitle>
@@ -170,11 +176,14 @@ export function Documents() {
         <CardContent>
           <PDFUploadZone onUpload={handlePDFUpload} />
           {processingStatus && (
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
               <div className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-                <p className="text-sm text-blue-700">{processingStatus}</p>
+                <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+                <p className="text-sm text-blue-700 font-medium">{processingStatus}</p>
               </div>
+              <p className="text-xs text-blue-600 mt-1">
+                Processing each page individually - this may take some time for large PDFs
+              </p>
             </div>
           )}
         </CardContent>
@@ -186,7 +195,7 @@ export function Documents() {
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <FileText className="w-5 h-5" />
-              Pages ({allPages.length})
+              Extracted Pages ({allPages.length})
             </div>
             <div className="flex items-center gap-2">
               {allPages.length > 0 && (
@@ -213,15 +222,22 @@ export function Documents() {
             <div className="text-center py-8">Loading pages...</div>
           ) : allPages.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No pages available. Upload a PDF to get started.
+              <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p className="text-lg font-medium">No pages available</p>
+              <p className="text-sm">Upload a PDF to extract and view individual pages</p>
             </div>
           ) : (
-            <PDFPageGallery
-              pages={allPages}
-              selectedPages={selectedPages}
-              onPageSelect={handlePageSelect}
-              onPageDelete={handlePageDelete}
-            />
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Each page from your PDF is displayed below as a separate thumbnail. Click to select pages.
+              </p>
+              <PDFPageGallery
+                pages={allPages}
+                selectedPages={selectedPages}
+                onPageSelect={handlePageSelect}
+                onPageDelete={handlePageDelete}
+              />
+            </div>
           )}
         </CardContent>
       </Card>
