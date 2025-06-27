@@ -1,10 +1,9 @@
-
 import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, FileText, CheckCircle, Trash2, Filter, Loader2 } from 'lucide-react';
+import { Upload, FileText, CheckCircle, Trash2, Filter, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PDFUploadZone } from '@/components/PDFUploadZone';
 import { DocumentPage, DocumentPageData } from '@/components/DocumentPage';
@@ -22,7 +21,9 @@ export function Documents() {
   const [uploadingPDFs, setUploadingPDFs] = useState<string[]>([]);
   const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
   const [processingStatus, setProcessingStatus] = useState<string>('');
+  const [processingProgress, setProcessingProgress] = useState<{ current: number; total: number } | null>(null);
   const [documentPages, setDocumentPages] = useState<DocumentPageData[]>([]);
+  const [processingError, setProcessingError] = useState<string>('');
   
   // Filters
   const [showOnlyUnassigned, setShowOnlyUnassigned] = useState(false);
@@ -32,6 +33,8 @@ export function Documents() {
     const uploadId = `${file.name}_${Date.now()}`;
     setUploadingPDFs(prev => [...prev, uploadId]);
     setProcessingStatus(`Processing ${file.name}...`);
+    setProcessingProgress(null);
+    setProcessingError('');
 
     try {
       console.log('🚀 Starting PDF upload process for:', file.name);
@@ -46,11 +49,14 @@ export function Documents() {
       console.log(`🎉 PDF processed: ${processedPages.length} pages extracted`);
       
       setProcessingStatus('Creating page thumbnails...');
+      setProcessingProgress({ current: 0, total: processedPages.length });
       
       // Create document page objects for display
       const newPages: DocumentPageData[] = processedPages.map((page, index) => {
         const thumbnailUrl = URL.createObjectURL(page.thumbnailBlob);
         const fullPageUrl = URL.createObjectURL(page.fullPageBlob);
+        
+        setProcessingProgress(prev => prev ? { ...prev, current: index + 1 } : null);
         
         return {
           id: `page_${Date.now()}_${index}`,
@@ -64,6 +70,7 @@ export function Documents() {
 
       setDocumentPages(prev => [...prev, ...newPages]);
       setProcessingStatus('');
+      setProcessingProgress(null);
 
       toast({
         title: "PDF Processed Successfully! 🎉",
@@ -74,6 +81,7 @@ export function Documents() {
       console.error('❌ PDF upload process failed:', error);
       
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred during PDF processing';
+      setProcessingError(errorMessage);
       
       toast({
         title: "PDF Processing Failed",
@@ -83,8 +91,14 @@ export function Documents() {
     } finally {
       setUploadingPDFs(prev => prev.filter(id => id !== uploadId));
       setProcessingStatus('');
+      setProcessingProgress(null);
     }
   }, [toast]);
+
+  const retryProcessing = () => {
+    setProcessingError('');
+    // Reset any failed state if needed
+  };
 
   const handlePageSelect = (pageId: string) => {
     setSelectedPages(prev => 
@@ -199,15 +213,55 @@ export function Documents() {
         </CardHeader>
         <CardContent>
           <PDFUploadZone onUpload={handlePDFUpload} />
+          
+          {/* Processing Status */}
           {processingStatus && (
             <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
               <div className="flex items-center gap-2">
                 <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
                 <p className="text-sm text-blue-700 font-medium">{processingStatus}</p>
               </div>
+              {processingProgress && (
+                <div className="mt-2">
+                  <div className="flex justify-between text-xs text-blue-600">
+                    <span>Progress: {processingProgress.current}/{processingProgress.total}</span>
+                    <span>{Math.round((processingProgress.current / processingProgress.total) * 100)}%</span>
+                  </div>
+                  <div className="w-full bg-blue-200 rounded-full h-2 mt-1">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${(processingProgress.current / processingProgress.total) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              )}
               <p className="text-xs text-blue-600 mt-1">
                 Each page is processed individually for optimal quality
               </p>
+            </div>
+          )}
+
+          {/* Processing Error */}
+          {processingError && (
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm text-red-700 font-medium">PDF Processing Failed</p>
+                  <p className="text-sm text-red-600 mt-1">{processingError}</p>
+                  <div className="mt-3 flex gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={retryProcessing}
+                      className="text-red-700 border-red-300 hover:bg-red-50"
+                    >
+                      <RefreshCw className="w-4 h-4 mr-1" />
+                      Try Again
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </CardContent>

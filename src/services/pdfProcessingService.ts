@@ -1,8 +1,15 @@
 
 import * as pdfjsLib from 'pdfjs-dist';
 
-// Configure PDF.js to use the local worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+// Configure PDF.js worker with fallback options
+try {
+  // Try to use local worker first
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+} catch (error) {
+  console.warn('Failed to set local worker, falling back to CDN:', error);
+  // Fallback to CDN worker
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js';
+}
 
 export interface ProcessedPage {
   pageNumber: number;
@@ -24,26 +31,34 @@ export class PDFProcessingService {
         throw new Error('Invalid file type. Please upload a PDF file.');
       }
 
-      if (file.size > 50 * 1024 * 1024) { // 50MB limit
-        throw new Error('File too large. Please upload a PDF smaller than 50MB.');
+      if (file.size > 100 * 1024 * 1024) { // 100MB limit
+        throw new Error('File too large. Please upload a PDF smaller than 100MB.');
       }
 
       const arrayBuffer = await file.arrayBuffer();
       console.log('📖 Loading PDF document...');
       
-      const pdf = await pdfjsLib.getDocument({
+      // Enhanced PDF loading with fallback options
+      const loadingTask = pdfjsLib.getDocument({
         data: arrayBuffer,
-        verbosity: 0
-      }).promise;
+        verbosity: 0,
+        // Add fallback for environments where Web Workers aren't available
+        disableWorker: typeof Worker === 'undefined',
+        // Disable font face to avoid potential issues
+        disableFontFace: true,
+        // Use legacy build for better compatibility
+        useSystemFonts: true
+      });
       
+      const pdf = await loadingTask.promise;
       console.log('✅ PDF loaded! Total pages:', pdf.numPages);
       
       if (pdf.numPages === 0) {
         throw new Error('PDF contains no pages');
       }
 
-      if (pdf.numPages > 100) {
-        throw new Error(`PDF has too many pages (${pdf.numPages}). Maximum 100 pages allowed.`);
+      if (pdf.numPages > 200) {
+        throw new Error(`PDF has too many pages (${pdf.numPages}). Maximum 200 pages allowed.`);
       }
 
       const pages: ProcessedPage[] = [];
@@ -55,11 +70,11 @@ export class PDFProcessingService {
         try {
           const page = await pdf.getPage(pageNum);
           
-          // Create thumbnail (200px max dimension)
-          const thumbnailBlob = await this.renderPageToBlob(page, 200);
+          // Create thumbnail (300px max dimension for better quality)
+          const thumbnailBlob = await this.renderPageToBlob(page, 300);
           
-          // Create full page (800px max dimension)
-          const fullPageBlob = await this.renderPageToBlob(page, 800);
+          // Create full page (1200px max dimension)
+          const fullPageBlob = await this.renderPageToBlob(page, 1200);
           
           pages.push({
             pageNumber: pageNum,
@@ -68,6 +83,11 @@ export class PDFProcessingService {
           });
           
           console.log(`✅ Page ${pageNum} processed successfully`);
+          
+          // Add small delay to prevent overwhelming the browser
+          if (pageNum % 10 === 0) {
+            await new Promise(resolve => setTimeout(resolve, 50));
+          }
           
         } catch (pageError) {
           console.error(`❌ Failed to process page ${pageNum}:`, pageError);
@@ -84,7 +104,20 @@ export class PDFProcessingService {
       
     } catch (error) {
       console.error('❌ PDF Processing failed:', error);
-      throw new Error(`PDF processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      // Provide more specific error messages
+      if (error instanceof Error) {
+        if (error.message.includes('Setting up fake worker failed')) {
+          throw new Error('PDF worker setup failed. Please try refreshing the page and uploading again.');
+        } else if (error.message.includes('Invalid PDF structure')) {
+          throw new Error('The PDF file appears to be corrupted or invalid. Please try a different PDF file.');
+        } else if (error.message.includes('Password')) {
+          throw new Error('This PDF is password protected. Please provide an unprotected PDF file.');
+        }
+        throw new Error(`PDF processing failed: ${error.message}`);
+      }
+      
+      throw new Error('PDF processing failed: Unknown error occurred');
     }
   }
 
@@ -118,11 +151,18 @@ export class PDFProcessingService {
         context.fillStyle = '#FFFFFF';
         context.fillRect(0, 0, canvas.width, canvas.height);
         
-        // Render page
-        const renderTask = page.render({
+        // Enhanced render options
+        const renderContext = {
           canvasContext: context,
-          viewport: viewport
-        });
+          viewport: viewport,
+          // Enable text layer for better quality
+          textLayer: null,
+          // Optimize for quality
+          intent: 'display'
+        };
+        
+        // Render page
+        const renderTask = page.render(renderContext);
         
         renderTask.promise
           .then(() => {
@@ -132,7 +172,7 @@ export class PDFProcessingService {
               } else {
                 reject(new Error('Failed to create blob from canvas'));
               }
-            }, 'image/jpeg', 0.85);
+            }, 'image/jpeg', 0.9); // Higher quality
           })
           .catch((error) => {
             console.error('Render task failed:', error);
