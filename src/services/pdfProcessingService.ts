@@ -1,15 +1,7 @@
-
 import * as pdfjsLib from 'pdfjs-dist';
 
-// Configure PDF.js worker with fallback options
-try {
-  // Try to use local worker first
-  pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
-} catch (error) {
-  console.warn('Failed to set local worker, falling back to CDN:', error);
-  // Fallback to CDN worker
-  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js';
-}
+// Configure PDF.js worker with reliable CDN
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js';
 
 export interface ProcessedPage {
   pageNumber: number;
@@ -38,14 +30,10 @@ export class PDFProcessingService {
       const arrayBuffer = await file.arrayBuffer();
       console.log('📖 Loading PDF document...');
       
-      // Enhanced PDF loading with proper configuration
+      // Simple PDF loading configuration
       const loadingTask = pdfjsLib.getDocument({
         data: arrayBuffer,
-        verbosity: 0,
-        // Disable font face to avoid potential issues
-        disableFontFace: true,
-        // Use system fonts for better compatibility
-        useSystemFonts: true
+        verbosity: 0
       });
       
       const pdf = await loadingTask.promise;
@@ -105,7 +93,7 @@ export class PDFProcessingService {
       
       // Provide more specific error messages
       if (error instanceof Error) {
-        if (error.message.includes('Setting up fake worker failed')) {
+        if (error.message.includes('Setting up fake worker failed') || error.message.includes('importScripts')) {
           throw new Error('PDF worker setup failed. Please try refreshing the page and uploading again.');
         } else if (error.message.includes('Invalid PDF structure')) {
           throw new Error('The PDF file appears to be corrupted or invalid. Please try a different PDF file.');
