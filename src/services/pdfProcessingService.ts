@@ -38,15 +38,13 @@ export class PDFProcessingService {
       const arrayBuffer = await file.arrayBuffer();
       console.log('📖 Loading PDF document...');
       
-      // Enhanced PDF loading with fallback options
+      // Enhanced PDF loading with proper configuration
       const loadingTask = pdfjsLib.getDocument({
         data: arrayBuffer,
         verbosity: 0,
-        // Add fallback for environments where Web Workers aren't available
-        disableWorker: typeof Worker === 'undefined',
         // Disable font face to avoid potential issues
         disableFontFace: true,
-        // Use legacy build for better compatibility
+        // Use system fonts for better compatibility
         useSystemFonts: true
       });
       
@@ -57,8 +55,8 @@ export class PDFProcessingService {
         throw new Error('PDF contains no pages');
       }
 
-      if (pdf.numPages > 200) {
-        throw new Error(`PDF has too many pages (${pdf.numPages}). Maximum 200 pages allowed.`);
+      if (pdf.numPages > 100) {
+        throw new Error(`PDF has too many pages (${pdf.numPages}). Maximum 100 pages allowed.`);
       }
 
       const pages: ProcessedPage[] = [];
