@@ -33,8 +33,7 @@ export class PDFProcessingService {
       
       const pdf = await pdfjsLib.getDocument({
         data: arrayBuffer,
-        verbosity: 0,
-        disableWorker: false
+        verbosity: 0
       }).promise;
       
       console.log('✅ PDF loaded! Total pages:', pdf.numPages);
@@ -43,8 +42,8 @@ export class PDFProcessingService {
         throw new Error('PDF contains no pages');
       }
 
-      if (pdf.numPages > 50) {
-        throw new Error(`PDF has too many pages (${pdf.numPages}). Maximum 50 pages allowed.`);
+      if (pdf.numPages > 100) {
+        throw new Error(`PDF has too many pages (${pdf.numPages}). Maximum 100 pages allowed.`);
       }
 
       const pages: ProcessedPage[] = [];
