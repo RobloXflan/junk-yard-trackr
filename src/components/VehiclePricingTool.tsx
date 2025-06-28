@@ -97,42 +97,57 @@ export function VehiclePricingTool() {
     console.log('Vehicles with purchase price:', vehiclesWithPurchasePrice.length);
     console.log('Quotes as similar vehicles:', quotesAsSimilarVehicles.length);
 
-    // Find exact matches from vehicles
+    // Find exact matches from vehicles (add $100 to purchase price for display)
     const exactMatchesFromVehicles = vehiclesWithPurchasePrice.filter(v =>
       v.make.toLowerCase() === searchMake.toLowerCase() &&
       v.model.toLowerCase() === searchModel.toLowerCase() &&
       Math.abs(parseInt(v.year) - parseInt(searchYear)) <= 3
-    ).map(v => ({ ...v, matchType: 'exact' as const, source: 'inventory' as const }));
+    ).map(v => ({ 
+      ...v, 
+      matchType: 'exact' as const, 
+      source: 'inventory' as const,
+      purchasePrice: (parseFloat(v.purchasePrice || '0') + 100).toString()
+    }));
 
-    // Find exact matches from saved quotes
+    // Find exact matches from saved quotes (no price adjustment)
     const exactMatchesFromQuotes = quotesAsSimilarVehicles.filter(v =>
       v.make.toLowerCase() === searchMake.toLowerCase() &&
       v.model.toLowerCase() === searchModel.toLowerCase() &&
       Math.abs(parseInt(v.year) - parseInt(searchYear)) <= 3
     ).map(v => ({ ...v, matchType: 'exact' as const }));
 
-    // Find model matches from vehicles
+    // Find model matches from vehicles (add $100 to purchase price for display)
     const modelMatchesFromVehicles = vehiclesWithPurchasePrice.filter(v =>
       v.model.toLowerCase() === searchModel.toLowerCase() &&
       v.make.toLowerCase() !== searchMake.toLowerCase() &&
       Math.abs(parseInt(v.year) - parseInt(searchYear)) <= 5
-    ).map(v => ({ ...v, matchType: 'model' as const, source: 'inventory' as const }));
+    ).map(v => ({ 
+      ...v, 
+      matchType: 'model' as const, 
+      source: 'inventory' as const,
+      purchasePrice: (parseFloat(v.purchasePrice || '0') + 100).toString()
+    }));
 
-    // Find model matches from saved quotes
+    // Find model matches from saved quotes (no price adjustment)
     const modelMatchesFromQuotes = quotesAsSimilarVehicles.filter(v =>
       v.model.toLowerCase() === searchModel.toLowerCase() &&
       v.make.toLowerCase() !== searchMake.toLowerCase() &&
       Math.abs(parseInt(v.year) - parseInt(searchYear)) <= 5
     ).map(v => ({ ...v, matchType: 'model' as const }));
 
-    // Find make/year matches from vehicles
+    // Find make/year matches from vehicles (add $100 to purchase price for display)
     const makeYearMatchesFromVehicles = vehiclesWithPurchasePrice.filter(v =>
       v.make.toLowerCase() === searchMake.toLowerCase() &&
       v.model.toLowerCase() !== searchModel.toLowerCase() &&
       Math.abs(parseInt(v.year) - parseInt(searchYear)) <= 2
-    ).map(v => ({ ...v, matchType: 'make_year' as const, source: 'inventory' as const }));
+    ).map(v => ({ 
+      ...v, 
+      matchType: 'make_year' as const, 
+      source: 'inventory' as const,
+      purchasePrice: (parseFloat(v.purchasePrice || '0') + 100).toString()
+    }));
 
-    // Find make/year matches from saved quotes
+    // Find make/year matches from saved quotes (no price adjustment)
     const makeYearMatchesFromQuotes = quotesAsSimilarVehicles.filter(v =>
       v.make.toLowerCase() === searchMake.toLowerCase() &&
       v.model.toLowerCase() !== searchModel.toLowerCase() &&
