@@ -17,7 +17,7 @@ export function Print() {
 
   const handlePrint = (document: UploadedDocument) => {
     // Create a temporary div to hold the document for printing
-    const printDiv = document.createElement('div');
+    const printDiv = window.document.createElement('div');
     printDiv.className = 'print-document';
     printDiv.style.position = 'fixed';
     printDiv.style.top = '0';
@@ -49,13 +49,13 @@ export function Print() {
     }
 
     // Add to document
-    document.body.appendChild(printDiv);
+    window.document.body.appendChild(printDiv);
     
     // Show the print div
     printDiv.style.display = 'block';
     
     // Hide the main content
-    const mainContent = document.querySelector('main');
+    const mainContent = window.document.querySelector('main');
     if (mainContent) {
       (mainContent as HTMLElement).style.display = 'none';
     }
@@ -66,7 +66,7 @@ export function Print() {
       
       // Clean up after print dialog closes
       setTimeout(() => {
-        document.body.removeChild(printDiv);
+        window.document.body.removeChild(printDiv);
         if (mainContent) {
           (mainContent as HTMLElement).style.display = '';
         }
