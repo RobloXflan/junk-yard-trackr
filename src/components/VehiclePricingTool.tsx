@@ -53,34 +53,35 @@ export function VehiclePricingTool() {
       return { filteredVehicles: vehicles, removedCount: 0 };
     }
 
-    // Sort prices to calculate quartiles
+    // Sort prices to calculate median
     const sortedPrices = [...prices].sort((a, b) => a - b);
-    const q1Index = Math.floor(sortedPrices.length * 0.25);
-    const q3Index = Math.floor(sortedPrices.length * 0.75);
+    const medianIndex = Math.floor(sortedPrices.length / 2);
+    const median = sortedPrices.length % 2 === 0 
+      ? (sortedPrices[medianIndex - 1] + sortedPrices[medianIndex]) / 2
+      : sortedPrices[medianIndex];
     
-    const q1 = sortedPrices[q1Index];
-    const q3 = sortedPrices[q3Index];
-    const iqr = q3 - q1;
+    // Define outlier bounds using 40% above and below median
+    const lowerBound = median * 0.6; // 40% below median
+    const upperBound = median * 1.4; // 40% above median
     
-    // Define outlier bounds using IQR method
-    const lowerBound = q1 - (1.5 * iqr);
-    const upperBound = q3 + (1.5 * iqr);
-    
-    console.log('Outlier detection:', { q1, q3, iqr, lowerBound, upperBound });
+    console.log('Outlier detection:', { median, lowerBound, upperBound });
 
-    // Filter out outliers, but prioritize exact matches
+    // Filter out outliers, but NEVER remove exact matches or saved quotes
     const filteredVehicles = vehicles.filter(vehicle => {
       const price = parseFloat(vehicle.purchasePrice || '0');
       if (price <= 0) return false;
       
-      // Keep exact matches even if they're outliers (unless extremely unreasonable)
+      // ALWAYS keep exact matches (same make and model regardless of year)
       if (vehicle.matchType === 'exact') {
-        const medianPrice = sortedPrices[Math.floor(sortedPrices.length / 2)];
-        // Only remove exact matches if they're more than 3x the median
-        return price <= medianPrice * 3 && price >= medianPrice * 0.33;
+        return true;
       }
       
-      // For non-exact matches, apply normal outlier filtering
+      // ALWAYS keep saved quotes
+      if (vehicle.source === 'saved_quote') {
+        return true;
+      }
+      
+      // For other matches (model only, make_year only), apply outlier filtering
       return price >= lowerBound && price <= upperBound;
     });
 
