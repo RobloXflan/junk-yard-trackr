@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,11 +25,12 @@ interface SimilarVehicle {
   purchasePrice?: string;
   matchType: 'exact' | 'model' | 'make_year';
   purchaseDate?: string;
+  source: 'inventory' | 'saved_quote';
 }
 
 export function VehiclePricingTool() {
   const { vehicles } = useVehicleStore();
-  const { addQuote } = useQuotesStore();
+  const { quotes, addQuote } = useQuotesStore();
   const { toast } = useToast();
   
   const [searchYear, setSearchYear] = useState('');
@@ -74,39 +76,76 @@ export function VehiclePricingTool() {
 
     console.log('Searching vehicles with:', { searchYear, searchMake, searchModel });
     console.log('Available vehicles:', vehicles.length);
+    console.log('Available saved quotes:', quotes.length);
 
     // Filter vehicles that have purchase prices
     const vehiclesWithPurchasePrice = vehicles.filter(v => 
       v.purchasePrice && parseFloat(v.purchasePrice) > 0
     );
 
-    console.log('Vehicles with purchase price:', vehiclesWithPurchasePrice.length);
+    // Convert saved quotes to similar vehicle format
+    const quotesAsSimilarVehicles = quotes.map(quote => ({
+      id: quote.id,
+      year: quote.year,
+      make: quote.make,
+      model: quote.model,
+      purchasePrice: quote.adjustedOffer.toString(),
+      purchaseDate: quote.createdAt,
+      source: 'saved_quote' as const
+    }));
 
-    // Find exact matches first (same make, model, similar year)
-    const exactMatches = vehiclesWithPurchasePrice.filter(v =>
+    console.log('Vehicles with purchase price:', vehiclesWithPurchasePrice.length);
+    console.log('Quotes as similar vehicles:', quotesAsSimilarVehicles.length);
+
+    // Find exact matches from vehicles
+    const exactMatchesFromVehicles = vehiclesWithPurchasePrice.filter(v =>
       v.make.toLowerCase() === searchMake.toLowerCase() &&
       v.model.toLowerCase() === searchModel.toLowerCase() &&
       Math.abs(parseInt(v.year) - parseInt(searchYear)) <= 3
-    );
+    ).map(v => ({ ...v, matchType: 'exact' as const, source: 'inventory' as const }));
 
-    // Find model matches (same model, any make, similar year)
-    const modelMatches = vehiclesWithPurchasePrice.filter(v =>
+    // Find exact matches from saved quotes
+    const exactMatchesFromQuotes = quotesAsSimilarVehicles.filter(v =>
+      v.make.toLowerCase() === searchMake.toLowerCase() &&
+      v.model.toLowerCase() === searchModel.toLowerCase() &&
+      Math.abs(parseInt(v.year) - parseInt(searchYear)) <= 3
+    ).map(v => ({ ...v, matchType: 'exact' as const }));
+
+    // Find model matches from vehicles
+    const modelMatchesFromVehicles = vehiclesWithPurchasePrice.filter(v =>
       v.model.toLowerCase() === searchModel.toLowerCase() &&
       v.make.toLowerCase() !== searchMake.toLowerCase() &&
       Math.abs(parseInt(v.year) - parseInt(searchYear)) <= 5
-    );
+    ).map(v => ({ ...v, matchType: 'model' as const, source: 'inventory' as const }));
 
-    // Find make/year matches (same make, similar year, any model)
-    const makeYearMatches = vehiclesWithPurchasePrice.filter(v =>
+    // Find model matches from saved quotes
+    const modelMatchesFromQuotes = quotesAsSimilarVehicles.filter(v =>
+      v.model.toLowerCase() === searchModel.toLowerCase() &&
+      v.make.toLowerCase() !== searchMake.toLowerCase() &&
+      Math.abs(parseInt(v.year) - parseInt(searchYear)) <= 5
+    ).map(v => ({ ...v, matchType: 'model' as const }));
+
+    // Find make/year matches from vehicles
+    const makeYearMatchesFromVehicles = vehiclesWithPurchasePrice.filter(v =>
       v.make.toLowerCase() === searchMake.toLowerCase() &&
       v.model.toLowerCase() !== searchModel.toLowerCase() &&
       Math.abs(parseInt(v.year) - parseInt(searchYear)) <= 2
-    );
+    ).map(v => ({ ...v, matchType: 'make_year' as const, source: 'inventory' as const }));
+
+    // Find make/year matches from saved quotes
+    const makeYearMatchesFromQuotes = quotesAsSimilarVehicles.filter(v =>
+      v.make.toLowerCase() === searchMake.toLowerCase() &&
+      v.model.toLowerCase() !== searchModel.toLowerCase() &&
+      Math.abs(parseInt(v.year) - parseInt(searchYear)) <= 2
+    ).map(v => ({ ...v, matchType: 'make_year' as const }));
 
     const results: SimilarVehicle[] = [
-      ...exactMatches.map(v => ({ ...v, matchType: 'exact' as const })),
-      ...modelMatches.map(v => ({ ...v, matchType: 'model' as const })),
-      ...makeYearMatches.map(v => ({ ...v, matchType: 'make_year' as const }))
+      ...exactMatchesFromVehicles,
+      ...exactMatchesFromQuotes,
+      ...modelMatchesFromVehicles,
+      ...modelMatchesFromQuotes,
+      ...makeYearMatchesFromVehicles,
+      ...makeYearMatchesFromQuotes
     ];
 
     // Sort by relevance (exact matches first, then by year proximity)
@@ -129,18 +168,23 @@ export function VehiclePricingTool() {
       const prices = limitedResults.map(v => parseFloat(v.purchasePrice || '0')).filter(p => p > 0);
       
       if (prices.length > 0) {
-        // Weight exact matches more heavily
+        // Weight exact matches more heavily, and saved quotes slightly less than inventory
         const weightedPrices = limitedResults.map(v => {
           const price = parseFloat(v.purchasePrice || '0');
-          const weight = v.matchType === 'exact' ? 3 : v.matchType === 'model' ? 2 : 1;
+          let weight = v.matchType === 'exact' ? 3 : v.matchType === 'model' ? 2 : 1;
+          // Slightly reduce weight for saved quotes vs inventory
+          if (v.source === 'saved_quote') {
+            weight = weight * 0.8;
+          }
           return { price, weight };
         }).filter(p => p.price > 0);
 
         const totalWeight = weightedPrices.reduce((sum, p) => sum + p.weight, 0);
         const weightedAverage = weightedPrices.reduce((sum, p) => sum + (p.price * p.weight), 0) / totalWeight;
 
+        const exactMatches = limitedResults.filter(v => v.matchType === 'exact');
         const confidence = exactMatches.length > 0 ? 'High' : 
-                          modelMatches.length > 0 ? 'Medium' : 'Low';
+                          limitedResults.filter(v => v.matchType === 'model').length > 0 ? 'Medium' : 'Low';
 
         setPriceEstimate({
           estimatedPrice: Math.round(weightedAverage),
@@ -174,6 +218,14 @@ export function VehiclePricingTool() {
       case 'make_year': return 'bg-yellow-100 text-yellow-800';
       default: return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const getSourceLabel = (source: string) => {
+    return source === 'inventory' ? 'Inventory' : 'Saved Quote';
+  };
+
+  const getSourceColor = (source: string) => {
+    return source === 'inventory' ? 'bg-purple-100 text-purple-800' : 'bg-orange-100 text-orange-800';
   };
 
   const resetSearch = () => {
@@ -260,7 +312,7 @@ export function VehiclePricingTool() {
                       ${priceEstimate.estimatedPrice.toLocaleString()}
                     </div>
                     <div className="text-sm text-green-600">
-                      Based on {priceEstimate.dataPoints} similar vehicle{priceEstimate.dataPoints !== 1 ? 's' : ''}
+                      Based on {priceEstimate.dataPoints} similar vehicle{priceEstimate.dataPoints !== 1 ? 's' : ''} from inventory and saved quotes
                     </div>
                     <Badge variant="outline" className={`mt-2 ${
                       priceEstimate.confidence === 'High' ? 'border-green-500 text-green-700' :
@@ -307,7 +359,7 @@ export function VehiclePricingTool() {
                 <div className="space-y-3">
                   {similarVehicles.map((vehicle) => (
                     <div
-                      key={vehicle.id}
+                      key={`${vehicle.source}-${vehicle.id}`}
                       className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
                     >
                       <div className="flex-1">
@@ -316,12 +368,15 @@ export function VehiclePricingTool() {
                         </div>
                         {vehicle.purchaseDate && (
                           <div className="text-sm text-gray-500">
-                            Purchased: {new Date(vehicle.purchaseDate).toLocaleDateString()}
+                            {vehicle.source === 'inventory' ? 'Purchased' : 'Quote saved'}: {new Date(vehicle.purchaseDate).toLocaleDateString()}
                           </div>
                         )}
                       </div>
                       
                       <div className="flex items-center gap-3">
+                        <Badge className={getSourceColor(vehicle.source)}>
+                          {getSourceLabel(vehicle.source)}
+                        </Badge>
                         <Badge className={getMatchTypeColor(vehicle.matchType)}>
                           {getMatchTypeLabel(vehicle.matchType)}
                         </Badge>
@@ -335,7 +390,7 @@ export function VehiclePricingTool() {
               ) : (
                 <div className="text-center py-8 text-gray-500">
                   <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>No similar vehicles found in your purchase history.</p>
+                  <p>No similar vehicles found in your inventory or saved quotes.</p>
                   <p className="text-sm mt-1">
                     Try searching with different criteria or add more vehicle data to improve future searches.
                   </p>
@@ -354,11 +409,11 @@ export function VehiclePricingTool() {
               Smart Vehicle Pricing Tool
             </h3>
             <p className="text-gray-500 mb-4">
-              Enter a vehicle's year, make, and model to find similar vehicles from your purchase history
-              and get a suggested offer price.
+              Enter a vehicle's year, make, and model to find similar vehicles from your inventory and saved quotes
+              to get a suggested offer price.
             </p>
             <p className="text-sm text-gray-400">
-              The more vehicles you add to your inventory, the smarter this tool becomes.
+              The more vehicles and quotes you have, the smarter this tool becomes.
             </p>
           </CardContent>
         </Card>
