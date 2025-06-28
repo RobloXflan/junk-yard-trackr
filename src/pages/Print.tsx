@@ -1,123 +1,185 @@
 
-import { Printer } from "lucide-react";
+import { useState } from "react";
+import { Printer, Upload, FileText, Eye, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DocumentUpload, UploadedDocument } from "@/components/forms/DocumentUpload";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export function Print() {
-  const handlePrint = () => {
-    window.print();
+  const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
+  const [selectedDocument, setSelectedDocument] = useState<UploadedDocument | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  const handlePrint = (document: UploadedDocument) => {
+    // Create a new window for printing the document
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      if (document.file.type === 'application/pdf') {
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>Print - ${document.name}</title>
+              <style>
+                body { margin: 0; padding: 0; }
+                iframe { width: 100vw; height: 100vh; border: none; }
+                @media print {
+                  body { margin: 0; }
+                  iframe { width: 100%; height: 100%; }
+                }
+              </style>
+            </head>
+            <body>
+              <iframe src="${document.url}" onload="window.print()"></iframe>
+            </body>
+          </html>
+        `);
+      } else {
+        // For images
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>Print - ${document.name}</title>
+              <style>
+                body { 
+                  margin: 0; 
+                  padding: 20px; 
+                  display: flex; 
+                  justify-content: center; 
+                  align-items: center; 
+                  min-height: 100vh; 
+                }
+                img { 
+                  max-width: 100%; 
+                  max-height: 100vh; 
+                  object-fit: contain; 
+                }
+                @media print {
+                  body { padding: 0; }
+                  img { width: 100%; height: auto; }
+                }
+              </style>
+            </head>
+            <body>
+              <img src="${document.url}" onload="window.print()" alt="${document.name}" />
+            </body>
+          </html>
+        `);
+      }
+    }
+  };
+
+  const viewDocument = (document: UploadedDocument) => {
+    setSelectedDocument(document);
+    setPreviewOpen(true);
+  };
+
+  const deleteDocument = (documentId: string) => {
+    setUploadedDocuments(prev => prev.filter(doc => doc.id !== documentId));
   };
 
   return (
     <div className="container mx-auto p-6">
-      <div className="mb-6 flex justify-between items-center">
+      <div className="mb-6">
         <h1 className="text-2xl font-bold">Print Documents</h1>
-        <Button onClick={handlePrint} className="flex items-center gap-2">
-          <Printer className="w-4 h-4" />
-          Print Document
-        </Button>
+        <p className="text-muted-foreground mt-2">Upload and manage documents for printing</p>
       </div>
       
-      {/* Document container */}
-      <div className="print-document bg-white shadow-lg mx-auto border border-black" style={{ width: '8.5in', minHeight: '11in' }}>
-        <div className="p-8">
-          {/* Header */}
-          <div className="text-center mb-6">
-            <div className="font-bold text-lg">AMERICA'S AUTO TOWING LLC</div>
-            <div className="mt-1">4735 Cecilia St</div>
-            <div>Cudahy, Ca 90201</div>
-            <div className="mt-4 font-bold text-xl underline">Buyer / Seller Agreement</div>
-          </div>
+      {/* Upload Section */}
+      <div className="mb-8">
+        <DocumentUpload 
+          uploadedDocuments={uploadedDocuments}
+          onDocumentsChange={setUploadedDocuments}
+        />
+      </div>
 
-          {/* Vehicle Information Section */}
-          <div className="mb-6">
-            <div className="font-bold underline mb-3">Vehicle Information</div>
-            <div className="grid grid-cols-2 gap-4 mb-2">
-              <div>Year: _____________</div>
-              <div>Make: _____________</div>
-            </div>
-            <div className="grid grid-cols-2 gap-4 mb-2">
-              <div>VIN: _____________</div>
-              <div>Model: _____________</div>
-            </div>
-            <div className="mb-2">Odometer/Mileage: _____________</div>
-            <div className="grid grid-cols-2 gap-4 mb-2">
-              <div>License: _____________</div>
-              <div>State: _____________</div>
-            </div>
-            <div>Color: _____________</div>
-          </div>
-
-          {/* Customer Information Section */}
-          <div className="mb-6">
-            <div className="font-bold underline mb-3">Customer Information</div>
-            <div className="grid grid-cols-2 gap-4 mb-2">
-              <div>First Name: _____________</div>
-              <div>Last Name: _____________</div>
-            </div>
-            <div className="mb-2">Address: _____________</div>
-            <div className="grid grid-cols-3 gap-4 mb-2">
-              <div>City: _____________</div>
-              <div>State: _____________</div>
-              <div>Zip: _____________</div>
-            </div>
-            <div className="grid grid-cols-2 gap-4 mb-2">
-              <div>Phone: ( ) _____________</div>
-              <div>Alt Phone: ( ) _____________</div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div>Driver's License: _____________</div>
-              <div>State: _____________</div>
-              <div>Exp: ___/___/_____</div>
-            </div>
-          </div>
-
-          {/* Affidavit Section */}
-          <div className="mb-6">
-            <div className="text-center font-bold mb-3">Affidavit</div>
-            <div className="text-sm leading-relaxed mb-4">
-              Please be advised that I have today assigned America's Auto Towing LLC the vehicle described herein and wish to confirm the following: The undersigned has assumed or acquired legal ownership to said vehicle and is authorized to assign the vehicle to America's Auto Towing LLC.
-            </div>
-            <div className="text-sm mb-4">
-              The undersigned provider/seller states that he has the lawful right to possess this vehicle because:
-            </div>
-            <div className="text-sm ml-6 mb-4">
-              <div>1. The undersigned provider/seller purchased the vehicle from the previous owner.</div>
-              <div>2. The previous owner gifted the vehicle _____ OR</div>
-              <div>3. Other basis of rightful possession.</div>
-            </div>
-            <div className="text-sm mb-4">
-              Note: All transactions are reported to the Department of Motor Vehicles. YOU are required by law to notify the DMV within 5 days from the date you sell or otherwise dispose of a vehicle.
-            </div>
-            <div className="text-sm mb-4">
-              NOTE: If for any reason you change your mind and want to cancel the transaction a $100.00 CANCELLATION FEE WILL BE CHARGED. IF THE TOW TRUCK IS THERE TO PICK UP THE VEHICLE AND YOU WANT TO CANCEL IT WE CHARGE $150.00. FEE TO RUN A RECORD IS $35.00
-            </div>
-            <div className="text-sm mb-4">
-              AMERICA'S Auto Towing, LLC will <span className="font-bold underline">NOT</span> be responsible for any damage caused to your property, building structure or any other vehicle while removing the vehicle from your location. Please make clearance for our tow trucks to safely remove your junk car. As a REMINDER, please remove ALL your BELONGINGS BEFORE we pick up the vehicle, we are not responsible once we tow it.
-            </div>
-            <div className="text-sm mb-4">
-              If the vehicle is reported stolen, we will exercise our right to seek legal remedy to recover our funds by suing the seller.
-            </div>
-            <div className="text-sm mb-6">
-              Atención: Si el vehículo es reportado robado, haremos uso de nuestro derecho de recuperar nuestra inversión y PODREMOS demandandarnos al vendedor para recuperar nuestro dinero. No se olvide de dar de baja el vehículo en el DMV es su responsabilidad en los siguientes 5 días después de la venta.
-            </div>
-          </div>
-
-          {/* Signature Section */}
-          <div className="grid grid-cols-2 gap-8 mb-4">
-            <div>Amount Paid: $___________</div>
-            <div>Date: ___________</div>
-          </div>
-          <div className="mb-4">Seller's Finger Print: ___________________________</div>
-          <div className="grid grid-cols-2 gap-8 mb-4">
-            <div>Seller's Name: ___________________________</div>
-            <div>Signature: ___________________________</div>
-          </div>
-          <div className="grid grid-cols-2 gap-8">
-            <div>Driver Name: ___________________________</div>
-            <div>Driver Signature: ___________________________</div>
+      {/* Documents List */}
+      {uploadedDocuments.length > 0 && (
+        <div className="bg-white rounded-lg border p-6">
+          <h2 className="text-xl font-semibold mb-4">Your Documents ({uploadedDocuments.length})</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {uploadedDocuments.map((document) => (
+              <div key={document.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div className="flex items-start gap-3">
+                  <FileText className="w-8 h-8 text-primary flex-shrink-0 mt-1" />
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium text-sm mb-1 truncate">{document.name}</h3>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      {(document.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => handlePrint(document)}
+                        className="flex items-center gap-1"
+                      >
+                        <Printer className="w-3 h-3" />
+                        Print
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => viewDocument(document)}
+                        className="flex items-center gap-1"
+                      >
+                        <Eye className="w-3 h-3" />
+                        View
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => deleteDocument(document.id)}
+                        className="flex items-center gap-1 text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      </div>
+      )}
+
+      {uploadedDocuments.length === 0 && (
+        <div className="text-center py-12 bg-muted/20 rounded-lg">
+          <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-medium mb-2">No documents uploaded</h3>
+          <p className="text-muted-foreground">Upload documents above to start printing them</p>
+        </div>
+      )}
+
+      {/* Preview Dialog */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>{selectedDocument?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-auto max-h-[70vh]">
+            {selectedDocument && (
+              selectedDocument.file.type === 'application/pdf' ? (
+                <iframe
+                  src={selectedDocument.url}
+                  className="w-full h-[600px] border-none"
+                  title={selectedDocument.name}
+                />
+              ) : (
+                <img
+                  src={selectedDocument.url}
+                  alt={selectedDocument.name}
+                  className="w-full h-auto max-h-[600px] object-contain"
+                />
+              )
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
