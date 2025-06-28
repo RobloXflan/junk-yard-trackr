@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Search, DollarSign, Save } from "lucide-react";
 import { useVehicleStore } from "@/hooks/useVehicleStore";
+import { useQuotesStore } from "@/hooks/useQuotesStore";
+import { useToast } from "@/hooks/use-toast";
 
 interface PriceEstimate {
   estimatedPrice: number;
@@ -27,6 +28,9 @@ interface SimilarVehicle {
 
 export function VehiclePricingTool() {
   const { vehicles } = useVehicleStore();
+  const { addQuote } = useQuotesStore();
+  const { toast } = useToast();
+  
   const [searchYear, setSearchYear] = useState('');
   const [searchMake, setSearchMake] = useState('');
   const [searchModel, setSearchModel] = useState('');
@@ -34,6 +38,34 @@ export function VehiclePricingTool() {
   const [priceEstimate, setPriceEstimate] = useState<PriceEstimate | null>(null);
   const [manualOffer, setManualOffer] = useState('');
   const [showResults, setShowResults] = useState(false);
+
+  const saveQuote = () => {
+    if (!priceEstimate || !searchYear || !searchMake || !searchModel) {
+      toast({
+        title: "Cannot Save Quote",
+        description: "Please complete a price search first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const adjustedOffer = parseFloat(manualOffer) || priceEstimate.estimatedPrice;
+    
+    addQuote({
+      year: searchYear,
+      make: searchMake,
+      model: searchModel,
+      estimatedPrice: priceEstimate.estimatedPrice,
+      adjustedOffer: adjustedOffer,
+      confidence: priceEstimate.confidence,
+      dataPoints: priceEstimate.dataPoints,
+    });
+
+    toast({
+      title: "Quote Saved",
+      description: `Quote for ${searchYear} ${searchMake} ${searchModel} has been saved.`,
+    });
+  };
 
   const searchSimilarVehicles = () => {
     if (!searchYear.trim() || !searchMake.trim() || !searchModel.trim()) {
@@ -255,7 +287,7 @@ export function VehiclePricingTool() {
                           className="pl-8"
                         />
                       </div>
-                      <Button variant="outline" className="flex items-center gap-2">
+                      <Button onClick={saveQuote} variant="outline" className="flex items-center gap-2">
                         <Save className="w-4 h-4" />
                         Save Quote
                       </Button>
