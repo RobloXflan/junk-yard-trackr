@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +14,7 @@ interface PriceEstimate {
   estimatedPrice: number;
   confidence: string;
   dataPoints: number;
+  removedOutliers?: number;
 }
 
 interface SimilarVehicle {
@@ -40,6 +40,61 @@ export function VehiclePricingTool() {
   const [priceEstimate, setPriceEstimate] = useState<PriceEstimate | null>(null);
   const [manualOffer, setManualOffer] = useState('');
   const [showResults, setShowResults] = useState(false);
+
+  const filterOutliers = (vehicles: SimilarVehicle[]) => {
+    if (vehicles.length < 4) {
+      // Don't filter if we have too few data points
+      return { filteredVehicles: vehicles, removedCount: 0 };
+    }
+
+    const prices = vehicles.map(v => parseFloat(v.purchasePrice || '0')).filter(p => p > 0);
+    
+    if (prices.length < 4) {
+      return { filteredVehicles: vehicles, removedCount: 0 };
+    }
+
+    // Sort prices to calculate quartiles
+    const sortedPrices = [...prices].sort((a, b) => a - b);
+    const q1Index = Math.floor(sortedPrices.length * 0.25);
+    const q3Index = Math.floor(sortedPrices.length * 0.75);
+    
+    const q1 = sortedPrices[q1Index];
+    const q3 = sortedPrices[q3Index];
+    const iqr = q3 - q1;
+    
+    // Define outlier bounds using IQR method
+    const lowerBound = q1 - (1.5 * iqr);
+    const upperBound = q3 + (1.5 * iqr);
+    
+    console.log('Outlier detection:', { q1, q3, iqr, lowerBound, upperBound });
+
+    // Filter out outliers, but prioritize exact matches
+    const filteredVehicles = vehicles.filter(vehicle => {
+      const price = parseFloat(vehicle.purchasePrice || '0');
+      if (price <= 0) return false;
+      
+      // Keep exact matches even if they're outliers (unless extremely unreasonable)
+      if (vehicle.matchType === 'exact') {
+        const medianPrice = sortedPrices[Math.floor(sortedPrices.length / 2)];
+        // Only remove exact matches if they're more than 3x the median
+        return price <= medianPrice * 3 && price >= medianPrice * 0.33;
+      }
+      
+      // For non-exact matches, apply normal outlier filtering
+      return price >= lowerBound && price <= upperBound;
+    });
+
+    // Ensure we don't remove too many data points
+    if (filteredVehicles.length < 2) {
+      console.log('Too few vehicles after filtering, keeping original data');
+      return { filteredVehicles: vehicles, removedCount: 0 };
+    }
+
+    const removedCount = vehicles.length - filteredVehicles.length;
+    console.log(`Filtered out ${removedCount} outliers, keeping ${filteredVehicles.length} vehicles`);
+    
+    return { filteredVehicles, removedCount };
+  };
 
   const saveQuote = () => {
     if (!priceEstimate || !searchYear || !searchMake || !searchModel) {
@@ -173,10 +228,16 @@ export function VehiclePricingTool() {
              Math.abs(parseInt(b.year) - parseInt(searchYear));
     });
 
-    const limitedResults = results.slice(0, 10);
+    // Apply outlier detection
+    const { filteredVehicles, removedCount } = filterOutliers(results.slice(0, 20));
+    const limitedResults = filteredVehicles.slice(0, 10);
+    
     setSimilarVehicles(limitedResults);
 
     console.log('Search results found:', limitedResults.length);
+    if (removedCount > 0) {
+      console.log(`Filtered out ${removedCount} outliers for better accuracy`);
+    }
 
     // Calculate price estimate
     if (limitedResults.length > 0) {
@@ -198,13 +259,22 @@ export function VehiclePricingTool() {
         const weightedAverage = weightedPrices.reduce((sum, p) => sum + (p.price * p.weight), 0) / totalWeight;
 
         const exactMatches = limitedResults.filter(v => v.matchType === 'exact');
-        const confidence = exactMatches.length > 0 ? 'High' : 
-                          limitedResults.filter(v => v.matchType === 'model').length > 0 ? 'Medium' : 'Low';
+        let confidence = exactMatches.length > 0 ? 'High' : 
+                        limitedResults.filter(v => v.matchType === 'model').length > 0 ? 'Medium' : 'Low';
+        
+        // Adjust confidence based on data consistency and outlier removal
+        if (removedCount > 0 && limitedResults.length >= 3) {
+          // If we had to remove outliers but still have good data, maintain confidence
+        } else if (removedCount > 0 && limitedResults.length < 3) {
+          // If we removed outliers and have few data points left, reduce confidence
+          confidence = confidence === 'High' ? 'Medium' : 'Low';
+        }
 
         setPriceEstimate({
           estimatedPrice: Math.round(weightedAverage),
           confidence,
-          dataPoints: prices.length
+          dataPoints: prices.length,
+          removedOutliers: removedCount
         });
 
         setManualOffer(Math.round(weightedAverage).toString());
@@ -328,6 +398,11 @@ export function VehiclePricingTool() {
                     </div>
                     <div className="text-sm text-green-600">
                       Based on {priceEstimate.dataPoints} similar vehicle{priceEstimate.dataPoints !== 1 ? 's' : ''} from inventory and saved quotes
+                      {priceEstimate.removedOutliers > 0 && (
+                        <div className="text-xs text-blue-600 mt-1">
+                          Filtered out {priceEstimate.removedOutliers} extreme value{priceEstimate.removedOutliers !== 1 ? 's' : ''} for better accuracy
+                        </div>
+                      )}
                     </div>
                     <Badge variant="outline" className={`mt-2 ${
                       priceEstimate.confidence === 'High' ? 'border-green-500 text-green-700' :
