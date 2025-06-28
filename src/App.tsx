@@ -11,6 +11,7 @@ import { InventoryOptimized } from "@/pages/InventoryOptimized";
 import { PendingReleases } from "@/pages/PendingReleases";
 import { Released } from "@/pages/Released";
 import { PublicInventory } from "@/pages/PublicInventory";
+import { Print } from "@/pages/Print";
 import { SiteAuth } from "@/components/SiteAuth";
 import { ViewOnlyInventory } from "@/components/ViewOnlyInventory";
 import { Menu } from "lucide-react";
@@ -53,6 +54,8 @@ const App = () => {
         return <PendingReleases />;
       case 'released':
         return <Released />;
+      case 'print':
+        return <Print />;
       case 'public-inventory':
         return <PublicInventory />;
       default:
@@ -166,6 +169,16 @@ const App = () => {
                       }`}
                     >
                       Released
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage("print")}
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                        currentPage === "print"
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      }`}
+                    >
+                      Print
                     </button>
                   </nav>
                   <div className="ml-auto flex items-center gap-4">
