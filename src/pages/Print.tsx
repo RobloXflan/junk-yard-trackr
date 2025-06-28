@@ -16,61 +16,62 @@ export function Print() {
   const [previewOpen, setPreviewOpen] = useState(false);
 
   const handlePrint = (document: UploadedDocument) => {
-    // Create a new window for printing the document
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      if (document.file.type === 'application/pdf') {
-        printWindow.document.write(`
-          <html>
-            <head>
-              <title>Print - ${document.name}</title>
-              <style>
-                body { margin: 0; padding: 0; }
-                iframe { width: 100vw; height: 100vh; border: none; }
-                @media print {
-                  body { margin: 0; }
-                  iframe { width: 100%; height: 100%; }
-                }
-              </style>
-            </head>
-            <body>
-              <iframe src="${document.url}" onload="window.print()"></iframe>
-            </body>
-          </html>
-        `);
-      } else {
-        // For images
-        printWindow.document.write(`
-          <html>
-            <head>
-              <title>Print - ${document.name}</title>
-              <style>
-                body { 
-                  margin: 0; 
-                  padding: 20px; 
-                  display: flex; 
-                  justify-content: center; 
-                  align-items: center; 
-                  min-height: 100vh; 
-                }
-                img { 
-                  max-width: 100%; 
-                  max-height: 100vh; 
-                  object-fit: contain; 
-                }
-                @media print {
-                  body { padding: 0; }
-                  img { width: 100%; height: auto; }
-                }
-              </style>
-            </head>
-            <body>
-              <img src="${document.url}" onload="window.print()" alt="${document.name}" />
-            </body>
-          </html>
-        `);
-      }
+    // Create a temporary div to hold the document for printing
+    const printDiv = document.createElement('div');
+    printDiv.className = 'print-document';
+    printDiv.style.position = 'fixed';
+    printDiv.style.top = '0';
+    printDiv.style.left = '0';
+    printDiv.style.width = '100vw';
+    printDiv.style.height = '100vh';
+    printDiv.style.zIndex = '9999';
+    printDiv.style.backgroundColor = 'white';
+    printDiv.style.display = 'none';
+
+    if (document.file.type === 'application/pdf') {
+      printDiv.innerHTML = `
+        <iframe 
+          src="${document.url}" 
+          style="width: 100%; height: 100%; border: none;"
+          title="${document.name}"
+        ></iframe>
+      `;
+    } else {
+      printDiv.innerHTML = `
+        <div style="display: flex; justify-content: center; align-items: center; height: 100%; padding: 20px;">
+          <img 
+            src="${document.url}" 
+            alt="${document.name}" 
+            style="max-width: 100%; max-height: 100%; object-fit: contain;"
+          />
+        </div>
+      `;
     }
+
+    // Add to document
+    document.body.appendChild(printDiv);
+    
+    // Show the print div
+    printDiv.style.display = 'block';
+    
+    // Hide the main content
+    const mainContent = document.querySelector('main');
+    if (mainContent) {
+      (mainContent as HTMLElement).style.display = 'none';
+    }
+
+    // Print
+    setTimeout(() => {
+      window.print();
+      
+      // Clean up after print dialog closes
+      setTimeout(() => {
+        document.body.removeChild(printDiv);
+        if (mainContent) {
+          (mainContent as HTMLElement).style.display = '';
+        }
+      }, 100);
+    }, 500);
   };
 
   const viewDocument = (document: UploadedDocument) => {
