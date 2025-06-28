@@ -98,25 +98,38 @@ export function VehiclePricingTool() {
   };
 
   const saveQuote = () => {
-    if (!priceEstimate || !searchYear || !searchMake || !searchModel) {
+    if (!searchYear || !searchMake || !searchModel) {
       toast({
         title: "Cannot Save Quote",
-        description: "Please complete a price search first.",
+        description: "Please enter year, make, and model first.",
         variant: "destructive",
       });
       return;
     }
 
-    const adjustedOffer = parseFloat(manualOffer) || priceEstimate.estimatedPrice;
+    const offerAmount = parseFloat(manualOffer);
+    if (!offerAmount || offerAmount <= 0) {
+      toast({
+        title: "Cannot Save Quote",
+        description: "Please enter a valid offer amount.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // If we have a price estimate, use it; otherwise create a manual quote
+    const estimatedPrice = priceEstimate?.estimatedPrice || offerAmount;
+    const confidence = priceEstimate?.confidence || 'Manual';
+    const dataPoints = priceEstimate?.dataPoints || 0;
     
     addQuote({
       year: searchYear,
       make: searchMake,
       model: searchModel,
-      estimatedPrice: priceEstimate.estimatedPrice,
-      adjustedOffer: adjustedOffer,
-      confidence: priceEstimate.confidence,
-      dataPoints: priceEstimate.dataPoints,
+      estimatedPrice: estimatedPrice,
+      adjustedOffer: offerAmount,
+      confidence: confidence,
+      dataPoints: dataPoints,
     });
 
     toast({
@@ -378,6 +391,39 @@ export function VehiclePricingTool() {
               </Button>
             )}
           </div>
+
+          {/* Manual Quote Section - Always visible when vehicle info is entered */}
+          {(searchYear || searchMake || searchModel) && (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <h3 className="text-lg font-medium">Create Manual Quote</h3>
+                <div>
+                  <Label htmlFor="manual-offer-standalone">Your Offer Amount</Label>
+                  <div className="flex gap-2 mt-1">
+                    <div className="relative flex-1">
+                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                      <Input
+                        id="manual-offer-standalone"
+                        type="number"
+                        placeholder="Enter your offer"
+                        value={manualOffer}
+                        onChange={(e) => setManualOffer(e.target.value)}
+                        className="pl-8"
+                      />
+                    </div>
+                    <Button onClick={saveQuote} variant="outline" className="flex items-center gap-2">
+                      <Save className="w-4 h-4" />
+                      Save Quote
+                    </Button>
+                  </div>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Save a quote even if no similar vehicles are found
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
