@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,7 +19,7 @@ interface SimilarVehicle {
   year: string;
   make: string;
   model: string;
-  purchasePrice: string;
+  purchasePrice?: string; // Made optional to match Vehicle interface
   matchType: 'exact' | 'model' | 'make_year';
   purchaseDate?: string;
 }
@@ -285,7 +284,7 @@ export function VehiclePricingTool() {
                           {getMatchTypeLabel(vehicle.matchType)}
                         </Badge>
                         <div className="font-bold text-green-600">
-                          ${parseFloat(vehicle.purchasePrice).toLocaleString()}
+                          ${parseFloat(vehicle.purchasePrice || '0').toLocaleString()}
                         </div>
                       </div>
                     </div>
