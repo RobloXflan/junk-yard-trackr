@@ -300,7 +300,7 @@ export function VehiclePricingTool() {
                   </p>
                 </div>
               )}
-            </Card>
+            </CardContent>
           </Card>
         </>
       )}
