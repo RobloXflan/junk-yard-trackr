@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -529,7 +530,7 @@ export function VehiclePricingTool() {
                   <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>No similar vehicles found in your inventory or saved quotes.</p>
                   <p className="text-sm mt-1">
-                    Try searching with different criteria or add more vehicle data to improve future searches.
+                    You can still save a quote above to help with future searches.
                   </p>
                 </div>
               )}
