@@ -2,8 +2,9 @@
 import { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, RefreshCw, ChevronDown } from "lucide-react";
+import { Search, Filter, Car, Plus, Edit, RefreshCw, ChevronDown } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -19,9 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useVehicleStorePaginated } from "@/hooks/useVehicleStorePaginated";
-import { useAdvancedSearch } from "@/hooks/useAdvancedSearch";
 import { VehicleDetailsDialog } from "@/components/VehicleDetailsDialog";
-import { AdvancedSearch } from "@/components/AdvancedSearch";
 import { Vehicle } from "@/stores/vehicleStore";
 import { toast } from "sonner";
 
@@ -53,18 +52,38 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loadingDocuments, setLoadingDocuments] = useState(false);
+  const [editingPaperworkId, setEditingPaperworkId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<Vehicle['status'] | 'all'>('all');
   
   const { 
     vehicles, 
     totalCount, 
     isLoading, 
+    hasMore, 
+    searchTerm, 
+    setSearchTerm, 
+    loadMore, 
+    updateVehicleStatus, 
     refreshVehicles,
     loadVehicleDocuments,
     updateVehiclePaperwork
   } = useVehicleStorePaginated();
 
-  // Use advanced search instead of basic filtering
-  const { filteredVehicles, setFilters, totalResults } = useAdvancedSearch(vehicles);
+  // Filter vehicles by status
+  const filteredVehicles = vehicles.filter((vehicle) => {
+    if (statusFilter !== 'all' && vehicle.status !== statusFilter) {
+      return false;
+    }
+    return true;
+  });
+
+  const statusCounts = {
+    all: vehicles.length,
+    yard: vehicles.filter(v => v.status === 'yard').length,
+    sold: vehicles.filter(v => v.status === 'sold').length,
+    'pick-your-part': vehicles.filter(v => v.status === 'pick-your-part').length,
+    'sa-recycling': vehicles.filter(v => v.status === 'sa-recycling').length,
+  };
 
   const paperworkOptions = [
     { value: "title", label: "Title" },
@@ -77,6 +96,7 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
   const handlePaperworkChange = async (vehicleId: string, newPaperwork: string) => {
     try {
       await updateVehiclePaperwork(vehicleId, newPaperwork);
+      setEditingPaperworkId(null);
       toast.success("Paperwork status updated successfully");
     } catch (error) {
       console.error('Error updating paperwork:', error);
@@ -122,6 +142,21 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
     }
   }, [loadVehicleDocuments]);
 
+  const handleStatusUpdate = async (vehicleId: string, newStatus: Vehicle['status'], soldData?: {
+    buyerFirstName: string;
+    buyerLastName: string;
+    salePrice: string;
+    saleDate: string;
+  }) => {
+    try {
+      await updateVehicleStatus(vehicleId, newStatus, soldData);
+      toast.success("Vehicle status updated successfully");
+    } catch (error) {
+      console.error('Error updating vehicle:', error);
+      toast.error("Failed to update vehicle status");
+    }
+  };
+
   const handleRefresh = async () => {
     try {
       await refreshVehicles();
@@ -136,6 +171,8 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
     setIsDialogOpen(false);
     setSelectedVehicle(null);
   };
+
+  const isSearching = searchTerm.trim().length > 0;
 
   return (
     <div className="space-y-6">
@@ -162,147 +199,281 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
         </div>
       </div>
 
-      {/* Advanced Search Component */}
-      <AdvancedSearch 
-        onFiltersChange={setFilters}
-        totalResults={totalResults}
-      />
+      {/* Search and Filter Bar */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Input
+                placeholder="Search by make, model, year, Vehicle ID, or license plate..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Button variant="outline">
+              <Filter className="w-4 h-4 mr-2" />
+              Filter
+            </Button>
+          </div>
+          {searchTerm && (
+            <div className="mt-2 text-sm text-muted-foreground">
+              {isSearching ? (
+                <>Showing {filteredVehicles.length} vehicle{filteredVehicles.length !== 1 ? 's' : ''} matching "{searchTerm}"</>
+              ) : (
+                <>Showing {filteredVehicles.length} of {totalCount} vehicles matching "{searchTerm}"</>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Status Filter Buttons */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={statusFilter === 'all' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('all')}
+              className="flex items-center gap-2"
+            >
+              All Vehicles
+              <Badge variant="secondary" className="ml-1">
+                {statusCounts.all}
+              </Badge>
+            </Button>
+            <Button
+              variant={statusFilter === 'yard' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('yard')}
+              className="flex items-center gap-2"
+            >
+              In Yard
+              <Badge variant="secondary" className="ml-1">
+                {statusCounts.yard}
+              </Badge>
+            </Button>
+            <Button
+              variant={statusFilter === 'sold' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('sold')}
+              className="flex items-center gap-2"
+            >
+              Sold
+              <Badge variant="secondary" className="ml-1">
+                {statusCounts.sold}
+              </Badge>
+            </Button>
+            <Button
+              variant={statusFilter === 'pick-your-part' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('pick-your-part')}
+              className="flex items-center gap-2"
+            >
+              Pick Your Part
+              <Badge variant="secondary" className="ml-1">
+                {statusCounts['pick-your-part']}
+              </Badge>
+            </Button>
+            <Button
+              variant={statusFilter === 'sa-recycling' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('sa-recycling')}
+              className="flex items-center gap-2"
+            >
+              SA Recycling
+              <Badge variant="secondary" className="ml-1">
+                {statusCounts['sa-recycling']}
+              </Badge>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Vehicle List */}
       <Card>
         <CardHeader>
           <CardTitle>
-            Vehicles ({totalResults} {totalResults === totalCount ? '' : `of ${totalCount}`} results)
+            Vehicles ({statusFilter === 'all' ? 
+              (isSearching ? filteredVehicles.length : `${filteredVehicles.length}${totalCount > filteredVehicles.length ? ` of ${totalCount}` : ''}`) :
+              `${filteredVehicles.length} ${statusFilter === 'yard' ? 'In Yard' : 
+                statusFilter === 'sold' ? 'Sold' :
+                statusFilter === 'pick-your-part' ? 'Pick Your Part' :
+                'SA Recycling'} vehicles`
+            })
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {totalResults === 0 ? (
+          {totalCount === 0 && !isLoading ? (
             <div className="text-center py-12">
-              <div className="w-12 h-12 text-muted-foreground mx-auto mb-4">🔍</div>
+              <Car className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">No vehicles found</h3>
               <p className="text-muted-foreground mb-4">
-                Try adjusting your search criteria or filters to find vehicles.
+                {searchTerm ? 'No vehicles match your search criteria.' : 'Start by adding your first vehicle to the inventory.'}
               </p>
-              <Button variant="outline" onClick={() => setFilters({
-                searchTerm: '',
-                status: 'all',
-                paperwork: 'all',
-                priceRange: { min: '', max: '' },
-                dateRange: { startDate: '', endDate: '' },
-                hasImages: null,
-                hasDocuments: null,
-              })}>
-                Clear All Filters
-              </Button>
+              {searchTerm ? (
+                <Button variant="outline" onClick={() => setSearchTerm("")}>
+                  Clear Search
+                </Button>
+              ) : (
+                <Button className="gradient-primary" onClick={handleAddVehicle}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add First Vehicle
+                </Button>
+              )}
+            </div>
+          ) : filteredVehicles.length === 0 ? (
+            <div className="text-center py-12">
+              <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No vehicles found</h3>
+              <p className="text-muted-foreground mb-4">
+                {statusFilter !== 'all' ? 
+                  `No vehicles with status "${statusFilter === 'yard' ? 'In Yard' : 
+                    statusFilter === 'sold' ? 'Sold' :
+                    statusFilter === 'pick-your-part' ? 'Pick Your Part' :
+                    'SA Recycling'}" found.` :
+                  'No vehicles match your search criteria.'
+                }
+              </p>
+              <div className="flex gap-2 justify-center">
+                {statusFilter !== 'all' && (
+                  <Button variant="outline" onClick={() => setStatusFilter('all')}>
+                    Show All Vehicles
+                  </Button>
+                )}
+                {searchTerm && (
+                  <Button variant="outline" onClick={() => setSearchTerm("")}>
+                    Clear Search
+                  </Button>
+                )}
+              </div>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Vehicle</TableHead>
-                  <TableHead>Vehicle ID</TableHead>
-                  <TableHead>Purchase Date</TableHead>
-                  <TableHead>Purchase Price</TableHead>
-                  <TableHead>Sale Price</TableHead>
-                  <TableHead>Sold To</TableHead>
-                  <TableHead>Paperwork</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredVehicles.map((vehicle) => (
-                  <TableRow key={vehicle.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">
-                          {vehicle.year} {vehicle.make} {vehicle.model}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {vehicle.licensePlate && `Plate: ${vehicle.licensePlate}`}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {vehicle.vehicleId}
-                    </TableCell>
-                    <TableCell>
-                      {vehicle.purchaseDate || '-'}
-                    </TableCell>
-                    <TableCell>
-                      {vehicle.purchasePrice ? `$${parseFloat(vehicle.purchasePrice).toLocaleString()}` : '-'}
-                    </TableCell>
-                    <TableCell>
-                      {vehicle.salePrice ? `$${parseFloat(vehicle.salePrice).toLocaleString()}` : '-'}
-                    </TableCell>
-                    <TableCell>
-                      {vehicle.status === 'sold' && vehicle.buyerFirstName && vehicle.buyerLastName ? (
-                        <div className="text-sm">
-                          <div>{vehicle.buyerFirstName} {vehicle.buyerLastName}</div>
-                          {vehicle.saleDate && (
-                            <div className="text-muted-foreground">{vehicle.saleDate}</div>
-                          )}
-                        </div>
-                      ) : '-'}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Badge 
-                            variant="outline" 
-                            className="cursor-pointer hover:bg-accent transition-colors"
-                          >
-                            {formatPaperworkDisplay(vehicle.paperwork, vehicle.paperworkOther)}
-                          </Badge>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start">
-                          {paperworkOptions.map((option) => (
-                            <DropdownMenuItem
-                              key={option.value}
-                              onClick={() => handlePaperworkChange(vehicle.id, option.value)}
-                              className="cursor-pointer"
-                            >
-                              {option.label}
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={
-                        vehicle.status === 'sold' ? 'default' :
-                        vehicle.status === 'yard' ? 'secondary' :
-                        'outline'
-                      }>
-                        {vehicle.status === 'yard' ? 'In Yard' : 
-                         vehicle.status === 'sold' ? 'Sold' :
-                         vehicle.status === 'pick-your-part' ? 'Pick Your Part' :
-                         vehicle.status === 'sa-recycling' ? 'SA Recycling' :
-                         vehicle.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleEditVehicle(vehicle)}
-                        disabled={isLoading || loadingDocuments}
-                      >
-                        <Edit className="w-4 h-4 mr-2" />
-                        {loadingDocuments ? 'Loading...' : 'Edit'}
-                      </Button>
-                    </TableCell>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Vehicle</TableHead>
+                    <TableHead>Vehicle ID</TableHead>
+                    <TableHead>Purchase Date</TableHead>
+                    <TableHead>Purchase Price</TableHead>
+                    <TableHead>Sale Price</TableHead>
+                    <TableHead>Sold To</TableHead>
+                    <TableHead>Paperwork</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-          
-          {/* Loading indicator */}
-          {isLoading && vehicles.length === 0 && (
-            <div className="flex justify-center py-8">
-              <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
-            </div>
+                </TableHeader>
+                <TableBody>
+                  {filteredVehicles.map((vehicle) => (
+                    <TableRow key={vehicle.id}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">
+                            {vehicle.year} {vehicle.make} {vehicle.model}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {vehicle.licensePlate && `Plate: ${vehicle.licensePlate}`}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {vehicle.vehicleId}
+                      </TableCell>
+                      <TableCell>
+                        {vehicle.purchaseDate || '-'}
+                      </TableCell>
+                      <TableCell>
+                        {vehicle.purchasePrice ? `$${parseFloat(vehicle.purchasePrice).toLocaleString()}` : '-'}
+                      </TableCell>
+                      <TableCell>
+                        {vehicle.salePrice ? `$${parseFloat(vehicle.salePrice).toLocaleString()}` : '-'}
+                      </TableCell>
+                      <TableCell>
+                        {vehicle.status === 'sold' && vehicle.buyerFirstName && vehicle.buyerLastName ? (
+                          <div className="text-sm">
+                            <div>{vehicle.buyerFirstName} {vehicle.buyerLastName}</div>
+                            {vehicle.saleDate && (
+                              <div className="text-muted-foreground">{vehicle.saleDate}</div>
+                            )}
+                          </div>
+                        ) : '-'}
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Badge 
+                              variant="outline" 
+                              className="cursor-pointer hover:bg-accent transition-colors"
+                            >
+                              {formatPaperworkDisplay(vehicle.paperwork, vehicle.paperworkOther)}
+                            </Badge>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start">
+                            {paperworkOptions.map((option) => (
+                              <DropdownMenuItem
+                                key={option.value}
+                                onClick={() => handlePaperworkChange(vehicle.id, option.value)}
+                                className="cursor-pointer"
+                              >
+                                {option.label}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={
+                          vehicle.status === 'sold' ? 'default' :
+                          vehicle.status === 'yard' ? 'secondary' :
+                          'outline'
+                        }>
+                          {vehicle.status === 'yard' ? 'In Yard' : 
+                           vehicle.status === 'sold' ? 'Sold' :
+                           vehicle.status === 'pick-your-part' ? 'Pick Your Part' :
+                           vehicle.status === 'sa-recycling' ? 'SA Recycling' :
+                           vehicle.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleEditVehicle(vehicle)}
+                          disabled={isLoading || loadingDocuments}
+                        >
+                          <Edit className="w-4 h-4 mr-2" />
+                          {loadingDocuments ? 'Loading...' : 'Edit'}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              
+              {/* Load More Button - Only show when not searching and there are more items */}
+              {hasMore && !isSearching && statusFilter === 'all' && (
+                <div className="flex justify-center mt-6">
+                  <Button 
+                    variant="outline" 
+                    onClick={loadMore}
+                    disabled={isLoading}
+                    className="min-w-32"
+                  >
+                    {isLoading ? (
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 mr-2" />
+                    )}
+                    {isLoading ? 'Loading...' : 'Load More'}
+                  </Button>
+                </div>
+              )}
+
+              {/* Loading indicator for initial load */}
+              {isLoading && vehicles.length === 0 && (
+                <div className="flex justify-center py-8">
+                  <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
@@ -311,7 +482,7 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
         vehicle={selectedVehicle}
         isOpen={isDialogOpen}
         onClose={handleCloseDialog}
-        onStatusUpdate={async () => {}} // Remove status update for now since we're using advanced search
+        onStatusUpdate={handleStatusUpdate}
         refreshVehicles={refreshVehicles}
       />
     </div>
