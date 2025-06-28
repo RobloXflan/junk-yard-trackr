@@ -10,6 +10,7 @@ import { Intake } from "@/pages/Intake";
 import { InventoryOptimized } from "@/pages/InventoryOptimized";
 import { PendingReleases } from "@/pages/PendingReleases";
 import { Released } from "@/pages/Released";
+import { Quotes } from "@/pages/Quotes";
 import { PublicInventory } from "@/pages/PublicInventory";
 import { SiteAuth } from "@/components/SiteAuth";
 import { ViewOnlyInventory } from "@/components/ViewOnlyInventory";
@@ -53,6 +54,8 @@ const App = () => {
         return <PendingReleases />;
       case 'released':
         return <Released />;
+      case 'quotes':
+        return <Quotes />;
       case 'public-inventory':
         return <PublicInventory />;
       default:
@@ -166,6 +169,16 @@ const App = () => {
                       }`}
                     >
                       Released
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage("quotes")}
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                        currentPage === "quotes"
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      }`}
+                    >
+                      Quotes
                     </button>
                   </nav>
                   <div className="ml-auto flex items-center gap-4">
