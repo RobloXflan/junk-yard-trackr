@@ -9,7 +9,6 @@ import { Dashboard } from "@/pages/Dashboard";
 import { Intake } from "@/pages/Intake";
 import { InventoryOptimized } from "@/pages/InventoryOptimized";
 import { PendingReleases } from "@/pages/PendingReleases";
-import { Documents } from "@/pages/Documents";
 import { Released } from "@/pages/Released";
 import { PublicInventory } from "@/pages/PublicInventory";
 import { SiteAuth } from "@/components/SiteAuth";
@@ -52,8 +51,6 @@ const App = () => {
         return <InventoryOptimized onNavigate={setCurrentPage} />;
       case 'pending-releases':
         return <PendingReleases />;
-      case 'documents':
-        return <Documents />;
       case 'released':
         return <Released />;
       case 'public-inventory':
@@ -170,19 +167,6 @@ const App = () => {
                     >
                       Released
                     </button>
-                    {/* Only show Documents tab for admin users */}
-                    {userType === 'admin' && (
-                      <button
-                        onClick={() => setCurrentPage("documents")}
-                        className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                          currentPage === "documents"
-                            ? "bg-primary text-primary-foreground"
-                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                        }`}
-                      >
-                        Documents
-                      </button>
-                    )}
                   </nav>
                   <div className="ml-auto flex items-center gap-4">
                     <span className="text-sm text-muted-foreground">

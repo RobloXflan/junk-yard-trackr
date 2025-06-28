@@ -1,5 +1,5 @@
 
-import { Car, FileText, BarChart3, Upload, Clock, Settings, CheckCircle } from "lucide-react";
+import { Car, BarChart3, Upload, Clock, Settings, CheckCircle } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -34,11 +34,6 @@ const menuItems = [
     title: "Pending Releases",
     page: "pending-releases",
     icon: Clock,
-  },
-  {
-    title: "Documents",
-    page: "documents",
-    icon: FileText,
   },
   {
     title: "Released",
