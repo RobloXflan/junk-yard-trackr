@@ -96,3 +96,33 @@
     background: linear-gradient(135deg, hsl(var(--primary)) 0%, rgb(15, 64, 96) 100%);
   }
 }
+
+/* Print styles */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  
+  .print-document, .print-document * {
+    visibility: visible;
+  }
+  
+  .print-document {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 8.5in !important;
+    height: 11in !important;
+  }
+  
+  /* Hide everything except the document when printing */
+  .print-document ~ * {
+    display: none !important;
+  }
+  
+  /* Ensure proper page sizing */
+  @page {
+    size: letter;
+    margin: 0.5in;
+  }
+}

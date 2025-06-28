@@ -1,5 +1,4 @@
-
-import { Car, BarChart3, Upload, Clock, Settings, CheckCircle } from "lucide-react";
+import { Car, BarChart3, Upload, Clock, Settings, CheckCircle, Printer } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -39,6 +38,11 @@ const menuItems = [
     title: "Released",
     page: "released",
     icon: CheckCircle,
+  },
+  {
+    title: "Print",
+    page: "print",
+    icon: Printer,
   },
   {
     title: "Settings",
