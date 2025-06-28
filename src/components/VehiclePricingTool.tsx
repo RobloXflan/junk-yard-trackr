@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Search, DollarSign, Plus, Save } from "lucide-react";
+import { Search, DollarSign, Save } from "lucide-react";
 import { useVehicleStore } from "@/hooks/useVehicleStore";
 
 interface PriceEstimate {
@@ -19,7 +20,7 @@ interface SimilarVehicle {
   year: string;
   make: string;
   model: string;
-  purchasePrice?: string; // Made optional to match Vehicle interface
+  purchasePrice?: string;
   matchType: 'exact' | 'model' | 'make_year';
   purchaseDate?: string;
 }
@@ -39,9 +40,15 @@ export function VehiclePricingTool() {
       return;
     }
 
+    console.log('Searching vehicles with:', { searchYear, searchMake, searchModel });
+    console.log('Available vehicles:', vehicles.length);
+
+    // Filter vehicles that have purchase prices
     const vehiclesWithPurchasePrice = vehicles.filter(v => 
       v.purchasePrice && parseFloat(v.purchasePrice) > 0
     );
+
+    console.log('Vehicles with purchase price:', vehiclesWithPurchasePrice.length);
 
     // Find exact matches first (same make, model, similar year)
     const exactMatches = vehiclesWithPurchasePrice.filter(v =>
@@ -80,15 +87,18 @@ export function VehiclePricingTool() {
              Math.abs(parseInt(b.year) - parseInt(searchYear));
     });
 
-    setSimilarVehicles(results.slice(0, 10)); // Limit to 10 results
+    const limitedResults = results.slice(0, 10);
+    setSimilarVehicles(limitedResults);
+
+    console.log('Search results found:', limitedResults.length);
 
     // Calculate price estimate
-    if (results.length > 0) {
-      const prices = results.map(v => parseFloat(v.purchasePrice || '0')).filter(p => p > 0);
+    if (limitedResults.length > 0) {
+      const prices = limitedResults.map(v => parseFloat(v.purchasePrice || '0')).filter(p => p > 0);
       
       if (prices.length > 0) {
         // Weight exact matches more heavily
-        const weightedPrices = results.map(v => {
+        const weightedPrices = limitedResults.map(v => {
           const price = parseFloat(v.purchasePrice || '0');
           const weight = v.matchType === 'exact' ? 3 : v.matchType === 'model' ? 2 : 1;
           return { price, weight };
