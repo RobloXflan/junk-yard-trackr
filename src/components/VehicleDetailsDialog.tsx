@@ -65,6 +65,30 @@ export function VehicleDetailsDialog({
     }));
   };
 
+  // Helper function to deserialize documents from database storage
+  const deserializeDocuments = (serializedDocs: any[]): UploadedDocument[] => {
+    return serializedDocs.map(doc => ({
+      id: doc.id,
+      name: doc.name,
+      size: doc.size,
+      url: doc.url,
+      // Create a placeholder File object since we can't serialize the original
+      file: new File([], doc.name, { type: getFileTypeFromName(doc.name) })
+    }));
+  };
+
+  // Helper function to determine file type from name
+  const getFileTypeFromName = (fileName: string): string => {
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    switch (extension) {
+      case 'pdf': return 'application/pdf';
+      case 'jpg':
+      case 'jpeg': return 'image/jpeg';
+      case 'png': return 'image/png';
+      default: return 'application/octet-stream';
+    }
+  };
+
   const handleStatusChange = async (newStatus: Vehicle['status']) => {
     if (newStatus === 'sold') {
       setShowBuyerSelector(true);
@@ -264,8 +288,9 @@ export function VehicleDetailsDialog({
 
       if (error) throw error;
 
-      // Update local state
-      const updatedVehicle = { ...localVehicle, documents: allDocuments };
+      // Update local state - need to deserialize for proper typing
+      const deserializedAllDocs = deserializeDocuments(allDocuments);
+      const updatedVehicle = { ...localVehicle, documents: deserializedAllDocs };
       setLocalVehicle(updatedVehicle);
       setEditedVehicle(updatedVehicle);
       
