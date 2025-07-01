@@ -1,9 +1,11 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search, Filter, Car, Plus, Edit, RefreshCw } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -21,17 +23,39 @@ interface VehicleInventoryProps {
   onNavigate: (page: string) => void;
 }
 
+const monthNames = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
 export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<Vehicle['status'] | 'all'>('all');
+  const [monthFilter, setMonthFilter] = useState<string>('all');
   const { vehicles, updateVehicleStatus, refreshVehicles, isLoading } = useVehicleStore();
+
+  // Calculate month counts from vehicle creation dates
+  const monthCounts = vehicles.reduce((acc, vehicle) => {
+    if (vehicle.createdAt) {
+      const month = vehicle.createdAt.substring(5, 7); // Extract MM from YYYY-MM-DD
+      acc[month] = (acc[month] || 0) + 1;
+    }
+    return acc;
+  }, {} as Record<string, number>);
 
   const filteredVehicles = vehicles.filter((vehicle) => {
     // Apply status filter first
     if (statusFilter !== 'all' && vehicle.status !== statusFilter) {
       return false;
+    }
+
+    // Apply month filter
+    if (monthFilter !== 'all') {
+      if (!vehicle.createdAt) return false;
+      const vehicleMonth = vehicle.createdAt.substring(5, 7); // Extract MM from YYYY-MM-DD
+      if (vehicleMonth !== monthFilter) return false;
     }
 
     // Then apply search filter
@@ -147,6 +171,26 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
                 className="pl-10"
               />
             </div>
+            <div className="w-48">
+              <Select value={monthFilter} onValueChange={setMonthFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by month" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Months ({vehicles.length})</SelectItem>
+                  {Array.from({ length: 12 }, (_, i) => {
+                    const monthNum = String(i + 1).padStart(2, '0');
+                    const count = monthCounts[monthNum] || 0;
+                    const monthName = monthNames[i];
+                    return (
+                      <SelectItem key={monthNum} value={monthNum}>
+                        {monthNum} ({monthName}) - {count} vehicles
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
             <Button variant="outline">
               <Filter className="w-4 h-4 mr-2" />
               Filter
@@ -218,12 +262,17 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
         <CardHeader>
           <CardTitle>
             Vehicles ({statusFilter === 'all' ? 
-              (searchTerm ? `${filteredVehicles.length} of ${vehicles.length}` : vehicles.length) :
+              (searchTerm || monthFilter !== 'all' ? `${filteredVehicles.length} of ${vehicles.length}` : vehicles.length) :
               `${filteredVehicles.length} ${statusFilter === 'yard' ? 'In Yard' : 
                 statusFilter === 'sold' ? 'Sold' :
                 statusFilter === 'pick-your-part' ? 'Pick Your Part' :
                 'SA Recycling'} vehicles`
             })
+            {monthFilter !== 'all' && (
+              <span className="text-sm font-normal text-muted-foreground ml-2">
+                - {monthNames[parseInt(monthFilter) - 1]} {new Date().getFullYear()}
+              </span>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -249,13 +298,20 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
                     statusFilter === 'sold' ? 'Sold' :
                     statusFilter === 'pick-your-part' ? 'Pick Your Part' :
                     'SA Recycling'}" found.` :
-                  'No vehicles match your search criteria. Try adjusting your search terms.'
+                  monthFilter !== 'all' ?
+                    `No vehicles found for ${monthNames[parseInt(monthFilter) - 1]}.` :
+                    'No vehicles match your search criteria. Try adjusting your search terms.'
                 }
               </p>
               <div className="flex gap-2 justify-center">
                 {statusFilter !== 'all' && (
                   <Button variant="outline" onClick={() => setStatusFilter('all')}>
                     Show All Vehicles
+                  </Button>
+                )}
+                {monthFilter !== 'all' && (
+                  <Button variant="outline" onClick={() => setMonthFilter('all')}>
+                    Show All Months
                   </Button>
                 )}
                 {searchTerm && (
