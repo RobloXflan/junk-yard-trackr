@@ -54,6 +54,17 @@ export function VehicleDetailsDialog({
     return null;
   }
 
+  // Helper function to serialize documents for database storage
+  const serializeDocuments = (documents: UploadedDocument[]) => {
+    return documents.map(doc => ({
+      id: doc.id,
+      name: doc.name,
+      size: doc.size,
+      url: doc.url,
+      // Don't store the File object, just the essential data
+    }));
+  };
+
   const handleStatusChange = async (newStatus: Vehicle['status']) => {
     if (newStatus === 'sold') {
       setShowBuyerSelector(true);
@@ -239,7 +250,8 @@ export function VehicleDetailsDialog({
     try {
       // Combine existing documents with new documents
       const existingDocuments = localVehicle.documents || [];
-      const allDocuments = [...existingDocuments, ...newDocuments];
+      const serializedNewDocuments = serializeDocuments(newDocuments);
+      const allDocuments = [...existingDocuments, ...serializedNewDocuments];
       
       // Update the database with combined documents
       const { error } = await supabase
