@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +16,15 @@ import { DocumentUpload, UploadedDocument } from "./forms/DocumentUpload";
 import { useVehicleStore } from "@/hooks/useVehicleStore";
 import { Buyer } from "@/hooks/useBuyers";
 import { supabase } from "@/integrations/supabase/client";
+
+// Define a type for stored documents (JSON-serializable)
+interface StoredDocument {
+  id: string;
+  name: string;
+  size: number;
+  url: string;
+  uploadedAt: string;
+}
 
 interface VehicleDetailsDialogProps {
   vehicle: Vehicle | null;
@@ -238,7 +248,7 @@ export function VehicleDetailsDialog({
   const handleDocumentsUpdate = async (newDocuments: UploadedDocument[]) => {
     try {
       // Convert UploadedDocument[] to JSON-serializable format
-      const jsonDocuments = newDocuments.map(doc => ({
+      const jsonDocuments: StoredDocument[] = newDocuments.map(doc => ({
         id: doc.id,
         name: doc.name,
         size: doc.size,
@@ -246,9 +256,19 @@ export function VehicleDetailsDialog({
         uploadedAt: new Date().toISOString()
       }));
 
+      // Get existing documents and ensure they're in the right format
+      const existingDocuments: StoredDocument[] = Array.isArray(localVehicle.documents) 
+        ? localVehicle.documents.map(doc => ({
+            id: doc.id,
+            name: doc.name,
+            size: doc.size,
+            url: doc.url,
+            uploadedAt: doc.uploadedAt || new Date().toISOString()
+          }))
+        : [];
+      
       // Combine existing documents with new documents
-      const existingDocuments = localVehicle.documents || [];
-      const allDocuments = [...existingDocuments, ...jsonDocuments];
+      const allDocuments: StoredDocument[] = [...existingDocuments, ...jsonDocuments];
       
       // Update the database with combined documents
       const { error } = await supabase
@@ -261,8 +281,16 @@ export function VehicleDetailsDialog({
 
       if (error) throw error;
 
-      // Update local state
-      const updatedVehicle = { ...localVehicle, documents: allDocuments };
+      // Update local state - convert StoredDocument[] to UploadedDocument[] for local state
+      const updatedDocumentsForState: UploadedDocument[] = allDocuments.map(doc => ({
+        id: doc.id,
+        name: doc.name,
+        size: doc.size,
+        url: doc.url,
+        file: new File([], doc.name) // Create a dummy file object for state consistency
+      }));
+
+      const updatedVehicle = { ...localVehicle, documents: updatedDocumentsForState };
       setLocalVehicle(updatedVehicle);
       setEditedVehicle(updatedVehicle);
       
