@@ -11,8 +11,10 @@ import { Vehicle } from "@/stores/vehicleStore";
 import { BuyerSelector } from "./forms/BuyerSelector";
 import { toast } from "@/hooks/use-toast";
 import { CarImagesUpload } from "./CarImagesUpload";
+import { DocumentUpload, UploadedDocument } from "./forms/DocumentUpload";
 import { useVehicleStore } from "@/hooks/useVehicleStore";
 import { Buyer } from "@/hooks/useBuyers";
+import { supabase } from "@/integrations/supabase/client";
 
 interface VehicleDetailsDialogProps {
   vehicle: Vehicle | null;
@@ -38,11 +40,14 @@ export function VehicleDetailsDialog({
   const [editedVehicle, setEditedVehicle] = useState<Vehicle | null>(vehicle);
   const [selectedStatus, setSelectedStatus] = useState<Vehicle['status']>(vehicle?.status || 'yard');
   const [showBuyerSelector, setShowBuyerSelector] = useState(false);
+  const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
 
   useEffect(() => {
     setLocalVehicle(vehicle);
     setEditedVehicle(vehicle);
     setSelectedStatus(vehicle?.status || 'yard');
+    // Initialize with empty array for new documents
+    setUploadedDocuments([]);
   }, [vehicle]);
 
   if (!vehicle || !localVehicle || !editedVehicle) {
@@ -58,9 +63,7 @@ export function VehicleDetailsDialog({
     try {
       console.log('Updating vehicle status to:', newStatus);
       
-      // Update local state immediately for smooth UI
       const updatedVehicle = { ...localVehicle, status: newStatus };
-      // Clear sold data if status is not sold
       updatedVehicle.buyerFirstName = undefined;
       updatedVehicle.buyerLastName = undefined;
       updatedVehicle.buyerName = undefined;
@@ -74,11 +77,9 @@ export function VehicleDetailsDialog({
       setLocalVehicle(updatedVehicle);
       setSelectedStatus(newStatus);
 
-      // Use provided update function or fallback to hook
       const updateFunction = onStatusUpdate || fallbackUpdateStatus;
       await updateFunction(vehicle.id, newStatus);
       
-      // Refresh data in both possible data sources
       if (refreshVehicles) {
         await refreshVehicles();
       }
@@ -94,7 +95,6 @@ export function VehicleDetailsDialog({
     } catch (error) {
       console.error('Failed to update vehicle status:', error);
       
-      // Revert local state on error
       setLocalVehicle(vehicle);
       setSelectedStatus(vehicle.status);
       
@@ -121,7 +121,6 @@ export function VehicleDetailsDialog({
         buyerZip: buyer.zip_code,
       };
       
-      // Update local state immediately
       const updatedVehicle = {
         ...localVehicle,
         status: 'sold' as Vehicle['status'],
@@ -140,11 +139,9 @@ export function VehicleDetailsDialog({
       setSelectedStatus('sold');
       setShowBuyerSelector(false);
 
-      // Use provided update function or fallback to hook
       const updateFunction = onStatusUpdate || fallbackUpdateStatus;
       await updateFunction(vehicle.id, 'sold', soldData);
       
-      // Refresh data in both possible data sources
       if (refreshVehicles) {
         await refreshVehicles();
       }
@@ -160,7 +157,6 @@ export function VehicleDetailsDialog({
     } catch (error) {
       console.error('Failed to update vehicle as sold:', error);
       
-      // Revert local state on error
       setLocalVehicle(vehicle);
       setSelectedStatus(vehicle.status);
       setShowBuyerSelector(false);
@@ -189,17 +185,14 @@ export function VehicleDetailsDialog({
 
       console.log('Saving vehicle details:', updateData);
 
-      // Use provided update function or fallback to hook
       const updateFunction = onVehicleUpdate || fallbackUpdateDetails;
       await updateFunction(vehicle.id, updateData);
 
-      // Update local state immediately with the saved changes
       const updatedVehicle = { ...localVehicle, ...updateData };
       setLocalVehicle(updatedVehicle);
       setEditedVehicle(updatedVehicle);
       setIsEditing(false);
 
-      // Refresh data in both possible data sources
       if (refreshVehicles) {
         await refreshVehicles();
       }
@@ -224,7 +217,6 @@ export function VehicleDetailsDialog({
 
   const handleCarImagesUpdate = async (carImages: any[]) => {
     try {
-      // Update local state immediately
       const updatedVehicle = { ...localVehicle, carImages };
       setLocalVehicle(updatedVehicle);
       setEditedVehicle(updatedVehicle);
@@ -238,6 +230,54 @@ export function VehicleDetailsDialog({
       toast({
         title: "Error",
         description: "Failed to update vehicle images",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDocumentsUpdate = async (newDocuments: UploadedDocument[]) => {
+    try {
+      // Combine existing documents with new documents
+      const existingDocuments = localVehicle.documents || [];
+      const allDocuments = [...existingDocuments, ...newDocuments];
+      
+      // Update the database with combined documents
+      const { error } = await supabase
+        .from('vehicles')
+        .update({
+          documents: allDocuments,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', vehicle.id);
+
+      if (error) throw error;
+
+      // Update local state
+      const updatedVehicle = { ...localVehicle, documents: allDocuments };
+      setLocalVehicle(updatedVehicle);
+      setEditedVehicle(updatedVehicle);
+      
+      // Clear the upload state
+      setUploadedDocuments([]);
+      
+      // Refresh the vehicles list
+      if (refreshVehicles) {
+        await refreshVehicles();
+      }
+      if (fallbackRefresh) {
+        await fallbackRefresh();
+      }
+
+      toast({
+        title: "Documents Updated",
+        description: `${newDocuments.length} new document(s) added successfully`,
+      });
+
+    } catch (error) {
+      console.error('Failed to update vehicle documents:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update vehicle documents",
         variant: "destructive",
       });
     }
@@ -498,33 +538,65 @@ export function VehicleDetailsDialog({
               )}
             </div>
 
-            {/* Documents */}
-            <div className="space-y-2">
+            {/* Documents Section - Enhanced with Upload Capability */}
+            <div className="space-y-4">
               <Label className="text-foreground font-medium flex items-center">
                 <FileText className="w-4 h-4 mr-2" />
                 Documents
               </Label>
-              <div className="p-2 border rounded-md bg-muted/20">
-                {localVehicle.documents && localVehicle.documents.length > 0 ? (
-                  <ul className="space-y-1">
-                    {localVehicle.documents.map((doc) => (
-                      <li key={doc.id} className="flex items-center justify-between">
-                        <span>{doc.name}</span>
-                        <a 
-                          href={doc.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-primary hover:underline text-sm"
-                        >
-                          View
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-muted-foreground">No documents uploaded</p>
+              
+              {/* Existing Documents Display */}
+              {localVehicle.documents && localVehicle.documents.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-sm font-medium text-muted-foreground">Existing Documents:</div>
+                  <div className="p-3 border rounded-md bg-muted/20">
+                    <div className="space-y-2">
+                      {localVehicle.documents.map((doc, index) => (
+                        <div key={`existing-${index}`} className="flex items-center justify-between py-1">
+                          <span className="text-sm">{doc.name}</span>
+                          <a 
+                            href={doc.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline text-sm font-medium"
+                          >
+                            View
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Document Upload Section */}
+              <div className="space-y-2">
+                <div className="text-sm font-medium text-muted-foreground">Add New Documents:</div>
+                <DocumentUpload
+                  uploadedDocuments={uploadedDocuments}
+                  onDocumentsChange={setUploadedDocuments}
+                />
+                
+                {/* Save Documents Button */}
+                {uploadedDocuments.length > 0 && (
+                  <div className="pt-2">
+                    <Button 
+                      onClick={() => handleDocumentsUpdate(uploadedDocuments)}
+                      className="w-full"
+                    >
+                      <FileText className="w-4 h-4 mr-2" />
+                      Save {uploadedDocuments.length} New Document{uploadedDocuments.length > 1 ? 's' : ''} to Vehicle
+                    </Button>
+                  </div>
                 )}
               </div>
+              
+              {/* No Documents Message */}
+              {(!localVehicle.documents || localVehicle.documents.length === 0) && uploadedDocuments.length === 0 && (
+                <div className="p-3 border rounded-md bg-muted/20">
+                  <p className="text-muted-foreground text-sm">No documents uploaded yet</p>
+                </div>
+              )}
             </div>
 
             {/* Car Images */}
