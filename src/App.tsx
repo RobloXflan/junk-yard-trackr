@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -11,6 +10,7 @@ import { InventoryOptimized } from "@/pages/InventoryOptimized";
 import { PendingReleases } from "@/pages/PendingReleases";
 import { Released } from "@/pages/Released";
 import { Quotes } from "@/pages/Quotes";
+import { Phones } from "@/pages/Phones";
 import { PublicInventory } from "@/pages/PublicInventory";
 import { SiteAuth } from "@/components/SiteAuth";
 import { ViewOnlyInventory } from "@/components/ViewOnlyInventory";
@@ -56,6 +56,8 @@ const App = () => {
         return <Released />;
       case 'quotes':
         return <Quotes />;
+      case 'phones':
+        return <Phones />;
       case 'public-inventory':
         return <PublicInventory />;
       default:
@@ -179,6 +181,16 @@ const App = () => {
                       }`}
                     >
                       Quotes
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage("phones")}
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                        currentPage === "phones"
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      }`}
+                    >
+                      Phones
                     </button>
                   </nav>
                   <div className="ml-auto flex items-center gap-4">
