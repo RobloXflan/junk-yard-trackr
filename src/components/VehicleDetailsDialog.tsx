@@ -54,41 +54,6 @@ export function VehicleDetailsDialog({
     return null;
   }
 
-  // Helper function to serialize documents for database storage
-  const serializeDocuments = (documents: UploadedDocument[]) => {
-    return documents.map(doc => ({
-      id: doc.id,
-      name: doc.name,
-      size: doc.size,
-      url: doc.url,
-      // Don't store the File object, just the essential data
-    }));
-  };
-
-  // Helper function to deserialize documents from database storage
-  const deserializeDocuments = (serializedDocs: any[]): UploadedDocument[] => {
-    return serializedDocs.map(doc => ({
-      id: doc.id,
-      name: doc.name,
-      size: doc.size,
-      url: doc.url,
-      // Create a placeholder File object since we can't serialize the original
-      file: new File([], doc.name, { type: getFileTypeFromName(doc.name) })
-    }));
-  };
-
-  // Helper function to determine file type from name
-  const getFileTypeFromName = (fileName: string): string => {
-    const extension = fileName.split('.').pop()?.toLowerCase();
-    switch (extension) {
-      case 'pdf': return 'application/pdf';
-      case 'jpg':
-      case 'jpeg': return 'image/jpeg';
-      case 'png': return 'image/png';
-      default: return 'application/octet-stream';
-    }
-  };
-
   const handleStatusChange = async (newStatus: Vehicle['status']) => {
     if (newStatus === 'sold') {
       setShowBuyerSelector(true);
@@ -274,8 +239,7 @@ export function VehicleDetailsDialog({
     try {
       // Combine existing documents with new documents
       const existingDocuments = localVehicle.documents || [];
-      const serializedNewDocuments = serializeDocuments(newDocuments);
-      const allDocuments = [...existingDocuments, ...serializedNewDocuments];
+      const allDocuments = [...existingDocuments, ...newDocuments];
       
       // Update the database with combined documents
       const { error } = await supabase
@@ -288,9 +252,8 @@ export function VehicleDetailsDialog({
 
       if (error) throw error;
 
-      // Update local state - need to deserialize for proper typing
-      const deserializedAllDocs = deserializeDocuments(allDocuments);
-      const updatedVehicle = { ...localVehicle, documents: deserializedAllDocs };
+      // Update local state
+      const updatedVehicle = { ...localVehicle, documents: allDocuments };
       setLocalVehicle(updatedVehicle);
       setEditedVehicle(updatedVehicle);
       
