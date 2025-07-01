@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +23,7 @@ interface StoredDocument {
   size: number;
   url: string;
   uploadedAt: string;
+  [key: string]: any; // Index signature for Json compatibility
 }
 
 interface VehicleDetailsDialogProps {
@@ -258,13 +258,28 @@ export function VehicleDetailsDialog({
 
       // Get existing documents and ensure they're in the right format
       const existingDocuments: StoredDocument[] = Array.isArray(localVehicle.documents) 
-        ? localVehicle.documents.map(doc => ({
-            id: doc.id,
-            name: doc.name,
-            size: doc.size,
-            url: doc.url,
-            uploadedAt: doc.uploadedAt || new Date().toISOString()
-          }))
+        ? localVehicle.documents.map(doc => {
+            // Handle both UploadedDocument and StoredDocument formats
+            if ('file' in doc) {
+              // This is an UploadedDocument, convert it
+              return {
+                id: doc.id,
+                name: doc.name,
+                size: doc.size,
+                url: doc.url,
+                uploadedAt: new Date().toISOString()
+              };
+            } else {
+              // This is already a StoredDocument or similar
+              return {
+                id: doc.id || `doc_${Date.now()}`,
+                name: doc.name || 'Unknown Document',
+                size: doc.size || 0,
+                url: doc.url || '',
+                uploadedAt: (doc as any).uploadedAt || new Date().toISOString()
+              };
+            }
+          })
         : [];
       
       // Combine existing documents with new documents
@@ -274,7 +289,7 @@ export function VehicleDetailsDialog({
       const { error } = await supabase
         .from('vehicles')
         .update({
-          documents: allDocuments,
+          documents: allDocuments as any, // Cast to any for Json compatibility
           updated_at: new Date().toISOString()
         })
         .eq('id', vehicle.id);
