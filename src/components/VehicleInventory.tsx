@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,7 +43,7 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
     // Apply month filter
     if (monthFilter.trim()) {
       const vehicleDate = new Date(vehicle.createdAt);
-      const filterDate = new Date(monthFilter);
+      const filterDate = new Date(monthFilter + '-01');
       
       // Check if year and month match
       if (vehicleDate.getFullYear() !== filterDate.getFullYear() || 
@@ -89,26 +88,26 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
     'sa-recycling': vehicles.filter(v => v.status === 'sa-recycling').length,
   };
 
-  const handleAddVehicle = () => {
+  function handleAddVehicle() {
     setIsIntakeDialogOpen(true);
-  };
+  }
 
-  const handleEditVehicle = (vehicle: Vehicle) => {
+  function handleEditVehicle(vehicle: Vehicle) {
     setSelectedVehicle(vehicle);
     setIsDialogOpen(true);
-  };
+  }
 
-  const handleSellVehicle = (vehicle: Vehicle) => {
+  function handleSellVehicle(vehicle: Vehicle) {
     setVehicleToSell(vehicle);
     setIsSoldDialogOpen(true);
-  };
+  }
 
-  const handleStatusUpdate = async (vehicleId: string, newStatus: Vehicle['status'], soldData?: {
+  async function handleStatusUpdate(vehicleId: string, newStatus: Vehicle['status'], soldData?: {
     buyerFirstName: string;
     buyerLastName: string;
     salePrice: string;
     saleDate: string;
-  }) => {
+  }) {
     try {
       await updateVehicleStatus(vehicleId, newStatus, soldData);
       toast.success("Vehicle status updated successfully");
@@ -116,9 +115,9 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
       console.error('Error updating vehicle:', error);
       toast.error("Failed to update vehicle status");
     }
-  };
+  }
 
-  const handleRefresh = async () => {
+  async function handleRefresh() {
     try {
       await refreshVehicles();
       toast.success("Vehicles refreshed successfully");
@@ -126,19 +125,19 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
       console.error('Error refreshing vehicles:', error);
       toast.error("Failed to refresh vehicles");
     }
-  };
+  }
 
-  const handleCloseDialog = () => {
+  function handleCloseDialog() {
     setIsDialogOpen(false);
     setSelectedVehicle(null);
-  };
+  }
 
-  const handleIntakeSuccess = () => {
+  function handleIntakeSuccess() {
     setIsIntakeDialogOpen(false);
     refreshVehicles();
-  };
+  }
 
-  const handleSoldConfirm = async (soldData: {
+  async function handleSoldConfirm(soldData: {
     buyerFirstName: string;
     buyerLastName: string;
     salePrice: string;
@@ -147,13 +146,13 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
     buyerCity?: string;
     buyerState?: string;
     buyerZip?: string;
-  }) => {
+  }) {
     if (vehicleToSell) {
       await handleStatusUpdate(vehicleToSell.id, 'sold', soldData);
       setIsSoldDialogOpen(false);
       setVehicleToSell(null);
     }
-  };
+  }
 
   return (
     <div className="space-y-6">

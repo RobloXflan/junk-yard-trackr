@@ -1,21 +1,18 @@
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Upload, Save } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
-import { useVehicleStore } from "@/hooks/useVehicleStore";
-import { DocumentUpload, UploadedDocument } from "./forms/DocumentUpload";
-import { VehicleDetails } from "./forms/VehicleDetails";
-import { PurchaseInfo } from "./forms/PurchaseInfo";
-import { DocumentStatus } from "./forms/DocumentStatus";
-import { DestinationSelector } from "./forms/DestinationSelector";
+import { Checkbox } from "@/components/ui/checkbox";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
-export function VehicleIntakeForm() {
-  const { addVehicle } = useVehicleStore();
-  
+interface VehicleIntakeFormProps {
+  onSuccess: () => void;
+}
+
+export function VehicleIntakeForm({ onSuccess }: VehicleIntakeFormProps) {
   const [formData, setFormData] = useState({
     year: "",
     make: "",
@@ -25,167 +22,165 @@ export function VehicleIntakeForm() {
     sellerName: "",
     purchaseDate: "",
     purchasePrice: "",
-    paperwork: "",
-    paperworkOther: "",
     titlePresent: false,
     billOfSale: false,
-    destination: "",
-    buyerName: "",
-    buyerFirstName: "",
-    buyerLastName: "",
-    saleDate: "",
-    salePrice: "",
     notes: ""
   });
 
-  const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.year || !formData.make || !formData.model || !formData.vehicleId) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in all required vehicle details.",
-        variant: "destructive",
-      });
-      return;
+    setIsSubmitting(true);
+
+    try {
+      const { error } = await supabase
+        .from('vehicles')
+        .insert([
+          {
+            year: formData.year,
+            make: formData.make,
+            model: formData.model,
+            vehicle_id: formData.vehicleId,
+            license_plate: formData.licensePlate || null,
+            seller_name: formData.sellerName || null,
+            purchase_date: formData.purchaseDate || null,
+            purchase_price: formData.purchasePrice || null,
+            title_present: formData.titlePresent,
+            bill_of_sale: formData.billOfSale,
+            notes: formData.notes || null,
+            status: 'yard'
+          }
+        ]);
+
+      if (error) throw error;
+
+      toast.success("Vehicle added successfully!");
+      onSuccess();
+    } catch (error) {
+      console.error('Error adding vehicle:', error);
+      toast.error("Failed to add vehicle");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    // Check if sold and missing buyer info
-    if ((formData.destination === "sold" || formData.destination === "buyer") && 
-        (!formData.buyerFirstName || !formData.buyerLastName || !formData.salePrice)) {
-      toast({
-        title: "Missing Sale Information",
-        description: "Please fill in buyer first name, last name, and sale price for sold vehicles.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Combine first and last name for backward compatibility
-    const combinedBuyerName = formData.buyerFirstName && formData.buyerLastName 
-      ? `${formData.buyerFirstName} ${formData.buyerLastName}` 
-      : formData.buyerName;
-
-    // Add vehicle to store
-    addVehicle({
-      ...formData,
-      buyerName: combinedBuyerName,
-      documents: uploadedDocuments
-    });
-    
-    let successMessage = "Vehicle has been added to inventory.";
-    if (uploadedDocuments.length > 0) {
-      successMessage += ` ${uploadedDocuments.length} document(s) saved.`;
-    }
-    
-    if (formData.destination === "pick-your-part") {
-      successMessage += " Pick Your Part bill of sale will be generated.";
-    } else if (formData.destination === "sa-recycling") {
-      successMessage += " SA Recycling paperwork will be prepared.";
-    } else if (formData.destination === "blank-bill-sale") {
-      successMessage += " Blank bill of sale will be generated for manual completion.";
-    } else if (formData.destination === "buyer" || formData.destination === "sold") {
-      successMessage += " Sale forms will be generated.";
-    }
-
-    toast({
-      title: "Vehicle Added Successfully",
-      description: successMessage,
-    });
-
-    // Reset form
-    setFormData({
-      year: "",
-      make: "",
-      model: "",
-      vehicleId: "",
-      licensePlate: "",
-      sellerName: "",
-      purchaseDate: "",
-      purchasePrice: "",
-      paperwork: "",
-      paperworkOther: "",
-      titlePresent: false,
-      billOfSale: false,
-      destination: "",
-      buyerName: "",
-      buyerFirstName: "",
-      buyerLastName: "",
-      saleDate: "",
-      salePrice: "",
-      notes: ""
-    });
-    
-    // Clean up document URLs and reset
-    uploadedDocuments.forEach(doc => {
-      if (doc.url.startsWith('blob:')) {
-        URL.revokeObjectURL(doc.url);
-      }
-    });
-    setUploadedDocuments([]);
   };
 
   return (
-    <div className="space-y-6">
-      <Card className="shadow-business border-border">
-        <CardHeader className="bg-card border-b border-border">
-          <CardTitle className="flex items-center gap-2 text-foreground font-bold">
-            <Upload className="w-5 h-5 text-primary" />
-            Vehicle Intake Form
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <DocumentUpload 
-              uploadedDocuments={uploadedDocuments}
-              onDocumentsChange={setUploadedDocuments}
-            />
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="year">Year *</Label>
+          <Input
+            id="year"
+            value={formData.year}
+            onChange={(e) => setFormData(prev => ({ ...prev, year: e.target.value }))}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="make">Make *</Label>
+          <Input
+            id="make"
+            value={formData.make}
+            onChange={(e) => setFormData(prev => ({ ...prev, make: e.target.value }))}
+            required
+          />
+        </div>
+      </div>
 
-            <VehicleDetails 
-              formData={formData}
-              onInputChange={handleInputChange}
-            />
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="model">Model *</Label>
+          <Input
+            id="model"
+            value={formData.model}
+            onChange={(e) => setFormData(prev => ({ ...prev, model: e.target.value }))}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="vehicleId">Vehicle ID *</Label>
+          <Input
+            id="vehicleId"
+            value={formData.vehicleId}
+            onChange={(e) => setFormData(prev => ({ ...prev, vehicleId: e.target.value }))}
+            required
+          />
+        </div>
+      </div>
 
-            <PurchaseInfo 
-              formData={formData}
-              onInputChange={handleInputChange}
-            />
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="licensePlate">License Plate</Label>
+          <Input
+            id="licensePlate"
+            value={formData.licensePlate}
+            onChange={(e) => setFormData(prev => ({ ...prev, licensePlate: e.target.value }))}
+          />
+        </div>
+        <div>
+          <Label htmlFor="sellerName">Seller Name</Label>
+          <Input
+            id="sellerName"
+            value={formData.sellerName}
+            onChange={(e) => setFormData(prev => ({ ...prev, sellerName: e.target.value }))}
+          />
+        </div>
+      </div>
 
-            <DocumentStatus 
-              formData={formData}
-              onInputChange={handleInputChange}
-            />
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="purchaseDate">Purchase Date</Label>
+          <Input
+            id="purchaseDate"
+            type="date"
+            value={formData.purchaseDate}
+            onChange={(e) => setFormData(prev => ({ ...prev, purchaseDate: e.target.value }))}
+          />
+        </div>
+        <div>
+          <Label htmlFor="purchasePrice">Purchase Price</Label>
+          <Input
+            id="purchasePrice"
+            type="number"
+            value={formData.purchasePrice}
+            onChange={(e) => setFormData(prev => ({ ...prev, purchasePrice: e.target.value }))}
+          />
+        </div>
+      </div>
 
-            <DestinationSelector 
-              formData={formData}
-              onInputChange={handleInputChange}
-            />
+      <div className="space-y-3">
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="titlePresent"
+            checked={formData.titlePresent}
+            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, titlePresent: checked as boolean }))}
+          />
+          <Label htmlFor="titlePresent">Title Present</Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="billOfSale"
+            checked={formData.billOfSale}
+            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, billOfSale: checked as boolean }))}
+          />
+          <Label htmlFor="billOfSale">Bill of Sale</Label>
+        </div>
+      </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="notes" className="text-foreground font-medium">Additional Notes</Label>
-              <Textarea
-                id="notes"
-                placeholder="Any additional information about the vehicle..."
-                value={formData.notes}
-                onChange={(e) => handleInputChange("notes", e.target.value)}
-                rows={3}
-                className="border-border focus:border-primary text-foreground"
-              />
-            </div>
+      <div>
+        <Label htmlFor="notes">Notes</Label>
+        <Textarea
+          id="notes"
+          value={formData.notes}
+          onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+          rows={3}
+        />
+      </div>
 
-            <Button type="submit" className="w-full">
-              <Save className="w-4 h-4 mr-2" />
-              Save Vehicle & Generate Forms
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+      <Button type="submit" disabled={isSubmitting} className="w-full">
+        {isSubmitting ? "Adding..." : "Add Vehicle"}
+      </Button>
+    </form>
   );
 }
