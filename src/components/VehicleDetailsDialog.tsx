@@ -237,9 +237,18 @@ export function VehicleDetailsDialog({
 
   const handleDocumentsUpdate = async (newDocuments: UploadedDocument[]) => {
     try {
+      // Convert UploadedDocument[] to JSON-serializable format
+      const jsonDocuments = newDocuments.map(doc => ({
+        id: doc.id,
+        name: doc.name,
+        size: doc.size,
+        url: doc.url,
+        uploadedAt: new Date().toISOString()
+      }));
+
       // Combine existing documents with new documents
       const existingDocuments = localVehicle.documents || [];
-      const allDocuments = [...existingDocuments, ...newDocuments];
+      const allDocuments = [...existingDocuments, ...jsonDocuments];
       
       // Update the database with combined documents
       const { error } = await supabase
