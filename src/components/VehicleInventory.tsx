@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter, Car, Plus, Edit, RefreshCw, Calendar } from "lucide-react";
+import { Search, Filter, Car, Plus, Edit, RefreshCw } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -14,8 +14,6 @@ import {
 } from "@/components/ui/table";
 import { useVehicleStore } from "@/hooks/useVehicleStore";
 import { VehicleDetailsDialog } from "@/components/VehicleDetailsDialog";
-import { VehicleIntakeDialog } from "@/components/VehicleIntakeDialog";
-import { SoldDialog } from "@/components/forms/SoldDialog";
 import { Vehicle } from "@/stores/vehicleStore";
 import { toast } from "sonner";
 
@@ -27,29 +25,13 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isIntakeDialogOpen, setIsIntakeDialogOpen] = useState(false);
-  const [isSoldDialogOpen, setIsSoldDialogOpen] = useState(false);
-  const [vehicleToSell, setVehicleToSell] = useState<Vehicle | null>(null);
   const [statusFilter, setStatusFilter] = useState<Vehicle['status'] | 'all'>('all');
-  const [monthFilter, setMonthFilter] = useState("");
   const { vehicles, updateVehicleStatus, refreshVehicles, isLoading } = useVehicleStore();
 
   const filteredVehicles = vehicles.filter((vehicle) => {
     // Apply status filter first
     if (statusFilter !== 'all' && vehicle.status !== statusFilter) {
       return false;
-    }
-
-    // Apply month filter
-    if (monthFilter.trim()) {
-      const vehicleDate = new Date(vehicle.createdAt);
-      const filterDate = new Date(monthFilter + '-01');
-      
-      // Check if year and month match
-      if (vehicleDate.getFullYear() !== filterDate.getFullYear() || 
-          vehicleDate.getMonth() !== filterDate.getMonth()) {
-        return false;
-      }
     }
 
     // Then apply search filter
@@ -88,26 +70,21 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
     'sa-recycling': vehicles.filter(v => v.status === 'sa-recycling').length,
   };
 
-  function handleAddVehicle() {
-    setIsIntakeDialogOpen(true);
-  }
+  const handleAddVehicle = () => {
+    onNavigate('intake');
+  };
 
-  function handleEditVehicle(vehicle: Vehicle) {
+  const handleEditVehicle = (vehicle: Vehicle) => {
     setSelectedVehicle(vehicle);
     setIsDialogOpen(true);
-  }
+  };
 
-  function handleSellVehicle(vehicle: Vehicle) {
-    setVehicleToSell(vehicle);
-    setIsSoldDialogOpen(true);
-  }
-
-  async function handleStatusUpdate(vehicleId: string, newStatus: Vehicle['status'], soldData?: {
+  const handleStatusUpdate = async (vehicleId: string, newStatus: Vehicle['status'], soldData?: {
     buyerFirstName: string;
     buyerLastName: string;
     salePrice: string;
     saleDate: string;
-  }) {
+  }) => {
     try {
       await updateVehicleStatus(vehicleId, newStatus, soldData);
       toast.success("Vehicle status updated successfully");
@@ -115,9 +92,9 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
       console.error('Error updating vehicle:', error);
       toast.error("Failed to update vehicle status");
     }
-  }
+  };
 
-  async function handleRefresh() {
+  const handleRefresh = async () => {
     try {
       await refreshVehicles();
       toast.success("Vehicles refreshed successfully");
@@ -125,34 +102,12 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
       console.error('Error refreshing vehicles:', error);
       toast.error("Failed to refresh vehicles");
     }
-  }
+  };
 
-  function handleCloseDialog() {
+  const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setSelectedVehicle(null);
-  }
-
-  function handleIntakeSuccess() {
-    setIsIntakeDialogOpen(false);
-    refreshVehicles();
-  }
-
-  async function handleSoldConfirm(soldData: {
-    buyerFirstName: string;
-    buyerLastName: string;
-    salePrice: string;
-    saleDate: string;
-    buyerAddress?: string;
-    buyerCity?: string;
-    buyerState?: string;
-    buyerZip?: string;
-  }) {
-    if (vehicleToSell) {
-      await handleStatusUpdate(vehicleToSell.id, 'sold', soldData);
-      setIsSoldDialogOpen(false);
-      setVehicleToSell(null);
-    }
-  }
+  };
 
   return (
     <div className="space-y-6">
@@ -182,8 +137,8 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
       {/* Search and Filter Bar */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex gap-4 flex-wrap">
-            <div className="relative flex-1 min-w-64">
+          <div className="flex gap-4">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
                 placeholder="Search by make, model, year, Vehicle ID, or license plate..."
@@ -192,28 +147,11 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
                 className="pl-10"
               />
             </div>
-            <div className="relative min-w-48">
-              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-              <Input
-                type="month"
-                placeholder="Filter by month"
-                value={monthFilter}
-                onChange={(e) => setMonthFilter(e.target.value)}
-                className="pl-10"
-              />
-            </div>
             <Button variant="outline">
               <Filter className="w-4 h-4 mr-2" />
               Filter
             </Button>
           </div>
-          {(searchTerm || monthFilter) && (
-            <div className="mt-2 text-sm text-muted-foreground">
-              Showing {filteredVehicles.length} vehicle{filteredVehicles.length !== 1 ? 's' : ''} 
-              {searchTerm && ` matching "${searchTerm}"`}
-              {monthFilter && ` from ${new Date(monthFilter + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`}
-            </div>
-          )}
         </CardContent>
       </Card>
 
@@ -280,7 +218,7 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
         <CardHeader>
           <CardTitle>
             Vehicles ({statusFilter === 'all' ? 
-              (searchTerm || monthFilter ? `${filteredVehicles.length} of ${vehicles.length}` : vehicles.length) :
+              (searchTerm ? `${filteredVehicles.length} of ${vehicles.length}` : vehicles.length) :
               `${filteredVehicles.length} ${statusFilter === 'yard' ? 'In Yard' : 
                 statusFilter === 'sold' ? 'Sold' :
                 statusFilter === 'pick-your-part' ? 'Pick Your Part' :
@@ -320,12 +258,9 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
                     Show All Vehicles
                   </Button>
                 )}
-                {(searchTerm || monthFilter) && (
-                  <Button variant="outline" onClick={() => {
-                    setSearchTerm("");
-                    setMonthFilter("");
-                  }}>
-                    Clear Filters
+                {searchTerm && (
+                  <Button variant="outline" onClick={() => setSearchTerm("")}>
+                    Clear Search
                   </Button>
                 )}
               </div>
@@ -397,27 +332,15 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="flex gap-1">
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleEditVehicle(vehicle)}
-                          disabled={isLoading}
-                        >
-                          <Edit className="w-4 h-4 mr-2" />
-                          Edit
-                        </Button>
-                        {vehicle.status !== 'sold' && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleSellVehicle(vehicle)}
-                            disabled={isLoading}
-                          >
-                            Sell
-                          </Button>
-                        )}
-                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleEditVehicle(vehicle)}
+                        disabled={isLoading}
+                      >
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -433,19 +356,6 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
         onClose={handleCloseDialog}
         onStatusUpdate={handleStatusUpdate}
         refreshVehicles={refreshVehicles}
-      />
-
-      <VehicleIntakeDialog
-        isOpen={isIntakeDialogOpen}
-        onClose={() => setIsIntakeDialogOpen(false)}
-        onSuccess={handleIntakeSuccess}
-      />
-
-      <SoldDialog
-        open={isSoldDialogOpen}
-        onOpenChange={setIsSoldDialogOpen}
-        vehicle={vehicleToSell}
-        onConfirm={handleSoldConfirm}
       />
     </div>
   );

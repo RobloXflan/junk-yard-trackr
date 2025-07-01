@@ -241,19 +241,11 @@ export function VehicleDetailsDialog({
       const existingDocuments = localVehicle.documents || [];
       const allDocuments = [...existingDocuments, ...newDocuments];
       
-      // Convert UploadedDocument[] to proper JSON format for database
-      const documentsForDb = allDocuments.map(doc => ({
-        id: doc.id,
-        name: doc.name,
-        size: doc.size,
-        url: doc.url
-      }));
-      
       // Update the database with combined documents
       const { error } = await supabase
         .from('vehicles')
         .update({
-          documents: documentsForDb,
+          documents: allDocuments,
           updated_at: new Date().toISOString()
         })
         .eq('id', vehicle.id);

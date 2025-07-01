@@ -4,22 +4,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Vehicle } from "@/stores/vehicleStore";
 
 interface SoldDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  vehicle: Vehicle | null;
-  onConfirm: (data: { 
-    buyerFirstName: string; 
-    buyerLastName: string; 
-    salePrice: string; 
-    saleDate: string;
-    buyerAddress?: string;
-    buyerCity?: string;
-    buyerState?: string;
-    buyerZip?: string;
-  }) => void;
+  onConfirm: (data: { buyerFirstName: string; buyerLastName: string; salePrice: string; saleDate: string }) => void;
   initialData?: {
     buyerFirstName: string;
     buyerLastName: string;
@@ -28,7 +17,7 @@ interface SoldDialogProps {
   };
 }
 
-export function SoldDialog({ open, onOpenChange, vehicle, onConfirm, initialData }: SoldDialogProps) {
+export function SoldDialog({ open, onOpenChange, onConfirm, initialData }: SoldDialogProps) {
   const [formData, setFormData] = useState({
     buyerFirstName: initialData?.buyerFirstName || "",
     buyerLastName: initialData?.buyerLastName || "",
@@ -54,8 +43,6 @@ export function SoldDialog({ open, onOpenChange, vehicle, onConfirm, initialData
     onOpenChange(false);
   };
 
-  if (!vehicle) return null;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -64,16 +51,6 @@ export function SoldDialog({ open, onOpenChange, vehicle, onConfirm, initialData
         </DialogHeader>
         
         <div className="space-y-6">
-          {/* Vehicle Info */}
-          <div className="p-3 bg-muted/50 rounded-lg">
-            <div className="text-sm font-medium">
-              {vehicle.year} {vehicle.make} {vehicle.model}
-            </div>
-            <div className="text-sm text-muted-foreground">
-              VIN: {vehicle.vehicleId}
-            </div>
-          </div>
-
           {/* Buyer Information List */}
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-muted-foreground">Buyer Information</h4>
