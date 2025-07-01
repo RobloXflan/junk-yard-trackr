@@ -1,7 +1,13 @@
 
 import { VehicleIntakeForm } from "@/components/VehicleIntakeForm";
+import { toast } from "sonner";
 
 export function Intake() {
+  const handleSuccess = () => {
+    toast.success("Vehicle added successfully!");
+    // Optionally refresh the page or redirect
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
@@ -11,7 +17,7 @@ export function Intake() {
         </p>
       </div>
 
-      <VehicleIntakeForm />
+      <VehicleIntakeForm onSuccess={handleSuccess} />
     </div>
   );
 }
