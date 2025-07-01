@@ -1,362 +1,300 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Search, Filter, Car, Plus, Edit, RefreshCw } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { useVehicleStore } from "@/hooks/useVehicleStore";
-import { VehicleDetailsDialog } from "@/components/VehicleDetailsDialog";
-import { Vehicle } from "@/stores/vehicleStore";
-import { toast } from "sonner";
+import React, { useState, useEffect } from 'react'
+import { useVehicleStorePaginated } from '@/hooks/useVehicleStorePaginated'
+import { VehicleDetailsDialog } from './VehicleDetailsDialog'
+import { VehicleIntakeDialog } from './VehicleIntakeDialog'
+import { Input } from './ui/input'
+import { Button } from './ui/button'
+import { Badge } from './ui/badge'
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu'
+import { SoldDialog } from './forms/SoldDialog'
+import { Plus, Search, Eye, MoreVertical, Filter } from 'lucide-react'
+import { Vehicle } from '@/stores/vehicleStore'
+import { toast } from 'sonner'
 
 interface VehicleInventoryProps {
   onNavigate: (page: string) => void;
 }
 
 export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<Vehicle['status'] | 'all'>('all');
-  const { vehicles, updateVehicleStatus, refreshVehicles, isLoading } = useVehicleStore();
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false)
+  const [showIntakeDialog, setShowIntakeDialog] = useState(false)
+  const [showSoldDialog, setShowSoldDialog] = useState(false)
+  const [vehicleToSell, setVehicleToSell] = useState<Vehicle | null>(null)
+  const [selectedMonth, setSelectedMonth] = useState<string>('all')
 
-  const filteredVehicles = vehicles.filter((vehicle) => {
-    // Apply status filter first
-    if (statusFilter !== 'all' && vehicle.status !== statusFilter) {
-      return false;
+  const {
+    vehicles,
+    totalCount,
+    isLoading,
+    hasMore,
+    searchTerm,
+    setSearchTerm,
+    loadMore,
+    updateVehicleStatus,
+    refreshVehicles
+  } = useVehicleStorePaginated()
+
+  // Filter vehicles by selected month
+  const filteredVehicles = selectedMonth === 'all' 
+    ? vehicles 
+    : vehicles.filter(vehicle => {
+        const vehicleDate = new Date(vehicle.createdAt)
+        const vehicleMonth = vehicleDate.getMonth() + 1 // getMonth() returns 0-11, we want 1-12
+        return vehicleMonth.toString() === selectedMonth
+      })
+
+  const handleViewDetails = (vehicle: Vehicle) => {
+    setSelectedVehicle(vehicle)
+    setShowDetailsDialog(true)
+  }
+
+  const handleSoldClick = (vehicle: Vehicle) => {
+    setVehicleToSell(vehicle)
+    setShowSoldDialog(true)
+  }
+
+  const handleStatusChange = async (vehicle: Vehicle, newStatus: Vehicle['status']) => {
+    try {
+      await updateVehicleStatus(vehicle.id, newStatus)
+      toast.success(`Vehicle status updated to ${newStatus}`)
+    } catch (error) {
+      console.error('Failed to update vehicle status:', error)
+      toast.error('Failed to update vehicle status')
     }
+  }
 
-    // Then apply search filter
-    if (!searchTerm.trim()) return true;
-    
-    const search = searchTerm.toLowerCase().trim();
-    
-    // Check make (handle undefined/null)
-    const make = vehicle.make?.toLowerCase() || '';
-    if (make.includes(search)) return true;
-    
-    // Check model (handle undefined/null)
-    const model = vehicle.model?.toLowerCase() || '';
-    if (model.includes(search)) return true;
-    
-    // Check year (handle undefined/null and convert to string)
-    const year = vehicle.year?.toString() || '';
-    if (year.includes(search)) return true;
-    
-    // Check vehicle ID (handle undefined/null)
-    const vehicleId = vehicle.vehicleId?.toLowerCase() || '';
-    if (vehicleId.includes(search)) return true;
-    
-    // Check license plate (handle undefined/null)
-    const licensePlate = vehicle.licensePlate?.toLowerCase() || '';
-    if (licensePlate.includes(search)) return true;
-    
-    return false;
-  });
-
-  const statusCounts = {
-    all: vehicles.length,
-    yard: vehicles.filter(v => v.status === 'yard').length,
-    sold: vehicles.filter(v => v.status === 'sold').length,
-    'pick-your-part': vehicles.filter(v => v.status === 'pick-your-part').length,
-    'sa-recycling': vehicles.filter(v => v.status === 'sa-recycling').length,
-  };
-
-  const handleAddVehicle = () => {
-    onNavigate('intake');
-  };
-
-  const handleEditVehicle = (vehicle: Vehicle) => {
-    setSelectedVehicle(vehicle);
-    setIsDialogOpen(true);
-  };
-
-  const handleStatusUpdate = async (vehicleId: string, newStatus: Vehicle['status'], soldData?: {
+  const handleSoldConfirm = async (soldData: {
     buyerFirstName: string;
     buyerLastName: string;
     salePrice: string;
     saleDate: string;
+    buyerAddress?: string;
+    buyerCity?: string;
+    buyerState?: string;
+    buyerZip?: string;
   }) => {
+    if (!vehicleToSell) return
+    
     try {
-      await updateVehicleStatus(vehicleId, newStatus, soldData);
-      toast.success("Vehicle status updated successfully");
+      await updateVehicleStatus(vehicleToSell.id, 'sold', soldData)
+      toast.success('Vehicle marked as sold')
+      setShowSoldDialog(false)
+      setVehicleToSell(null)
     } catch (error) {
-      console.error('Error updating vehicle:', error);
-      toast.error("Failed to update vehicle status");
+      console.error('Failed to mark vehicle as sold:', error)
+      toast.error('Failed to mark vehicle as sold')
     }
-  };
+  }
 
-  const handleRefresh = async () => {
-    try {
-      await refreshVehicles();
-      toast.success("Vehicles refreshed successfully");
-    } catch (error) {
-      console.error('Error refreshing vehicles:', error);
-      toast.error("Failed to refresh vehicles");
+  const handleIntakeSuccess = () => {
+    setShowIntakeDialog(false)
+    refreshVehicles()
+  }
+
+  const getStatusBadgeColor = (status: string) => {
+    switch (status) {
+      case 'sold': return 'bg-green-500 hover:bg-green-600'
+      case 'yard': return 'bg-blue-500 hover:bg-blue-600'
+      case 'pick-your-part': return 'bg-orange-500 hover:bg-orange-600'
+      case 'sa-recycling': return 'bg-purple-500 hover:bg-purple-600'
+      default: return 'bg-gray-500 hover:bg-gray-600'
     }
-  };
+  }
 
-  const handleCloseDialog = () => {
-    setIsDialogOpen(false);
-    setSelectedVehicle(null);
-  };
+  const formatStatus = (status: string) => {
+    return status.split('-').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ')
+  }
+
+  const months = [
+    { value: 'all', label: 'All Months' },
+    { value: '1', label: 'January' },
+    { value: '2', label: 'February' },
+    { value: '3', label: 'March' },
+    { value: '4', label: 'April' },
+    { value: '5', label: 'May' },
+    { value: '6', label: 'June' },
+    { value: '7', label: 'July' },
+    { value: '8', label: 'August' },
+    { value: '9', label: 'September' },
+    { value: '10', label: 'October' },
+    { value: '11', label: 'November' },
+    { value: '12', label: 'December' }
+  ]
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Vehicle Inventory</h2>
-          <p className="text-muted-foreground">
-            Manage your vehicle inventory and track status
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={handleRefresh}
-            disabled={isLoading}
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          <Button className="gradient-primary" onClick={handleAddVehicle}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Vehicle
-          </Button>
-        </div>
-      </div>
-
-      {/* Search and Filter Bar */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex gap-4">
+      <Card className="shadow-business">
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span className="text-black font-bold">Vehicle Inventory</span>
+            <Button onClick={() => setShowIntakeDialog(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Vehicle
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
-                placeholder="Search by make, model, year, Vehicle ID, or license plate..."
+                placeholder="Search vehicles..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
               />
             </div>
-            <Button variant="outline">
-              <Filter className="w-4 h-4 mr-2" />
-              Filter
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Status Filter Buttons */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant={statusFilter === 'all' ? 'default' : 'outline'}
-              onClick={() => setStatusFilter('all')}
-              className="flex items-center gap-2"
-            >
-              All Vehicles
-              <Badge variant="secondary" className="ml-1">
-                {statusCounts.all}
-              </Badge>
-            </Button>
-            <Button
-              variant={statusFilter === 'yard' ? 'default' : 'outline'}
-              onClick={() => setStatusFilter('yard')}
-              className="flex items-center gap-2"
-            >
-              In Yard
-              <Badge variant="secondary" className="ml-1">
-                {statusCounts.yard}
-              </Badge>
-            </Button>
-            <Button
-              variant={statusFilter === 'sold' ? 'default' : 'outline'}
-              onClick={() => setStatusFilter('sold')}
-              className="flex items-center gap-2"
-            >
-              Sold
-              <Badge variant="secondary" className="ml-1">
-                {statusCounts.sold}
-              </Badge>
-            </Button>
-            <Button
-              variant={statusFilter === 'pick-your-part' ? 'default' : 'outline'}
-              onClick={() => setStatusFilter('pick-your-part')}
-              className="flex items-center gap-2"
-            >
-              Pick Your Part
-              <Badge variant="secondary" className="ml-1">
-                {statusCounts['pick-your-part']}
-              </Badge>
-            </Button>
-            <Button
-              variant={statusFilter === 'sa-recycling' ? 'default' : 'outline'}
-              onClick={() => setStatusFilter('sa-recycling')}
-              className="flex items-center gap-2"
-            >
-              SA Recycling
-              <Badge variant="secondary" className="ml-1">
-                {statusCounts['sa-recycling']}
-              </Badge>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Vehicle List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            Vehicles ({statusFilter === 'all' ? 
-              (searchTerm ? `${filteredVehicles.length} of ${vehicles.length}` : vehicles.length) :
-              `${filteredVehicles.length} ${statusFilter === 'yard' ? 'In Yard' : 
-                statusFilter === 'sold' ? 'Sold' :
-                statusFilter === 'pick-your-part' ? 'Pick Your Part' :
-                'SA Recycling'} vehicles`
-            })
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {vehicles.length === 0 ? (
-            <div className="text-center py-12">
-              <Car className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No vehicles in inventory</h3>
-              <p className="text-muted-foreground mb-4">
-                Start by adding your first vehicle to the inventory.
-              </p>
-              <Button className="gradient-primary" onClick={handleAddVehicle}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add First Vehicle
-              </Button>
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-gray-500" />
+              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Filter by month" />
+                </SelectTrigger>
+                <SelectContent>
+                  {months.map((month) => (
+                    <SelectItem key={month.value} value={month.value}>
+                      {month.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          ) : filteredVehicles.length === 0 ? (
-            <div className="text-center py-12">
-              <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No vehicles found</h3>
-              <p className="text-muted-foreground mb-4">
-                {statusFilter !== 'all' ? 
-                  `No vehicles with status "${statusFilter === 'yard' ? 'In Yard' : 
-                    statusFilter === 'sold' ? 'Sold' :
-                    statusFilter === 'pick-your-part' ? 'Pick Your Part' :
-                    'SA Recycling'}" found.` :
-                  'No vehicles match your search criteria. Try adjusting your search terms.'
-                }
-              </p>
-              <div className="flex gap-2 justify-center">
-                {statusFilter !== 'all' && (
-                  <Button variant="outline" onClick={() => setStatusFilter('all')}>
-                    Show All Vehicles
-                  </Button>
-                )}
-                {searchTerm && (
-                  <Button variant="outline" onClick={() => setSearchTerm("")}>
-                    Clear Search
-                  </Button>
-                )}
-              </div>
-            </div>
-          ) : (
+          </div>
+
+          <div className="text-sm text-gray-600 mb-4">
+            Showing {filteredVehicles.length} of {totalCount} vehicles
+            {selectedMonth !== 'all' && (
+              <span className="ml-2 text-blue-600">
+                (filtered by {months.find(m => m.value === selectedMonth)?.label})
+              </span>
+            )}
+          </div>
+
+          <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Vehicle</TableHead>
                   <TableHead>Vehicle ID</TableHead>
-                  <TableHead>Purchase Date</TableHead>
-                  <TableHead>Purchase Price</TableHead>
-                  <TableHead>Sale Price</TableHead>
-                  <TableHead>Buyer</TableHead>
-                  <TableHead>Sold To</TableHead>
+                  <TableHead>Year</TableHead>
+                  <TableHead>Make</TableHead>
+                  <TableHead>Model</TableHead>
+                  <TableHead>License Plate</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Added Date</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredVehicles.map((vehicle) => (
                   <TableRow key={vehicle.id}>
+                    <TableCell className="font-mono">{vehicle.vehicleId}</TableCell>
+                    <TableCell>{vehicle.year}</TableCell>
+                    <TableCell>{vehicle.make}</TableCell>
+                    <TableCell>{vehicle.model}</TableCell>
+                    <TableCell className="font-mono">{vehicle.licensePlate || 'N/A'}</TableCell>
                     <TableCell>
-                      <div>
-                        <div className="font-medium">
-                          {vehicle.year} {vehicle.make} {vehicle.model}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {vehicle.licensePlate && `Plate: ${vehicle.licensePlate}`}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {vehicle.vehicleId}
-                    </TableCell>
-                    <TableCell>
-                      {vehicle.purchaseDate || '-'}
-                    </TableCell>
-                    <TableCell>
-                      {vehicle.purchasePrice ? `$${parseFloat(vehicle.purchasePrice).toLocaleString()}` : '-'}
-                    </TableCell>
-                    <TableCell>
-                      {vehicle.salePrice ? `$${parseFloat(vehicle.salePrice).toLocaleString()}` : '-'}
-                    </TableCell>
-                    <TableCell>
-                      -
-                    </TableCell>
-                    <TableCell>
-                      {vehicle.status === 'sold' && vehicle.buyerFirstName && vehicle.buyerLastName ? (
-                        <div className="text-sm">
-                          <div>{vehicle.buyerFirstName} {vehicle.buyerLastName}</div>
-                          {vehicle.saleDate && (
-                            <div className="text-muted-foreground">{vehicle.saleDate}</div>
-                          )}
-                        </div>
-                      ) : '-'}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={
-                        vehicle.status === 'sold' ? 'default' :
-                        vehicle.status === 'yard' ? 'secondary' :
-                        'outline'
-                      }>
-                        {vehicle.status === 'yard' ? 'In Yard' : 
-                         vehicle.status === 'sold' ? 'Sold' :
-                         vehicle.status === 'pick-your-part' ? 'Pick Your Part' :
-                         vehicle.status === 'sa-recycling' ? 'SA Recycling' :
-                         vehicle.status}
+                      <Badge className={`${getStatusBadgeColor(vehicle.status)} text-white`}>
+                        {formatStatus(vehicle.status)}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleEditVehicle(vehicle)}
-                        disabled={isLoading}
-                      >
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit
-                      </Button>
+                      {new Date(vehicle.createdAt).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewDetails(vehicle)}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                            <DropdownMenuItem onClick={() => handleSoldClick(vehicle)}>
+                              Mark as Sold
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleStatusChange(vehicle, 'yard')}>
+                              Move to Yard
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleStatusChange(vehicle, 'pick-your-part')}>
+                              Send to Pick Your Part
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleStatusChange(vehicle, 'sa-recycling')}>
+                              Send to SA Recycling
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+          </div>
+
+          {hasMore && !isLoading && selectedMonth === 'all' && (
+            <div className="mt-4 text-center">
+              <Button onClick={loadMore} variant="outline">
+                Load More Vehicles
+              </Button>
+            </div>
+          )}
+
+          {isLoading && (
+            <div className="mt-4 text-center text-gray-500">
+              Loading vehicles...
+            </div>
           )}
         </CardContent>
       </Card>
 
-      <VehicleDetailsDialog
-        vehicle={selectedVehicle}
-        isOpen={isDialogOpen}
-        onClose={handleCloseDialog}
-        onStatusUpdate={handleStatusUpdate}
-        refreshVehicles={refreshVehicles}
-      />
+      {showDetailsDialog && selectedVehicle && (
+        <VehicleDetailsDialog
+          vehicle={selectedVehicle}
+          isOpen={showDetailsDialog}
+          onClose={() => {
+            setShowDetailsDialog(false)
+            setSelectedVehicle(null)
+          }}
+          onSave={() => {
+            refreshVehicles()
+            setShowDetailsDialog(false)
+            setSelectedVehicle(null)
+          }}
+        />
+      )}
+
+      {showIntakeDialog && (
+        <VehicleIntakeDialog
+          isOpen={showIntakeDialog}
+          onClose={() => setShowIntakeDialog(false)}
+          onSuccess={handleIntakeSuccess}
+        />
+      )}
+
+      {showSoldDialog && vehicleToSell && (
+        <SoldDialog
+          isOpen={showSoldDialog}
+          onClose={() => {
+            setShowSoldDialog(false)
+            setVehicleToSell(null)
+          }}
+          vehicle={vehicleToSell}
+          onConfirm={handleSoldConfirm}
+        />
+      )}
     </div>
-  );
+  )
 }
