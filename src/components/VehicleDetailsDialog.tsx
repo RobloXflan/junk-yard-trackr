@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react'
 import { Vehicle, UploadedDocument } from '@/stores/vehicleStore'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
@@ -17,7 +18,7 @@ import { toast } from 'sonner'
 import { FileText, Trash2, Download, Calendar, DollarSign, User, MapPin, FileImage, Upload } from 'lucide-react'
 
 interface VehicleDetailsDialogProps {
-  vehicle: Vehicle
+  vehicle: Vehicle | null
   isOpen: boolean
   onClose: () => void
   onSave: () => void
@@ -61,14 +62,20 @@ const deserializeDocuments = (documentsData: any): UploadedDocument[] => {
 }
 
 export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: VehicleDetailsDialogProps) {
-  const [editedVehicle, setEditedVehicle] = useState<Vehicle>(vehicle)
+  const [editedVehicle, setEditedVehicle] = useState<Vehicle | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [documents, setDocuments] = useState<UploadedDocument[]>([])
 
   useEffect(() => {
-    setEditedVehicle(vehicle)
-    setDocuments(vehicle.documents || [])
+    if (vehicle) {
+      setEditedVehicle(vehicle)
+      setDocuments(vehicle.documents || [])
+    }
   }, [vehicle])
+
+  if (!vehicle || !editedVehicle) {
+    return null
+  }
 
   const handleSave = async () => {
     setIsLoading(true)
@@ -119,6 +126,10 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
 
   const removeDocument = (docId: string) => {
     setDocuments(prev => prev.filter(doc => doc.id !== docId))
+  }
+
+  const handleImagesUpdate = (updatedImages: any[]) => {
+    setEditedVehicle(prev => prev ? { ...prev, carImages: updatedImages } : null)
   }
 
   return (
@@ -273,9 +284,8 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
 
           <TabsContent value="documents" className="space-y-4">
             <DocumentUpload
-              documents={documents}
+              uploadedDocuments={documents}
               onDocumentsChange={handleDocumentsChange}
-              vehicleId={editedVehicle.id}
             />
             {documents.length > 0 && (
               <div className="space-y-2">
@@ -314,7 +324,8 @@ export function VehicleDetailsDialog({ vehicle, isOpen, onClose, onSave }: Vehic
           <TabsContent value="images" className="space-y-4">
             <CarImagesUpload
               vehicleId={editedVehicle.id}
-              existingImages={editedVehicle.carImages || []}
+              currentImages={editedVehicle.carImages || []}
+              onImagesUpdate={handleImagesUpdate}
             />
           </TabsContent>
         </Tabs>

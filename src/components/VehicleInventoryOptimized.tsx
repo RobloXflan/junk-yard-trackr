@@ -172,6 +172,12 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
     setSelectedVehicle(null);
   };
 
+  const handleSaveVehicle = () => {
+    refreshVehicles();
+    setIsDialogOpen(false);
+    setSelectedVehicle(null);
+  };
+
   const isSearching = searchTerm.trim().length > 0;
 
   return (
@@ -482,8 +488,7 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
         vehicle={selectedVehicle}
         isOpen={isDialogOpen}
         onClose={handleCloseDialog}
-        onStatusUpdate={handleStatusUpdate}
-        refreshVehicles={refreshVehicles}
+        onSave={handleSaveVehicle}
       />
     </div>
   );

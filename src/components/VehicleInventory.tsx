@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react'
 import { useVehicleStorePaginated } from '@/hooks/useVehicleStorePaginated'
 import { VehicleDetailsDialog } from './VehicleDetailsDialog'
@@ -286,12 +287,11 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
 
       {showSoldDialog && vehicleToSell && (
         <SoldDialog
-          isOpen={showSoldDialog}
-          onClose={() => {
-            setShowSoldDialog(false)
-            setVehicleToSell(null)
+          open={showSoldDialog}
+          onOpenChange={(open) => {
+            setShowSoldDialog(open)
+            if (!open) setVehicleToSell(null)
           }}
-          vehicle={vehicleToSell}
           onConfirm={handleSoldConfirm}
         />
       )}
