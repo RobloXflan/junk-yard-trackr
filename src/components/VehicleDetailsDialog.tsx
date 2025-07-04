@@ -260,23 +260,24 @@ export function VehicleDetailsDialog({
       const existingDocuments: StoredDocument[] = Array.isArray(localVehicle.documents) 
         ? localVehicle.documents.map(doc => {
             // Handle both UploadedDocument and StoredDocument formats
-            if ('file' in doc) {
+            const anyDoc = doc as any; // Cast to any to handle mixed types
+            if ('file' in anyDoc) {
               // This is an UploadedDocument, convert it
               return {
-                id: doc.id,
-                name: doc.name,
-                size: doc.size,
-                url: doc.url,
+                id: anyDoc.id,
+                name: anyDoc.name,
+                size: anyDoc.size,
+                url: anyDoc.url,
                 uploadedAt: new Date().toISOString()
               };
             } else {
               // This is already a StoredDocument or similar
               return {
-                id: doc.id || `doc_${Date.now()}`,
-                name: doc.name || 'Unknown Document',
-                size: doc.size || 0,
-                url: doc.url || '',
-                uploadedAt: (doc as any).uploadedAt || new Date().toISOString()
+                id: anyDoc.id || `doc_${Date.now()}`,
+                name: anyDoc.name || 'Unknown Document',
+                size: anyDoc.size || 0,
+                url: anyDoc.url || '',
+                uploadedAt: anyDoc.uploadedAt || new Date().toISOString()
               };
             }
           })
