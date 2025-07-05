@@ -10,7 +10,7 @@ import { InventoryOptimized } from "@/pages/InventoryOptimized";
 import { PendingReleases } from "@/pages/PendingReleases";
 import { Released } from "@/pages/Released";
 import { Quotes } from "@/pages/Quotes";
-import { Phones } from "@/pages/Phones";
+
 import { PublicInventory } from "@/pages/PublicInventory";
 import { SiteAuth } from "@/components/SiteAuth";
 import { ViewOnlyInventory } from "@/components/ViewOnlyInventory";
@@ -56,8 +56,8 @@ const App = () => {
         return <Released />;
       case 'quotes':
         return <Quotes />;
-      case 'phones':
-        return <Phones />;
+      case 'admin':
+        return <div className="p-6"><h1 className="text-2xl font-bold">Admin Panel</h1><p>Welcome to the admin panel.</p></div>;
       case 'public-inventory':
         return <PublicInventory />;
       default:
@@ -183,14 +183,21 @@ const App = () => {
                       Quotes
                     </button>
                     <button
-                      onClick={() => setCurrentPage("phones")}
+                      onClick={() => {
+                        const passcode = prompt("Enter admin passcode:");
+                        if (passcode === "1426") {
+                          setCurrentPage("admin");
+                        } else if (passcode !== null) {
+                          alert("Invalid passcode");
+                        }
+                      }}
                       className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                        currentPage === "phones"
+                        currentPage === "admin"
                           ? "bg-primary text-primary-foreground"
                           : "text-muted-foreground hover:text-foreground hover:bg-muted"
                       }`}
                     >
-                      Phones
+                      Admin
                     </button>
                   </nav>
                   <div className="ml-auto flex items-center gap-4">

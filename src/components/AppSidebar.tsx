@@ -1,4 +1,4 @@
-import { Car, BarChart3, Upload, Clock, Settings, CheckCircle, FileText, Smartphone } from "lucide-react";
+import { Car, BarChart3, Upload, Clock, Settings, CheckCircle, FileText } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -45,9 +45,10 @@ const menuItems = [
     icon: FileText,
   },
   {
-    title: "Phones",
-    page: "phones",
-    icon: Smartphone,
+    title: "Admin",
+    page: "admin",  
+    icon: Settings,
+    locked: true,
   },
   {
     title: "Settings",
@@ -64,7 +65,14 @@ interface AppSidebarProps {
 export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
   const { setOpenMobile } = useSidebar();
 
-  const handleNavigation = (page: string) => {
+  const handleNavigation = (page: string, locked?: boolean) => {
+    if (locked) {
+      const passcode = prompt("Enter admin passcode:");
+      if (passcode !== "1426") {
+        alert("Invalid passcode");
+        return;
+      }
+    }
     onNavigate(page);
     // Close mobile sidebar after navigation
     setOpenMobile(false);
@@ -94,7 +102,7 @@ export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton 
-                    onClick={() => handleNavigation(item.page)}
+                    onClick={() => handleNavigation(item.page, (item as any).locked)}
                     isActive={currentPage === item.page}
                     className={`hover:bg-slate-100 cursor-pointer ${
                       currentPage === item.page 
