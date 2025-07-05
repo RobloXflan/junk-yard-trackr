@@ -116,8 +116,8 @@ const App = () => {
           <div className="min-h-screen flex w-full bg-background">
             <AppSidebar currentPage={currentPage} onNavigate={setCurrentPage} />
             <main className="flex-1 flex flex-col">
-              <header className="border-b bg-card px-4 py-3 lg:px-6">
-                <div className="flex items-center gap-4">
+              <header className="border-b bg-card px-3 py-2 sm:px-4 sm:py-3 lg:px-6">
+                <div className="flex items-center gap-2 sm:gap-4">
                   <SidebarTrigger className="lg:hidden">
                     <Menu className="w-5 h-5" />
                   </SidebarTrigger>
@@ -200,20 +200,20 @@ const App = () => {
                       Admin
                     </button>
                   </nav>
-                  <div className="ml-auto flex items-center gap-4">
-                    <span className="text-sm text-muted-foreground">
+                  <div className="ml-auto flex items-center gap-2 sm:gap-4">
+                    <span className="text-xs sm:text-sm text-muted-foreground hidden sm:inline">
                       Welcome, {username}
                     </span>
                     <button
                       onClick={handleLogout}
-                      className="text-sm text-muted-foreground hover:text-foreground"
+                      className="text-xs sm:text-sm text-muted-foreground hover:text-foreground px-2 py-1 rounded touch-manipulation"
                     >
                       Logout
                     </button>
                   </div>
                 </div>
               </header>
-              <div className="flex-1 p-4 lg:p-6">
+              <div className="flex-1 p-3 sm:p-4 lg:p-6">
                 {renderPage()}
               </div>
             </main>
