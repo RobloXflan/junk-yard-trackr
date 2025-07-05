@@ -45,6 +45,80 @@ export type Database = {
         }
         Relationships: []
       }
+      cash_transactions: {
+        Row: {
+          amount: number
+          balance_after: number
+          created_at: string
+          id: string
+          notes: string | null
+          transaction_date: string
+          transaction_type: string
+          worker_id: string
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          transaction_date?: string
+          transaction_type: string
+          worker_id: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          transaction_date?: string
+          transaction_type?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_transactions_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_summaries: {
+        Row: {
+          active_workers_count: number | null
+          created_at: string
+          id: string
+          net_change: number | null
+          summary_date: string
+          total_given_out: number | null
+          total_turned_in: number | null
+          updated_at: string
+        }
+        Insert: {
+          active_workers_count?: number | null
+          created_at?: string
+          id?: string
+          net_change?: number | null
+          summary_date: string
+          total_given_out?: number | null
+          total_turned_in?: number | null
+          updated_at?: string
+        }
+        Update: {
+          active_workers_count?: number | null
+          created_at?: string
+          id?: string
+          net_change?: number | null
+          summary_date?: string
+          total_given_out?: number | null
+          total_turned_in?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       email_processing_logs: {
         Row: {
           created_at: string
@@ -417,6 +491,36 @@ export type Database = {
           updated_at?: string
           vehicle_id?: string
           year?: string
+        }
+        Relationships: []
+      }
+      workers: {
+        Row: {
+          created_at: string
+          hire_date: string | null
+          id: string
+          name: string
+          phone: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          hire_date?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          hire_date?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          status?: string | null
+          updated_at?: string
         }
         Relationships: []
       }

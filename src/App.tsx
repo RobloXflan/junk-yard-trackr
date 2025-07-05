@@ -10,7 +10,7 @@ import { InventoryOptimized } from "@/pages/InventoryOptimized";
 import { PendingReleases } from "@/pages/PendingReleases";
 import { Released } from "@/pages/Released";
 import { Quotes } from "@/pages/Quotes";
-
+import { CashManagement } from "@/components/CashManagement";
 import { PublicInventory } from "@/pages/PublicInventory";
 import { SiteAuth } from "@/components/SiteAuth";
 import { ViewOnlyInventory } from "@/components/ViewOnlyInventory";
@@ -57,7 +57,7 @@ const App = () => {
       case 'quotes':
         return <Quotes />;
       case 'admin':
-        return <div className="p-6"><h1 className="text-2xl font-bold">Admin Panel</h1><p>Welcome to the admin panel.</p></div>;
+        return <CashManagement />;
       case 'public-inventory':
         return <PublicInventory />;
       default:
