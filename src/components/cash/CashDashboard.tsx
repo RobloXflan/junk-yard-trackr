@@ -79,6 +79,15 @@ export function CashDashboard({ selectedDate, onDateChange }: CashDashboardProps
         .select('transaction_type, amount')
         .eq('transaction_date', dateStr);
 
+      // Get vehicle purchases for the same day
+      const { data: vehicles } = await supabase
+        .from('vehicles')
+        .select('purchase_price')
+        .eq('purchase_date', dateStr);
+
+      const total_vehicle_purchases = vehicles?.reduce((sum, vehicle) => 
+        sum + (Number(vehicle.purchase_price) || 0), 0) || 0;
+
       if (transactions) {
         const summary = transactions.reduce(
           (acc, tx) => {
@@ -91,7 +100,8 @@ export function CashDashboard({ selectedDate, onDateChange }: CashDashboardProps
           },
           { total_turned_in: 0, total_given_out: 0, net_change: 0, active_workers_count: workers?.length || 0 }
         );
-        summary.net_change = summary.total_turned_in - summary.total_given_out;
+        // Net change = Vehicle Purchases - Cash Given Out (positive = company owes money)
+        summary.net_change = total_vehicle_purchases - summary.total_given_out;
         setDailySummary(summary);
       }
     } catch (error) {

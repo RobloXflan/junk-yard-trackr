@@ -13,9 +13,11 @@ interface WorkerCashFlow {
   money_given: number;
   money_turned_in: number;
   vehicle_spending_previous_day: number;
+  vehicle_spending_same_day: number;
   expected_vs_actual_difference: number;
   net_unexplained: number;
   ending_balance: number;
+  daily_net_change: number;
 }
 
 interface DailyWorkerCashFlowProps {
@@ -90,11 +92,11 @@ export function DailyWorkerCashFlow({ selectedDate }: DailyWorkerCashFlowProps) 
             .eq('transaction_date', dateStr)
             .in('transaction_type', ['turn_in', 'give_money']);
 
-          // Get vehicle spending from PREVIOUS day
-          const { data: previousDayVehicles } = await supabase
+          // Get vehicle spending from SAME day
+          const { data: sameDayVehicles } = await supabase
             .from('vehicles')
             .select('purchase_price')
-            .eq('purchase_date', previousDateStr)
+            .eq('purchase_date', dateStr)
             .filter('seller_name', 'ilike', worker.name);
 
           const starting_balance = startingBalanceData?.[0]?.balance_after || 0;
@@ -110,6 +112,16 @@ export function DailyWorkerCashFlow({ selectedDate }: DailyWorkerCashFlowProps) 
             }
           });
 
+          const vehicle_spending_same_day = sameDayVehicles?.reduce((sum, vehicle) => 
+            sum + (Number(vehicle.purchase_price) || 0), 0) || 0;
+
+          // Get vehicle spending from PREVIOUS day for reconciliation
+          const { data: previousDayVehicles } = await supabase
+            .from('vehicles')
+            .select('purchase_price')
+            .eq('purchase_date', previousDateStr)
+            .filter('seller_name', 'ilike', worker.name);
+
           const vehicle_spending_previous_day = previousDayVehicles?.reduce((sum, vehicle) => 
             sum + (Number(vehicle.purchase_price) || 0), 0) || 0;
 
@@ -117,6 +129,9 @@ export function DailyWorkerCashFlow({ selectedDate }: DailyWorkerCashFlowProps) 
           const expected_vs_actual_difference = previous_ending_balance - starting_balance;
           const net_unexplained = expected_vs_actual_difference - vehicle_spending_previous_day;
           const ending_balance = starting_balance + money_given - money_turned_in;
+          
+          // Calculate daily net change: Vehicle Purchases - Cash Given Out
+          const daily_net_change = vehicle_spending_same_day - money_given;
 
           return {
             id: worker.id,
@@ -126,9 +141,11 @@ export function DailyWorkerCashFlow({ selectedDate }: DailyWorkerCashFlowProps) 
             money_given,
             money_turned_in,
             vehicle_spending_previous_day,
+            vehicle_spending_same_day,
             expected_vs_actual_difference,
             net_unexplained,
-            ending_balance
+            ending_balance,
+            daily_net_change
           };
         })
       );
@@ -168,9 +185,14 @@ export function DailyWorkerCashFlow({ selectedDate }: DailyWorkerCashFlowProps) 
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center justify-between">
                 {flow.name}
-                <Badge variant={flow.net_unexplained >= 0 ? "default" : "destructive"}>
-                  {flow.net_unexplained >= 0 ? '+' : ''}${flow.net_unexplained.toFixed(2)}
-                </Badge>
+                <div className="flex gap-2">
+                  <Badge variant={flow.daily_net_change <= 0 ? "default" : "destructive"}>
+                    Daily: {flow.daily_net_change >= 0 ? '+' : ''}${flow.daily_net_change.toFixed(2)}
+                  </Badge>
+                  <Badge variant={flow.net_unexplained >= 0 ? "default" : "destructive"}>
+                    Missing: {flow.net_unexplained >= 0 ? '+' : ''}${flow.net_unexplained.toFixed(2)}
+                  </Badge>
+                </div>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 pt-0">
@@ -212,18 +234,18 @@ export function DailyWorkerCashFlow({ selectedDate }: DailyWorkerCashFlowProps) 
                   <div className="flex items-center justify-between text-orange-600">
                     <span className="flex items-center gap-1">
                       <ShoppingCart className="h-3 w-3" />
-                      Vehicles (Prev Day):
+                      Vehicles Today:
                     </span>
-                    <span className="font-medium">${flow.vehicle_spending_previous_day.toFixed(2)}</span>
+                    <span className="font-medium">${flow.vehicle_spending_same_day.toFixed(2)}</span>
                   </div>
 
                   <div className="flex items-center justify-between font-medium text-base pt-2 border-t">
                     <span className="flex items-center gap-1">
                       <DollarSign className="h-4 w-4" />
-                      Net Unexplained:
+                      Daily Net:
                     </span>
-                    <span className={flow.net_unexplained === 0 ? 'text-green-600' : 'text-red-600'}>
-                      ${flow.net_unexplained.toFixed(2)}
+                    <span className={flow.daily_net_change <= 0 ? 'text-green-600' : 'text-red-600'}>
+                      {flow.daily_net_change > 0 ? 'Owe Worker: +' : 'Worker Owes: '}${Math.abs(flow.daily_net_change).toFixed(2)}
                     </span>
                   </div>
 
@@ -237,9 +259,21 @@ export function DailyWorkerCashFlow({ selectedDate }: DailyWorkerCashFlowProps) 
                 </div>
               </div>
 
-              {flow.vehicle_spending_previous_day > 0 && (
+              {flow.vehicle_spending_same_day > 0 && (
                 <div className="mt-3 p-2 bg-orange-50 rounded text-xs text-orange-800">
-                  💡 ${flow.vehicle_spending_previous_day.toFixed(2)} spent on vehicles yesterday explains some cash reduction
+                  🚗 ${flow.vehicle_spending_same_day.toFixed(2)} spent on vehicles today
+                </div>
+              )}
+
+              {flow.daily_net_change > 0 && (
+                <div className="mt-2 p-2 bg-red-50 rounded text-xs text-red-800">
+                  ⚠️ Company owes worker ${flow.daily_net_change.toFixed(2)} (vehicles &gt; cash given)
+                </div>
+              )}
+
+              {flow.daily_net_change < 0 && (
+                <div className="mt-2 p-2 bg-green-50 rounded text-xs text-green-800">
+                  ✅ Worker owes company ${Math.abs(flow.daily_net_change).toFixed(2)} (cash given &gt; vehicles)
                 </div>
               )}
 
