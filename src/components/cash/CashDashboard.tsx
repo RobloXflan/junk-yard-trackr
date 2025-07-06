@@ -7,6 +7,7 @@ import { CalendarIcon, DollarSign, TrendingUp, TrendingDown, Users } from "lucid
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { DailyWorkerCashFlow } from "./DailyWorkerCashFlow";
 
 interface WorkerBalance {
   id: string;
@@ -188,6 +189,9 @@ export function CashDashboard({ selectedDate, onDateChange }: CashDashboardProps
           </CardContent>
         </Card>
       </div>
+
+      {/* Worker Cash Flows */}
+      <DailyWorkerCashFlow selectedDate={selectedDate} />
 
       {/* Worker Balances */}
       <Card>

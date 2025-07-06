@@ -24,7 +24,7 @@ interface TransactionEntryProps {
 export function TransactionEntry({ selectedDate }: TransactionEntryProps) {
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [selectedWorker, setSelectedWorker] = useState<string>("");
-  const [transactionType, setTransactionType] = useState<"turn_in" | "give_money">("turn_in");
+  const [transactionType, setTransactionType] = useState<"turn_in" | "give_money" | "starting_balance">("turn_in");
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
@@ -74,7 +74,9 @@ export function TransactionEntry({ selectedDate }: TransactionEntryProps) {
 
   const calculateNewBalance = () => {
     const amountNum = parseFloat(amount) || 0;
-    if (transactionType === "turn_in") {
+    if (transactionType === "starting_balance") {
+      return amountNum;
+    } else if (transactionType === "turn_in") {
       return currentBalance - amountNum;
     } else {
       return currentBalance + amountNum;
@@ -172,8 +174,12 @@ export function TransactionEntry({ selectedDate }: TransactionEntryProps) {
             <Label>Transaction Type *</Label>
             <RadioGroup
               value={transactionType}
-              onValueChange={(value) => setTransactionType(value as "turn_in" | "give_money")}
+              onValueChange={(value) => setTransactionType(value as "turn_in" | "give_money" | "starting_balance")}
             >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="starting_balance" id="starting_balance" />
+                <Label htmlFor="starting_balance">Set Starting Balance</Label>
+              </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="turn_in" id="turn_in" />
                 <Label htmlFor="turn_in">Turn In Money (Subtract)</Label>
@@ -245,8 +251,12 @@ export function TransactionEntry({ selectedDate }: TransactionEntryProps) {
 
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Transaction:</span>
-                <span className={`font-medium ${transactionType === 'turn_in' ? 'text-red-600' : 'text-green-600'}`}>
-                  {transactionType === 'turn_in' ? '−' : '+'} ${parseFloat(amount) || 0}
+                <span className={`font-medium ${
+                  transactionType === 'starting_balance' ? 'text-blue-600' : 
+                  transactionType === 'turn_in' ? 'text-red-600' : 'text-green-600'
+                }`}>
+                  {transactionType === 'starting_balance' ? 'Set to' : 
+                   transactionType === 'turn_in' ? '−' : '+'} ${parseFloat(amount) || 0}
                 </span>
               </div>
 
