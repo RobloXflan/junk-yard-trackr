@@ -6,10 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { DollarSign, Calculator } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DollarSign, Calculator, CalendarIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface Worker {
   id: string;
@@ -24,6 +27,7 @@ interface TransactionEntryProps {
 export function TransactionEntry({ selectedDate }: TransactionEntryProps) {
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [selectedWorker, setSelectedWorker] = useState<string>("");
+  const [transactionDate, setTransactionDate] = useState<Date>(selectedDate);
   const [transactionType, setTransactionType] = useState<"turn_in" | "give_money" | "starting_balance">("turn_in");
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
@@ -108,7 +112,7 @@ export function TransactionEntry({ selectedDate }: TransactionEntryProps) {
     setLoading(true);
     try {
       const newBalance = calculateNewBalance();
-      const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      const dateStr = format(transactionDate, 'yyyy-MM-dd');
 
       const { error } = await supabase
         .from('cash_transactions')
@@ -130,6 +134,7 @@ export function TransactionEntry({ selectedDate }: TransactionEntryProps) {
 
       // Reset form
       setSelectedWorker("");
+      setTransactionDate(selectedDate);
       setAmount("");
       setNotes("");
       setCurrentBalance(0);
@@ -168,6 +173,33 @@ export function TransactionEntry({ selectedDate }: TransactionEntryProps) {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="date">Transaction Date *</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !transactionDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {transactionDate ? format(transactionDate, "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={transactionDate}
+                  onSelect={(date) => date && setTransactionDate(date)}
+                  initialFocus
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="space-y-3">
@@ -234,7 +266,7 @@ export function TransactionEntry({ selectedDate }: TransactionEntryProps) {
             <CardContent className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Date:</span>
-                <span className="font-medium">{format(selectedDate, "MMM dd, yyyy")}</span>
+                <span className="font-medium">{format(transactionDate, "MMM dd, yyyy")}</span>
               </div>
               
               <div className="flex justify-between items-center">
