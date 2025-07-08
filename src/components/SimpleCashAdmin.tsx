@@ -202,7 +202,7 @@ export function SimpleCashAdmin() {
             <div className="space-y-2">
               <Label htmlFor="reported">Cash Reported</Label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="reported"
                   type="number"
@@ -211,7 +211,7 @@ export function SimpleCashAdmin() {
                   value={reportedCash}
                   onChange={(e) => setReportedCash(e.target.value)}
                   placeholder="0.00"
-                  className="pl-9"
+                  className="pl-10 text-base font-medium"
                 />
               </div>
             </div>
@@ -219,7 +219,7 @@ export function SimpleCashAdmin() {
             <div className="space-y-2">
               <Label htmlFor="given">Cash Given</Label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="given"
                   type="number"
@@ -228,7 +228,7 @@ export function SimpleCashAdmin() {
                   value={cashGiven}
                   onChange={(e) => setCashGiven(e.target.value)}
                   placeholder="0.00"
-                  className="pl-9"
+                  className="pl-10 text-base font-medium"
                 />
               </div>
             </div>
