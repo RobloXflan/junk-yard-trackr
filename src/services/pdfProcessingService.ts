@@ -37,11 +37,8 @@ export class PDFProcessingService {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('https://lvqvoigbdqhruudmfcou.supabase.co/functions/v1/process-pdf', {
+      const response = await fetch('/functions/v1/process-pdf', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2cXZvaWdiZHFocnV1ZG1mY291Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkwODY1ODMsImV4cCI6MjA2NDY2MjU4M30.xtNOODhhRmfLP5tmhdAm607hkgBEIq6wQNWWKnkWG48`,
-        },
         body: formData,
       });
 
