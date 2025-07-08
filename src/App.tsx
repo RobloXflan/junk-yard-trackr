@@ -6,6 +6,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Dashboard } from "@/pages/Dashboard";
 import { Intake } from "@/pages/Intake";
+import { Documents } from "@/pages/Documents";
 import { InventoryOptimized } from "@/pages/InventoryOptimized";
 import { PendingReleases } from "@/pages/PendingReleases";
 import { Released } from "@/pages/Released";
@@ -48,6 +49,8 @@ const App = () => {
         return <Dashboard />;
       case 'intake':
         return <Intake />;
+      case 'documents':
+        return <Documents />;
       case 'inventory':
         return <InventoryOptimized onNavigate={setCurrentPage} />;
       case 'pending-releases':
@@ -141,6 +144,16 @@ const App = () => {
                       }`}
                     >
                       Vehicle Intake
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage("documents")}
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                        currentPage === "documents"
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      }`}
+                    >
+                      Documents
                     </button>
                     <button
                       onClick={() => setCurrentPage("inventory")}
