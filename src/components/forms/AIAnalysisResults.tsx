@@ -98,7 +98,7 @@ export function AIAnalysisResults({ results, onApplyData, onClose }: AIAnalysisR
           <>
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                Click on fields to select them, then apply to your form:
+                Click on fields to select them, then apply to your form. Note: PDF analysis currently returns sample data - please verify and update as needed.
               </p>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -110,12 +110,21 @@ export function AIAnalysisResults({ results, onApplyData, onClose }: AIAnalysisR
                       selectedFields.includes(field.key)
                         ? 'border-primary bg-primary/5'
                         : 'border-border hover:border-primary/50'
+                    } ${
+                      results.documentAnalysis?.some(doc => doc.note) 
+                        ? 'bg-blue-50 border-blue-200' 
+                        : ''
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium">{field.label}</p>
                         <p className="text-sm text-muted-foreground">{field.value}</p>
+                        {results.documentAnalysis?.some(doc => doc.note) && (
+                          <p className="text-xs text-blue-600 mt-1">
+                            Sample data - please verify
+                          </p>
+                        )}
                       </div>
                       {selectedFields.includes(field.key) && (
                         <CheckCircle className="w-4 h-4 text-primary" />
