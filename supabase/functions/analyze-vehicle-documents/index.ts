@@ -28,61 +28,16 @@ serve(async (req) => {
       try {
         console.log(`🔍 Analyzing: ${url}`);
         
-        const isPdf = url.toLowerCase().includes('.pdf');
+        // Send PDF or image directly to OpenAI - they can handle both!
+        console.log('🤖 Sending document directly to OpenAI...');
+        const analysisResult = await analyzeDocumentWithOpenAI(url);
         
-        if (isPdf) {
-          console.log('📋 PDF detected - converting to images...');
-          
-          // Convert PDF to images using PDF.co (reliable service)
-          const convertResponse = await fetch('https://api.pdf.co/v1/pdf/convert/to/png', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-api-key': Deno.env.get('PDF_CO_API_KEY') || 'demo'
-            },
-            body: JSON.stringify({
-              url: url,
-              pages: '1-10',
-              async: false,
-              encrypt: false
-            })
-          });
-          
-          if (!convertResponse.ok) {
-            throw new Error(`PDF conversion failed: ${convertResponse.statusText}`);
-          }
-          
-          const convertData = await convertResponse.json();
-          console.log('🖼️ PDF conversion result:', convertData);
-          
-          if (!convertData.urls || convertData.urls.length === 0) {
-            throw new Error('No images generated from PDF');
-          }
-          
-          // Analyze the first few pages (where title info is usually located)
-          const imageUrls = convertData.urls.slice(0, 3);
-          console.log(`📷 Analyzing ${imageUrls.length} image(s) from PDF`);
-          
-          for (let i = 0; i < imageUrls.length; i++) {
-            const imageUrl = imageUrls[i];
-            console.log(`🔎 Processing page ${i + 1}: ${imageUrl}`);
-            
-            const analysisResult = await analyzeImageWithOpenAI(imageUrl, i + 1);
-            
-            if (analysisResult && !analysisResult.error) {
-              console.log(`✅ Successfully extracted data from page ${i + 1}`);
-              results.push(analysisResult);
-              break; // Stop after first successful extraction
-            }
-          }
-          
+        if (analysisResult && !analysisResult.error) {
+          console.log(`✅ Successfully extracted data`);
+          results.push(analysisResult);
         } else {
-          // Direct image analysis
-          console.log('🖼️ Image detected - analyzing directly...');
-          const analysisResult = await analyzeImageWithOpenAI(url, 1);
-          if (analysisResult) {
-            results.push(analysisResult);
-          }
+          console.log(`❌ Failed to extract data:`, analysisResult);
+          results.push(analysisResult);
         }
         
       } catch (error) {
@@ -119,9 +74,9 @@ serve(async (req) => {
   }
 });
 
-async function analyzeImageWithOpenAI(imageUrl, pageNumber) {
+async function analyzeDocumentWithOpenAI(documentUrl) {
   try {
-    console.log(`🧠 Sending page ${pageNumber} to OpenAI Vision API...`);
+    console.log(`🧠 Sending document to OpenAI Vision API...`);
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -130,53 +85,54 @@ async function analyzeImageWithOpenAI(imageUrl, pageNumber) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o', // Using the most reliable vision model
+        model: 'gpt-4o', // Latest and most capable vision model
         messages: [
           {
             role: 'system',
-            content: `You are a vehicle title document expert. Extract information from this Certificate of Title with extreme precision.
+            content: `You are an expert at reading vehicle documents. Extract information from this document.
 
-CRITICAL: You must find and extract:
-- VIN (Vehicle Identification Number) - exactly 17 characters
-- Year, Make, Model of vehicle
-- Owner/Registered name
+IMPORTANT: Look for these fields and extract them exactly as they appear:
+- VIN (Vehicle Identification Number) - must be exactly 17 characters
+- Year, Make, Model of the vehicle
+- Owner/Registered owner name
+- License plate number
 - Title/Certificate number
-- License plate if visible
+- Any document type indicators
 
-Return ONLY valid JSON in this exact format:
+Return ONLY this JSON format:
 {
-  "year": "YYYY",
-  "make": "Manufacturer name",
-  "model": "Model name",
-  "vehicleId": "17-character VIN",
-  "licensePlate": "Plate number or null",
-  "sellerName": "Owner name from title",
-  "titlePresent": true,
-  "titleNumber": "Certificate number",
-  "confidence": "high",
-  "source": "Certificate of Title extraction"
+  "year": "extracted year or null",
+  "make": "extracted make or null", 
+  "model": "extracted model or null",
+  "vehicleId": "17-digit VIN or null",
+  "licensePlate": "plate number or null",
+  "sellerName": "owner name or null",
+  "titlePresent": true/false,
+  "titleNumber": "title number or null",
+  "confidence": "high/medium/low",
+  "source": "document analysis"
 }
 
-Use null for missing fields. VIN must be exactly 17 characters.`
+Be precise and only extract what you can clearly see. Use null for missing information.`
           },
           {
             role: 'user',
             content: [
               {
                 type: 'text',
-                text: `Analyze this vehicle document image (page ${pageNumber}). Extract all Certificate of Title information with maximum accuracy.`
+                text: 'Extract all vehicle information from this document. Look carefully for VIN, year, make, model, owner name, and title information.'
               },
               {
                 type: 'image_url',
                 image_url: {
-                  url: imageUrl,
+                  url: documentUrl,
                   detail: 'high'
                 }
               }
             ]
           }
         ],
-        max_tokens: 500,
+        max_tokens: 800,
         temperature: 0
       }),
     });
@@ -184,7 +140,7 @@ Use null for missing fields. VIN must be exactly 17 characters.`
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`🚫 OpenAI error: ${response.status} - ${errorText}`);
-      throw new Error(`OpenAI API error: ${response.status}`);
+      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
@@ -193,18 +149,30 @@ Use null for missing fields. VIN must be exactly 17 characters.`
     console.log(`📋 Raw OpenAI response:`, content);
     
     try {
-      const parsed = JSON.parse(content);
+      // Clean up the response to extract JSON
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('No JSON found in response');
+      }
+      
+      const parsed = JSON.parse(jsonMatch[0]);
       console.log(`✅ Parsed result:`, parsed);
       return parsed;
     } catch (parseError) {
       console.error(`🚫 JSON parse error:`, parseError);
-      throw new Error('Invalid JSON response from AI');
+      console.error(`🚫 Raw content:`, content);
+      return {
+        error: 'JSON parsing failed',
+        details: parseError.message,
+        confidence: 'low',
+        rawResponse: content
+      };
     }
     
   } catch (error) {
     console.error(`💥 Analysis error:`, error);
     return {
-      error: 'Analysis failed',
+      error: 'Document analysis failed',
       details: error.message,
       confidence: 'low'
     };
