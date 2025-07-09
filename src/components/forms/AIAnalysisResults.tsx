@@ -68,10 +68,31 @@ export function AIAnalysisResults({ results, onApplyData, onClose }: AIAnalysisR
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {results.error ? (
-          <div className="flex items-center gap-2 p-4 bg-destructive/10 rounded-lg">
-            <AlertCircle className="w-5 h-5 text-destructive" />
-            <span className="text-sm text-destructive">Error: {results.error}</span>
+        {results.error || (results.documentAnalysis && results.documentAnalysis.some(doc => doc.error)) ? (
+          <div className="space-y-3">
+            {results.error && (
+              <div className="flex items-center gap-2 p-4 bg-destructive/10 rounded-lg">
+                <AlertCircle className="w-5 h-5 text-destructive" />
+                <span className="text-sm text-destructive">Error: {results.error}</span>
+              </div>
+            )}
+            
+            {results.documentAnalysis && results.documentAnalysis.map((doc, index) => (
+              doc.error && (
+                <div key={index} className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-blue-800">Document {index + 1}:</p>
+                      <p className="text-sm text-blue-700">{doc.error}</p>
+                      {doc.suggestion && (
+                        <p className="text-sm text-blue-600 mt-1 font-medium">{doc.suggestion}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            ))}
           </div>
         ) : (
           <>

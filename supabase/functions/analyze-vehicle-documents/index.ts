@@ -25,39 +25,27 @@ serve(async (req) => {
 
     // Process multiple documents
     const analysisPromises = documentUrls.map(async (url: string) => {
-      // Check if URL is a PDF, if so, we'll process it differently
+      // Check if URL is a PDF, if so, return a helpful message without calling OpenAI
       const isPdf = url.toLowerCase().includes('.pdf');
       
-      let analysisContent;
-      
       if (isPdf) {
-        // For PDFs, we'll use a text-based approach since Vision API doesn't handle PDFs directly
-        analysisContent = {
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content: `You are an expert at extracting vehicle information from document URLs. Since this is a PDF document, I need you to return a JSON response indicating that PDF processing requires conversion to images first.
-
-              Return ONLY this JSON object:
-              {
-                "error": "PDF files need to be converted to images for AI processing",
-                "suggestion": "Please upload images (JPG, PNG) of your documents instead of PDFs for AI analysis",
-                "confidence": "low"
-              }`
-            },
-            {
-              role: 'user',
-              content: `This is a PDF document URL: ${url}. Please return the error message as specified.`
-            }
-          ],
-          max_tokens: 200,
-          temperature: 0.1
+        // Return a helpful message for PDFs without calling OpenAI
+        return {
+          error: "PDF files cannot be processed directly",
+          suggestion: "Please upload images (JPG, PNG) of your documents instead of PDFs for AI analysis. You can take photos of the documents or convert PDF pages to images.",
+          confidence: "low"
         };
-      } else {
-        // For images, use the Vision API
-        analysisContent = {
-          model: 'gpt-4o',
+      }
+
+      // For images, use the Vision API
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4.1-2025-04-14',
           messages: [
             {
               role: 'system',
@@ -99,16 +87,7 @@ serve(async (req) => {
           ],
           max_tokens: 1000,
           temperature: 0.1
-        };
-      }
-
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openAIApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(analysisContent),
+        }),
       });
 
       if (!response.ok) {
