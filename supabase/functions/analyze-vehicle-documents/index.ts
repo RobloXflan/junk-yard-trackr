@@ -58,7 +58,7 @@ serve(async (req) => {
           
           // If PDF conversion failed, fall back to direct analysis
           if (imageUrls.length === 0) {
-            console.log('PDF conversion failed, using advanced text analysis');
+            console.log('PDF conversion failed, using direct PDF analysis with strict JSON response');
             
             const analysisResponse = await fetch('https://api.openai.com/v1/chat/completions', {
               method: 'POST',
@@ -71,55 +71,37 @@ serve(async (req) => {
                 messages: [
                   {
                     role: 'system',
-                    content: `You are an expert vehicle document analyst specializing in California DMV titles, registrations, and automotive paperwork. You have deep knowledge of:
+                    content: `You are a vehicle document analysis system. You MUST respond with ONLY valid JSON - no explanations, no conversational text, no apologies.
 
-- DMV Certificate of Title formats and layouts
-- Vehicle registration documents 
-- Bill of sale formats
-- Lien holder information
-- Transfer documentation
-- Common data locations on official forms
+Since you cannot directly read PDF content, you will return a structured response indicating the need for image conversion.
 
-CRITICAL ANALYSIS REQUIREMENTS:
-1. Focus on CERTIFICATE OF TITLE as the primary source of truth
-2. Cross-reference all information between multiple document types
-3. Look for inconsistencies and flag them
-4. Prioritize official DMV stamps and signatures
-5. Verify VIN formats (17 characters for modern vehicles)
-6. Validate year, make, model combinations
-7. Check for liens, previous owners, and title brands
-
-Extract the following information with EXTREME ACCURACY:
+You MUST respond with exactly this JSON structure:
 {
-  "year": "4-digit year from title",
-  "make": "exact manufacturer name from title", 
-  "model": "exact model name from title",
-  "vehicleId": "complete 17-digit VIN from title",
-  "licensePlate": "current license plate number",
-  "sellerName": "registered owner name from title",
-  "purchaseDate": "transfer date or sale date in YYYY-MM-DD",
-  "purchasePrice": "sale amount if available",
-  "titlePresent": true/false based on actual title document,
-  "billOfSale": true/false if separate bill of sale exists,
-  "confidence": "high/medium/low based on document clarity",
-  "titleNumber": "certificate number from title",
-  "liens": "any lien holder information",
-  "previousOwners": "number of previous owners if visible",
-  "titleBrands": "any title brands (salvage, flood, etc)",
-  "crossReferenceNotes": "any discrepancies between documents"
+  "year": null,
+  "make": null,
+  "model": null,
+  "vehicleId": null,
+  "licensePlate": null,
+  "sellerName": null,
+  "purchaseDate": null,
+  "purchasePrice": null,
+  "titlePresent": false,
+  "billOfSale": false,
+  "confidence": "low",
+  "extractionNote": "PDF requires image conversion for accurate analysis",
+  "recommendation": "Convert PDF to images for detailed extraction"
 }
 
-Be extremely careful with VIN numbers - they must be exactly 17 characters.
-Verify make/model combinations make sense.
-Flag any suspicious or inconsistent information.`
+CRITICAL: Return ONLY this JSON object. No other text before or after.`
                   },
                   {
                     role: 'user',
-                    content: `Analyze this PDF vehicle document with multiple pages. This likely contains a California Certificate of Title and possibly other supporting documents. Extract information with maximum accuracy, focusing on the title as primary source: ${url}`
+                    content: `Analyze PDF: ${url}`
                   }
                 ],
-                max_tokens: 1000,
-                temperature: 0.0
+                max_tokens: 300,
+                temperature: 0.0,
+                response_format: { type: "json_object" }
               }),
             });
             
@@ -128,7 +110,29 @@ Flag any suspicious or inconsistent information.`
             }
             
             const analysisData = await analysisResponse.json();
-            return JSON.parse(analysisData.choices[0].message.content);
+            const content = analysisData.choices[0].message.content;
+            
+            // Double-check JSON parsing
+            try {
+              return JSON.parse(content);
+            } catch (parseError) {
+              console.error('JSON parse error:', parseError, 'Content:', content);
+              return {
+                year: null,
+                make: null,
+                model: null,
+                vehicleId: null,
+                licensePlate: null,
+                sellerName: null,
+                purchaseDate: null,
+                purchasePrice: null,
+                titlePresent: false,
+                billOfSale: false,
+                confidence: "low",
+                error: "JSON parsing failed",
+                note: "PDF processing needs image conversion for accuracy"
+              };
+            }
           }
           
           // Process converted images with advanced multi-page analysis
