@@ -25,13 +25,38 @@ serve(async (req) => {
 
     // Process multiple documents
     const analysisPromises = documentUrls.map(async (url: string) => {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openAIApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      // Check if URL is a PDF, if so, we'll process it differently
+      const isPdf = url.toLowerCase().includes('.pdf');
+      
+      let analysisContent;
+      
+      if (isPdf) {
+        // For PDFs, we'll use a text-based approach since Vision API doesn't handle PDFs directly
+        analysisContent = {
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: `You are an expert at extracting vehicle information from document URLs. Since this is a PDF document, I need you to return a JSON response indicating that PDF processing requires conversion to images first.
+
+              Return ONLY this JSON object:
+              {
+                "error": "PDF files need to be converted to images for AI processing",
+                "suggestion": "Please upload images (JPG, PNG) of your documents instead of PDFs for AI analysis",
+                "confidence": "low"
+              }`
+            },
+            {
+              role: 'user',
+              content: `This is a PDF document URL: ${url}. Please return the error message as specified.`
+            }
+          ],
+          max_tokens: 200,
+          temperature: 0.1
+        };
+      } else {
+        // For images, use the Vision API
+        analysisContent = {
           model: 'gpt-4o',
           messages: [
             {
@@ -41,7 +66,7 @@ serve(async (req) => {
               Extract the following information and return ONLY a valid JSON object with these exact keys (use null for missing values):
               {
                 "year": "vehicle year",
-                "make": "vehicle make/manufacturer",
+                "make": "vehicle make/manufacturer", 
                 "model": "vehicle model",
                 "vehicleId": "VIN, vehicle ID, or serial number",
                 "licensePlate": "license plate number",
@@ -74,7 +99,16 @@ serve(async (req) => {
           ],
           max_tokens: 1000,
           temperature: 0.1
-        }),
+        };
+      }
+
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(analysisContent),
       });
 
       if (!response.ok) {
