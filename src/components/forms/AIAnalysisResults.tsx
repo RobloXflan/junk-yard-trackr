@@ -73,21 +73,29 @@ export function AIAnalysisResults({ results, onApplyData, onClose }: AIAnalysisR
             {results.error && (
               <div className="flex items-center gap-2 p-4 bg-destructive/10 rounded-lg">
                 <AlertCircle className="w-5 h-5 text-destructive" />
-                <span className="text-sm text-destructive">Error: {results.error}</span>
+                <div>
+                  <span className="text-sm font-medium text-destructive">Analysis Error: {results.error}</span>
+                  {results.details && (
+                    <p className="text-xs text-destructive mt-1">{results.details}</p>
+                  )}
+                </div>
               </div>
             )}
             
             {results.documentAnalysis && results.documentAnalysis.map((doc, index) => (
               doc.error && (
-                <div key={index} className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div key={index} className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
                   <div className="flex items-start gap-2">
-                    <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+                    <AlertCircle className="w-5 h-5 text-orange-600 mt-0.5" />
                     <div>
-                      <p className="text-sm font-medium text-blue-800">Document {index + 1}:</p>
-                      <p className="text-sm text-blue-700">{doc.error}</p>
-                      {doc.suggestion && (
-                        <p className="text-sm text-blue-600 mt-1 font-medium">{doc.suggestion}</p>
+                      <p className="text-sm font-medium text-orange-800">Document {index + 1} Error:</p>
+                      <p className="text-sm text-orange-700">{doc.error}</p>
+                      {doc.details && (
+                        <p className="text-xs text-orange-600 mt-1">{doc.details}</p>
                       )}
+                      <p className="text-xs text-orange-500 mt-2">
+                        Please ensure your document is clear and try again. If this persists, contact support.
+                      </p>
                     </div>
                   </div>
                 </div>

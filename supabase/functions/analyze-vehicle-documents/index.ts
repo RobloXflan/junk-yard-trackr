@@ -21,6 +21,14 @@ serve(async (req) => {
       throw new Error('Document URLs are required');
     }
 
+    if (!openAIApiKey) {
+      throw new Error('OpenAI API key not configured');
+    }
+
+    if (!pdfCoApiKey) {
+      throw new Error('PDF.co API key not configured');
+    }
+
     console.log(`📄 Processing ${documentUrls.length} documents`);
 
     const results = [];
@@ -29,16 +37,17 @@ serve(async (req) => {
       try {
         console.log(`🔍 Analyzing: ${url}`);
         
-        // Send PDF or image directly to OpenAI - they can handle both!
-        console.log('🤖 Sending document directly to OpenAI...');
         const analysisResult = await analyzeDocumentWithOpenAI(url);
         
         if (analysisResult && !analysisResult.error) {
-          console.log(`✅ Successfully extracted data`);
+          console.log(`✅ Successfully extracted data:`, analysisResult);
           results.push(analysisResult);
         } else {
           console.log(`❌ Failed to extract data:`, analysisResult);
-          results.push(analysisResult);
+          results.push(analysisResult || {
+            error: 'Unknown analysis error',
+            confidence: 'low'
+          });
         }
         
       } catch (error) {
@@ -196,43 +205,66 @@ Be precise and only extract what you can clearly see. Use null for missing infor
 }
 
 async function convertPDFToImage(pdfUrl) {
-  try {
-    console.log(`🔄 Converting PDF to image using PDF.co: ${pdfUrl}`);
-    
-    const response = await fetch('https://api.pdf.co/v1/pdf/convert/to/png', {
-      method: 'POST',
-      headers: {
-        'x-api-key': pdfCoApiKey,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        url: pdfUrl,
-        pages: '0', // First page only
-        async: false
-      }),
-    });
+  const MAX_RETRIES = 3;
+  
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      console.log(`🔄 Converting PDF to image (attempt ${attempt}/${MAX_RETRIES}): ${pdfUrl}`);
+      
+      const response = await fetch('https://api.pdf.co/v1/pdf/convert/to/png', {
+        method: 'POST',
+        headers: {
+          'x-api-key': pdfCoApiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          url: pdfUrl,
+          pages: '0', // First page only
+          async: false,
+          name: `vehicle-doc-${Date.now()}`,
+          password: '', // Empty password
+          profiles: JSON.stringify({
+            ImageFormat: 'PNG',
+            ImageQuality: 95,
+            ImageResolution: 300
+          })
+        }),
+      });
 
-    if (!response.ok) {
-      throw new Error(`PDF.co conversion failed: ${response.status}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`PDF.co HTTP error ${response.status}: ${errorText}`);
+        throw new Error(`PDF.co conversion failed: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log(`📊 PDF.co response:`, data);
+      
+      if (data.error === true || data.error === 'true') {
+        throw new Error(`PDF.co error: ${data.message || 'Unknown error'}`);
+      }
+
+      if (!data.url) {
+        throw new Error('No image URL returned from PDF.co');
+      }
+
+      console.log(`✅ PDF converted successfully: ${data.url}`);
+      return data.url;
+      
+    } catch (error) {
+      console.error(`❌ PDF conversion attempt ${attempt} failed:`, error);
+      
+      if (attempt === MAX_RETRIES) {
+        console.error(`❌ All ${MAX_RETRIES} attempts failed for PDF conversion`);
+        return null;
+      }
+      
+      // Wait before retry
+      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
     }
-
-    const data = await response.json();
-    
-    if (data.error) {
-      throw new Error(`PDF.co error: ${data.message}`);
-    }
-
-    if (!data.url) {
-      throw new Error('No image URL returned from PDF.co');
-    }
-
-    console.log(`✅ PDF converted successfully: ${data.url}`);
-    return data.url;
-    
-  } catch (error) {
-    console.error(`❌ PDF conversion failed:`, error);
-    return null;
   }
+  
+  return null;
 }
 
 function findBestResult(results) {

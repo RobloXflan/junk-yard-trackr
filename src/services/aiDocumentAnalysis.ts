@@ -15,6 +15,7 @@ export interface AIAnalysisResult {
   confidence?: 'high' | 'medium' | 'low';
   documentAnalysis?: any[];
   error?: string;
+  details?: string;
 }
 
 export class AIDocumentAnalysisService {
