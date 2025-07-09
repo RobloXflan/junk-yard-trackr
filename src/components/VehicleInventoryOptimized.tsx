@@ -209,7 +209,7 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
                 placeholder="Search by make, model, year, Vehicle ID, or license plate..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-12"
               />
             </div>
             <Button variant="outline">
