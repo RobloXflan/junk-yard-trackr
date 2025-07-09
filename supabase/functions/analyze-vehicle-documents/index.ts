@@ -205,66 +205,79 @@ Be precise and only extract what you can clearly see. Use null for missing infor
 }
 
 async function convertPDFToImage(pdfUrl) {
-  const MAX_RETRIES = 3;
+  console.log(`🔄 Starting PDF conversion for: ${pdfUrl}`);
   
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      console.log(`🔄 Converting PDF to image (attempt ${attempt}/${MAX_RETRIES}): ${pdfUrl}`);
-      
-      const response = await fetch('https://api.pdf.co/v1/pdf/convert/to/png', {
-        method: 'POST',
-        headers: {
-          'x-api-key': pdfCoApiKey,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          url: pdfUrl,
-          pages: '0', // First page only
-          async: false,
-          name: `vehicle-doc-${Date.now()}`,
-          password: '', // Empty password
-          profiles: JSON.stringify({
-            ImageFormat: 'PNG',
-            ImageQuality: 95,
-            ImageResolution: 300
-          })
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`PDF.co HTTP error ${response.status}: ${errorText}`);
-        throw new Error(`PDF.co conversion failed: ${response.status} - ${errorText}`);
-      }
-
-      const data = await response.json();
-      console.log(`📊 PDF.co response:`, data);
-      
-      if (data.error === true || data.error === 'true') {
-        throw new Error(`PDF.co error: ${data.message || 'Unknown error'}`);
-      }
-
-      if (!data.url) {
-        throw new Error('No image URL returned from PDF.co');
-      }
-
-      console.log(`✅ PDF converted successfully: ${data.url}`);
-      return data.url;
-      
-    } catch (error) {
-      console.error(`❌ PDF conversion attempt ${attempt} failed:`, error);
-      
-      if (attempt === MAX_RETRIES) {
-        console.error(`❌ All ${MAX_RETRIES} attempts failed for PDF conversion`);
-        return null;
-      }
-      
-      // Wait before retry
-      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-    }
+  if (!pdfCoApiKey) {
+    console.error('❌ PDF.co API key not available');
+    throw new Error('PDF conversion service not configured');
   }
-  
-  return null;
+
+  try {
+    // First, verify the PDF URL is accessible
+    console.log('🔍 Verifying PDF URL accessibility...');
+    const pdfResponse = await fetch(pdfUrl, { method: 'HEAD' });
+    if (!pdfResponse.ok) {
+      throw new Error(`PDF URL not accessible: ${pdfResponse.status} ${pdfResponse.statusText}`);
+    }
+    console.log('✅ PDF URL is accessible');
+
+    // Convert PDF to image using PDF.co
+    console.log('🔄 Sending PDF to conversion service...');
+    const response = await fetch('https://api.pdf.co/v1/pdf/convert/to/png', {
+      method: 'POST',
+      headers: {
+        'x-api-key': pdfCoApiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        url: pdfUrl,
+        pages: '0',
+        async: false,
+        name: `vehicle-doc-${Date.now()}`,
+        profiles: JSON.stringify({
+          ImageFormat: 'PNG',
+          ImageQuality: 95,
+          ImageResolution: 150
+        })
+      }),
+    });
+
+    console.log(`📡 PDF.co response status: ${response.status}`);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ PDF.co HTTP error: ${response.status} - ${errorText}`);
+      throw new Error(`PDF conversion service error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('📊 PDF.co response data:', JSON.stringify(data, null, 2));
+    
+    if (data.error === true || data.error === 'true' || data.error) {
+      const errorMessage = data.message || data.error || 'Unknown conversion error';
+      console.error(`❌ PDF.co conversion error: ${errorMessage}`);
+      throw new Error(`PDF conversion failed: ${errorMessage}`);
+    }
+
+    if (!data.url) {
+      console.error('❌ No image URL in response:', data);
+      throw new Error('PDF conversion completed but no image URL returned');
+    }
+
+    // Verify the converted image is accessible
+    console.log('🔍 Verifying converted image accessibility...');
+    const imageResponse = await fetch(data.url, { method: 'HEAD' });
+    if (!imageResponse.ok) {
+      throw new Error(`Converted image not accessible: ${imageResponse.status}`);
+    }
+
+    console.log(`✅ PDF successfully converted to image: ${data.url}`);
+    return data.url;
+    
+  } catch (error) {
+    console.error(`💥 PDF conversion failed:`, error);
+    throw error;
+  }
 }
 
 function findBestResult(results) {
