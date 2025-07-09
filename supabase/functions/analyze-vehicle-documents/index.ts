@@ -32,27 +32,105 @@ serve(async (req) => {
         if (isPdf) {
           console.log(`Processing PDF: ${url}`);
           
-          // Convert PDF to images using PDF.co API for proper analysis
-          const pdfToImageResponse = await fetch('https://api.pdf.co/v1/pdf/convert/to/png', {
+          // First, try to extract text content from the PDF using a different approach
+          const pdfTextResponse = await fetch('https://api.pdf.co/v1/pdf/convert/to/text', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'x-api-key': Deno.env.get('PDF_CO_API_KEY') || 'demo' // Using demo key if not set
+              'x-api-key': Deno.env.get('PDF_CO_API_KEY') || 'demo'
             },
             body: JSON.stringify({
               url: url,
-              pages: "1-10", // Process up to 10 pages
               async: false
             })
           });
           
-          let imageUrls = [];
+          let extractedText = '';
           
-          if (pdfToImageResponse.ok) {
-            const pdfResult = await pdfToImageResponse.json();
-            if (pdfResult.urls && pdfResult.urls.length > 0) {
-              imageUrls = pdfResult.urls;
-              console.log(`PDF converted to ${imageUrls.length} images`);
+          if (pdfTextResponse.ok) {
+            const textResult = await pdfTextResponse.json();
+            if (textResult.body) {
+              extractedText = textResult.body;
+              console.log(`Extracted ${extractedText.length} characters of text from PDF`);
+            }
+          }
+          
+          // If text extraction worked, analyze the text content
+          if (extractedText && extractedText.length > 100) {
+            console.log('Analyzing extracted PDF text content');
+            
+            const analysisResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${openAIApiKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                model: 'gpt-4.1-2025-04-14',
+                messages: [
+                  {
+                    role: 'system',
+                    content: `You are an expert at analyzing California Certificate of Title documents. You will receive extracted text from a PDF that contains vehicle documentation.
+
+CRITICAL INSTRUCTIONS:
+1. Look specifically for "CERTIFICATE OF TITLE" sections in the text
+2. Extract EXACT information from the title document - do not guess or approximate
+3. Focus on official DMV fields and data
+4. VIN numbers must be exactly 17 characters (for vehicles 1981+)
+5. Cross-reference information if multiple documents are present
+
+SEARCH FOR THESE SPECIFIC FIELDS IN THE CERTIFICATE OF TITLE:
+- Vehicle Identification Number (VIN)
+- Year, Make, Model
+- Registered Owner name and address  
+- Certificate/Title number
+- License plate number
+- Lien information
+- Title brands (if any)
+- Transfer dates and amounts
+
+You MUST respond with ONLY this JSON format:
+{
+  "year": "exact year from title",
+  "make": "exact manufacturer from title",
+  "model": "exact model from title", 
+  "vehicleId": "exact 17-digit VIN from title",
+  "licensePlate": "license plate number",
+  "sellerName": "registered owner name from title",
+  "purchaseDate": "most recent date in YYYY-MM-DD format",
+  "purchasePrice": "sale price if available",
+  "titlePresent": true,
+  "billOfSale": false,
+  "confidence": "high/medium/low",
+  "titleNumber": "certificate number",
+  "extractionSource": "Certificate of Title text extraction"
+}
+
+If you cannot find specific information, use null for that field. Be extremely precise.`
+                  },
+                  {
+                    role: 'user',
+                    content: `Extract vehicle information from this Certificate of Title document text. Focus on the CERTIFICATE OF TITLE section:\n\n${extractedText}`
+                  }
+                ],
+                max_tokens: 800,
+                temperature: 0.0,
+                response_format: { type: "json_object" }
+              }),
+            });
+            
+            if (!analysisResponse.ok) {
+              throw new Error(`OpenAI API error: ${analysisResponse.statusText}`);
+            }
+            
+            const analysisData = await analysisResponse.json();
+            const content = analysisData.choices[0].message.content;
+            
+            try {
+              return JSON.parse(content);
+            } catch (parseError) {
+              console.error('JSON parse error:', parseError);
+              throw new Error('Failed to parse AI response as JSON');
             }
           }
           
