@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,6 +41,29 @@ export function VehicleIntakeForm() {
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleAIAnalysis = (aiData: any) => {
+    console.log('Applying AI-extracted data:', aiData);
+    
+    // Apply AI data to form, but don't overwrite existing user input
+    const updatedData = { ...formData };
+    
+    Object.keys(aiData).forEach(key => {
+      if (aiData[key] !== null && aiData[key] !== undefined) {
+        // Only apply if current field is empty or user wants to overwrite
+        if (!updatedData[key as keyof typeof updatedData] || updatedData[key as keyof typeof updatedData] === '') {
+          (updatedData as any)[key] = aiData[key];
+        }
+      }
+    });
+    
+    setFormData(updatedData);
+    
+    toast({
+      title: "AI Analysis Applied",
+      description: "Form has been pre-filled with AI-extracted information. Please review and adjust as needed.",
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -145,6 +167,7 @@ export function VehicleIntakeForm() {
             <DocumentUpload 
               uploadedDocuments={uploadedDocuments}
               onDocumentsChange={setUploadedDocuments}
+              onAIAnalysis={handleAIAnalysis}
             />
 
             <VehicleDetails 

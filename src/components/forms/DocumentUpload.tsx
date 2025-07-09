@@ -2,9 +2,12 @@
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Upload, FileText, X, Eye } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Upload, FileText, X, Eye, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { AIDocumentAnalysisService, AIAnalysisResult } from "@/services/aiDocumentAnalysis";
+import { AIAnalysisResults } from "./AIAnalysisResults";
 
 interface UploadedDocument {
   id: string;
@@ -17,10 +20,14 @@ interface UploadedDocument {
 interface DocumentUploadProps {
   uploadedDocuments: UploadedDocument[];
   onDocumentsChange: (documents: UploadedDocument[]) => void;
+  onAIAnalysis?: (data: any) => void;
 }
 
-export function DocumentUpload({ uploadedDocuments, onDocumentsChange }: DocumentUploadProps) {
+export function DocumentUpload({ uploadedDocuments, onDocumentsChange, onAIAnalysis }: DocumentUploadProps) {
   const [uploading, setUploading] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [showAIResults, setShowAIResults] = useState(false);
+  const [aiResults, setAIResults] = useState<AIAnalysisResult | null>(null);
 
   const uploadFileToStorage = async (file: File): Promise<string> => {
     const fileExt = file.name.split('.').pop();
@@ -38,7 +45,6 @@ export function DocumentUpload({ uploadedDocuments, onDocumentsChange }: Documen
       throw error;
     }
 
-    // Get the public URL
     const { data: urlData } = supabase.storage
       .from('vehicle-documents')
       .getPublicUrl(filePath);
@@ -122,10 +128,61 @@ export function DocumentUpload({ uploadedDocuments, onDocumentsChange }: Documen
     }
   };
 
+  const handleAIAnalysis = async () => {
+    if (uploadedDocuments.length === 0) {
+      toast({
+        title: "No documents to analyze",
+        description: "Please upload documents first before running AI analysis.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setAnalyzing(true);
+    
+    try {
+      const documentUrls = uploadedDocuments.map(doc => doc.url);
+      
+      toast({
+        title: "Analyzing documents with AI...",
+        description: `Processing ${documentUrls.length} document(s). This may take a moment.`,
+      });
+
+      const results = await AIDocumentAnalysisService.analyzeDocuments(documentUrls);
+      
+      setAIResults(results);
+      setShowAIResults(true);
+      
+      toast({
+        title: "AI analysis completed!",
+        description: "Review the extracted information and apply it to your form.",
+      });
+      
+    } catch (error) {
+      console.error('AI analysis failed:', error);
+      toast({
+        title: "AI analysis failed",
+        description: error instanceof Error ? error.message : "Failed to analyze documents",
+        variant: "destructive",
+      });
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const handleApplyAIData = (data: Partial<AIAnalysisResult>) => {
+    if (onAIAnalysis) {
+      onAIAnalysis(data);
+    }
+    toast({
+      title: "Information applied",
+      description: "AI-extracted data has been applied to the form fields.",
+    });
+  };
+
   const removeDocument = async (documentId: string) => {
     const documentToRemove = uploadedDocuments.find(doc => doc.id === documentId);
     if (documentToRemove) {
-      // Extract the file path from the URL to delete from storage
       try {
         const url = new URL(documentToRemove.url);
         const pathParts = url.pathname.split('/');
@@ -152,7 +209,6 @@ export function DocumentUpload({ uploadedDocuments, onDocumentsChange }: Documen
     if (document.file.type === 'application/pdf') {
       window.open(document.url, '_blank');
     } else {
-      // For images, create a new window to display them
       const newWindow = window.open('', '_blank');
       if (newWindow) {
         newWindow.document.write(`
@@ -193,7 +249,23 @@ export function DocumentUpload({ uploadedDocuments, onDocumentsChange }: Documen
 
       {uploadedDocuments.length > 0 && (
         <div className="space-y-3">
-          <Label className="text-foreground font-medium">Uploaded Documents ({uploadedDocuments.length})</Label>
+          <div className="flex items-center justify-between">
+            <Label className="text-foreground font-medium">Uploaded Documents ({uploadedDocuments.length})</Label>
+            <Button
+              onClick={handleAIAnalysis}
+              disabled={analyzing || uploading}
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              {analyzing ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4" />
+              )}
+              {analyzing ? 'Analyzing...' : 'Analyze with AI'}
+            </Button>
+          </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {uploadedDocuments.map((document) => (
               <div key={document.id} className="flex items-center gap-3 p-3 bg-card rounded-lg border border-border">
@@ -227,6 +299,18 @@ export function DocumentUpload({ uploadedDocuments, onDocumentsChange }: Documen
           </div>
         </div>
       )}
+
+      <Dialog open={showAIResults} onOpenChange={setShowAIResults}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          {aiResults && (
+            <AIAnalysisResults
+              results={aiResults}
+              onApplyData={handleApplyAIData}
+              onClose={() => setShowAIResults(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
