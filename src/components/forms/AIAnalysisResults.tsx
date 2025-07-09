@@ -96,10 +96,10 @@ export function AIAnalysisResults({ results, onApplyData, onClose }: AIAnalysisR
           </div>
         ) : (
           <>
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Click on fields to select them, then apply to your form. Note: PDF analysis currently returns sample data - please verify and update as needed.
-              </p>
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Click on fields to select them, then apply to your form.
+                </p>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {extractedFields.map((field) => (

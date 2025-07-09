@@ -2,6 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const pdfCoApiKey = Deno.env.get('PDF_CO_API_KEY');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -76,7 +77,22 @@ serve(async (req) => {
 
 async function analyzeDocumentWithOpenAI(documentUrl) {
   try {
-    console.log(`🧠 Sending document to OpenAI Vision API...`);
+    console.log(`🔍 Processing document: ${documentUrl}`);
+    
+    // Check if it's a PDF that needs conversion
+    const isPDF = documentUrl.toLowerCase().includes('.pdf');
+    let imageUrl = documentUrl;
+    
+    if (isPDF) {
+      console.log(`📄 Converting PDF to image...`);
+      imageUrl = await convertPDFToImage(documentUrl);
+      if (!imageUrl) {
+        throw new Error('Failed to convert PDF to image');
+      }
+      console.log(`✅ PDF converted to image: ${imageUrl}`);
+    }
+    
+    console.log(`🧠 Sending to OpenAI Vision API...`);
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -85,7 +101,7 @@ async function analyzeDocumentWithOpenAI(documentUrl) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o', // Latest and most capable vision model
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',
@@ -125,7 +141,7 @@ Be precise and only extract what you can clearly see. Use null for missing infor
               {
                 type: 'image_url',
                 image_url: {
-                  url: documentUrl,
+                  url: imageUrl,
                   detail: 'high'
                 }
               }
@@ -176,6 +192,46 @@ Be precise and only extract what you can clearly see. Use null for missing infor
       details: error.message,
       confidence: 'low'
     };
+  }
+}
+
+async function convertPDFToImage(pdfUrl) {
+  try {
+    console.log(`🔄 Converting PDF to image using PDF.co: ${pdfUrl}`);
+    
+    const response = await fetch('https://api.pdf.co/v1/pdf/convert/to/png', {
+      method: 'POST',
+      headers: {
+        'x-api-key': pdfCoApiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        url: pdfUrl,
+        pages: '0', // First page only
+        async: false
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`PDF.co conversion failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    if (data.error) {
+      throw new Error(`PDF.co error: ${data.message}`);
+    }
+
+    if (!data.url) {
+      throw new Error('No image URL returned from PDF.co');
+    }
+
+    console.log(`✅ PDF converted successfully: ${data.url}`);
+    return data.url;
+    
+  } catch (error) {
+    console.error(`❌ PDF conversion failed:`, error);
+    return null;
   }
 }
 
