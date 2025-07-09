@@ -78,6 +78,9 @@ export function AIAnalysisResults({ results, onApplyData, onClose }: AIAnalysisR
                   {results.details && (
                     <p className="text-xs text-destructive mt-1">{results.details}</p>
                   )}
+                  {results.suggestion && (
+                    <p className="text-xs text-blue-600 mt-2 font-medium">💡 {results.suggestion}</p>
+                  )}
                 </div>
               </div>
             )}
@@ -93,9 +96,14 @@ export function AIAnalysisResults({ results, onApplyData, onClose }: AIAnalysisR
                       {doc.details && (
                         <p className="text-xs text-orange-600 mt-1">{doc.details}</p>
                       )}
-                      <p className="text-xs text-orange-500 mt-2">
-                        Please ensure your document is clear and try again. If this persists, contact support.
-                      </p>
+                      {doc.suggestion && (
+                        <p className="text-xs text-blue-600 mt-2 font-medium">💡 {doc.suggestion}</p>
+                      )}
+                      {!doc.suggestion && (
+                        <p className="text-xs text-orange-500 mt-2">
+                          The document could not be processed. Please ensure it's clear and try again.
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>

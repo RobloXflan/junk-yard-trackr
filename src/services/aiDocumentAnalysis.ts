@@ -16,6 +16,7 @@ export interface AIAnalysisResult {
   documentAnalysis?: any[];
   error?: string;
   details?: string;
+  suggestion?: string;
 }
 
 export class AIDocumentAnalysisService {

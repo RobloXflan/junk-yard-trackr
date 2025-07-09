@@ -88,33 +88,26 @@ async function analyzeDocumentWithOpenAI(documentUrl) {
   try {
     console.log(`🔍 Processing document: ${documentUrl}`);
     
-    // Check if it's a PDF that needs conversion
+    // Check if it's a PDF that needs special handling
     const isPDF = documentUrl.toLowerCase().includes('.pdf');
-    let imageUrl = documentUrl;
     
     if (isPDF) {
-      console.log(`📄 Converting PDF to image...`);
-      imageUrl = await convertPDFToImage(documentUrl);
-      if (!imageUrl) {
-        throw new Error('Failed to convert PDF to image');
-      }
-      console.log(`✅ PDF converted to image: ${imageUrl}`);
-    }
-    
-    console.log(`🧠 Sending to OpenAI Vision API...`);
-    
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [
-          {
-            role: 'system',
-            content: `You are an expert at reading vehicle documents. Extract information from this document.
+      console.log(`📄 Detected PDF document, attempting direct analysis...`);
+      
+      // Try direct PDF analysis first using OpenAI's new capabilities
+      try {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openAIApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o',
+            messages: [
+              {
+                role: 'system',
+                content: `You are an expert at reading vehicle documents. Extract information from this PDF document.
 
 IMPORTANT: Look for these fields and extract them exactly as they appear:
 - VIN (Vehicle Identification Number) - must be exactly 17 characters
@@ -135,71 +128,179 @@ Return ONLY this JSON format:
   "titlePresent": true/false,
   "titleNumber": "title number or null",
   "confidence": "high/medium/low",
-  "source": "document analysis"
+  "source": "direct pdf analysis"
 }
 
 Be precise and only extract what you can clearly see. Use null for missing information.`
-          },
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: 'Extract all vehicle information from this document. Look carefully for VIN, year, make, model, owner name, and title information.'
               },
               {
-                type: 'image_url',
-                image_url: {
-                  url: imageUrl,
-                  detail: 'high'
-                }
+                role: 'user',
+                content: [
+                  {
+                    type: 'text',
+                    text: 'Extract all vehicle information from this PDF document. Look carefully for VIN, year, make, model, owner name, and title information.'
+                  },
+                  {
+                    type: 'image_url',
+                    image_url: {
+                      url: documentUrl,
+                      detail: 'high'
+                    }
+                  }
+                ]
               }
-            ]
+            ],
+            max_tokens: 800,
+            temperature: 0
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const content = data.choices[0].message.content;
+          console.log(`📋 Direct PDF analysis response:`, content);
+          
+          try {
+            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              const parsed = JSON.parse(jsonMatch[0]);
+              console.log(`✅ Direct PDF analysis successful:`, parsed);
+              return parsed;
+            }
+          } catch (parseError) {
+            console.log(`⚠️ Direct PDF analysis failed, trying conversion fallback`);
           }
-        ],
-        max_tokens: 800,
-        temperature: 0
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`🚫 OpenAI error: ${response.status} - ${errorText}`);
-      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
-    }
-
-    const data = await response.json();
-    const content = data.choices[0].message.content;
-    
-    console.log(`📋 Raw OpenAI response:`, content);
-    
-    try {
-      // Clean up the response to extract JSON
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('No JSON found in response');
+        }
+      } catch (directError) {
+        console.log(`⚠️ Direct PDF analysis failed: ${directError.message}, trying conversion fallback`);
       }
       
-      const parsed = JSON.parse(jsonMatch[0]);
-      console.log(`✅ Parsed result:`, parsed);
-      return parsed;
-    } catch (parseError) {
-      console.error(`🚫 JSON parse error:`, parseError);
-      console.error(`🚫 Raw content:`, content);
-      return {
-        error: 'JSON parsing failed',
-        details: parseError.message,
-        confidence: 'low',
-        rawResponse: content
-      };
+      // Fallback to PDF conversion if direct analysis fails
+      console.log(`🔄 Attempting PDF to image conversion fallback...`);
+      try {
+        const imageUrl = await convertPDFToImage(documentUrl);
+        if (imageUrl) {
+          console.log(`✅ PDF converted to image: ${imageUrl}`);
+          return await analyzeImageWithOpenAI(imageUrl);
+        }
+      } catch (conversionError) {
+        console.error(`❌ PDF conversion also failed: ${conversionError.message}`);
+        
+        // Final fallback - return helpful error message
+        return {
+          error: 'Unable to process PDF document',
+          details: 'Both direct PDF analysis and image conversion failed. Please try converting the PDF to an image (PNG/JPG) and upload that instead.',
+          confidence: 'low',
+          suggestion: 'Convert PDF to image format (PNG/JPG) for better results'
+        };
+      }
+    } else {
+      // Handle image documents directly
+      console.log(`🖼️ Processing image document directly...`);
+      return await analyzeImageWithOpenAI(documentUrl);
     }
     
   } catch (error) {
-    console.error(`💥 Analysis error:`, error);
+    console.error(`💥 Document analysis error:`, error);
     return {
-      error: 'Document analysis failed',
+      error: 'Document processing failed',
       details: error.message,
       confidence: 'low'
+    };
+  }
+}
+
+async function analyzeImageWithOpenAI(imageUrl) {
+  console.log(`🧠 Sending image to OpenAI Vision API: ${imageUrl}`);
+  
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${openAIApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      messages: [
+        {
+          role: 'system',
+          content: `You are an expert at reading vehicle documents. Extract information from this document image.
+
+IMPORTANT: Look for these fields and extract them exactly as they appear:
+- VIN (Vehicle Identification Number) - must be exactly 17 characters
+- Year, Make, Model of the vehicle
+- Owner/Registered owner name
+- License plate number
+- Title/Certificate number
+- Any document type indicators
+
+Return ONLY this JSON format:
+{
+  "year": "extracted year or null",
+  "make": "extracted make or null", 
+  "model": "extracted model or null",
+  "vehicleId": "17-digit VIN or null",
+  "licensePlate": "plate number or null",
+  "sellerName": "owner name or null",
+  "titlePresent": true/false,
+  "titleNumber": "title number or null",
+  "confidence": "high/medium/low",
+  "source": "image analysis"
+}
+
+Be precise and only extract what you can clearly see. Use null for missing information.`
+        },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: 'Extract all vehicle information from this document. Look carefully for VIN, year, make, model, owner name, and title information.'
+            },
+            {
+              type: 'image_url',
+              image_url: {
+                url: imageUrl,
+                detail: 'high'
+              }
+            }
+          ]
+        }
+      ],
+      max_tokens: 800,
+      temperature: 0
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`🚫 OpenAI error: ${response.status} - ${errorText}`);
+    throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices[0].message.content;
+  
+  console.log(`📋 OpenAI image analysis response:`, content);
+  
+  try {
+    // Clean up the response to extract JSON
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error('No JSON found in response');
+    }
+    
+    const parsed = JSON.parse(jsonMatch[0]);
+    console.log(`✅ Image analysis result:`, parsed);
+    return parsed;
+  } catch (parseError) {
+    console.error(`🚫 JSON parse error:`, parseError);
+    console.error(`🚫 Raw content:`, content);
+    return {
+      error: 'Response parsing failed',
+      details: parseError.message,
+      confidence: 'low',
+      rawResponse: content
     };
   }
 }
