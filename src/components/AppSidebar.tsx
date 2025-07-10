@@ -48,6 +48,7 @@ const menuItems = [
     title: "Metrics",
     page: "metrics",
     icon: TrendingUp,
+    locked: true,
   },
   {
     title: "Admin",
