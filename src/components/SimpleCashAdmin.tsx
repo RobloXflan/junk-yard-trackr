@@ -364,15 +364,15 @@ export function SimpleCashAdmin() {
       {/* Today's Entries */}
       <Card>
         <CardHeader>
-          <CardTitle>Today's Cash Entries</CardTitle>
+          <CardTitle>Cash Entries</CardTitle>
           <CardDescription>
-            Current cash status for all workers
+            Cash entries for {format(selectedDate, "MMMM dd, yyyy")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {dailyEntries.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No cash entries recorded for today
+              No cash entries recorded for {format(selectedDate, "MMMM dd, yyyy")}
             </div>
           ) : (
             <div className="space-y-3">
