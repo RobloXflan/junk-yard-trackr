@@ -4,16 +4,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DollarSign, Check } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DollarSign, Check, CalendarIcon, Minus, Plus } from "lucide-react";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface WorkerCashEntry {
   worker_id: string;
   worker_name: string;
   reported_cash: number;
-  cash_given: number;
+  dinero_dado: number;
+  dinero_recibido: number;
   total_cash: number;
   source: 'worker' | 'admin';
+  entry_date: string;
 }
 
 const workers = [
@@ -25,26 +31,28 @@ const workers = [
 export function WorkerCashEntry() {
   const [selectedWorker, setSelectedWorker] = useState<string>("");
   const [reportedCash, setReportedCash] = useState("");
-  const [cashGiven, setCashGiven] = useState("");
+  const [dineroAmount, setDineroAmount] = useState("");
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [activeTab, setActiveTab] = useState<'dado' | 'recibido'>('dado');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState("");
 
-  const today = format(new Date(), 'yyyy-MM-dd');
+  const dateKey = format(selectedDate, 'yyyy-MM-dd');
 
   const handleSubmit = () => {
     // Reset error
     setError("");
 
     // Validation
-    if (!selectedWorker || !reportedCash || !cashGiven) {
+    if (!selectedWorker || !reportedCash || !dineroAmount) {
       setError("Please fill in all fields");
       return;
     }
 
     const reportedAmount = parseFloat(reportedCash);
-    const givenAmount = parseFloat(cashGiven);
+    const dineroAmountValue = parseFloat(dineroAmount);
 
-    if (isNaN(reportedAmount) || isNaN(givenAmount) || reportedAmount < 0 || givenAmount < 0) {
+    if (isNaN(reportedAmount) || isNaN(dineroAmountValue) || reportedAmount < 0 || dineroAmountValue < 0) {
       setError("Please enter valid positive amounts");
       return;
     }
@@ -52,29 +60,34 @@ export function WorkerCashEntry() {
     const worker = workers.find(w => w.id === selectedWorker);
     if (!worker) return;
 
-    const totalAmount = reportedAmount + givenAmount;
+    // Calculate totals based on tab selection
+    const dineroGiven = activeTab === 'dado' ? dineroAmountValue : 0;
+    const dineroReceived = activeTab === 'recibido' ? dineroAmountValue : 0;
+    const totalAmount = reportedAmount - dineroGiven + dineroReceived;
 
     const newEntry: WorkerCashEntry = {
       worker_id: selectedWorker,
       worker_name: worker.name,
       reported_cash: reportedAmount,
-      cash_given: givenAmount,
+      dinero_dado: dineroGiven,
+      dinero_recibido: dineroReceived,
       total_cash: totalAmount,
-      source: 'worker'
+      source: 'worker',
+      entry_date: dateKey
     };
 
-    // Get existing entries for today
-    const stored = localStorage.getItem(`dailyCash_${today}`);
+    // Get existing entries for selected date
+    const stored = localStorage.getItem(`dailyCash_${dateKey}`);
     const existingEntries: WorkerCashEntry[] = stored ? JSON.parse(stored) : [];
 
-    // Remove any existing entry for this worker
+    // Remove any existing entry for this worker on this date
     const filteredEntries = existingEntries.filter(entry => entry.worker_id !== selectedWorker);
     
     // Add the new entry
     const updatedEntries = [...filteredEntries, newEntry];
     
     // Save to localStorage
-    localStorage.setItem(`dailyCash_${today}`, JSON.stringify(updatedEntries));
+    localStorage.setItem(`dailyCash_${dateKey}`, JSON.stringify(updatedEntries));
 
     setIsSubmitted(true);
   };
@@ -97,7 +110,7 @@ export function WorkerCashEntry() {
                   setIsSubmitted(false);
                   setSelectedWorker("");
                   setReportedCash("");
-                  setCashGiven("");
+                  setDineroAmount("");
                   setError("");
                 }}
                 className="w-full"
@@ -117,7 +130,7 @@ export function WorkerCashEntry() {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Daily Cash Report</CardTitle>
           <p className="text-muted-foreground text-sm">
-            {format(new Date(), "MMMM dd, yyyy")}
+            {format(selectedDate, "MMMM dd, yyyy")}
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -126,6 +139,33 @@ export function WorkerCashEntry() {
               <p className="text-red-600 text-sm">{error}</p>
             </div>
           )}
+
+          <div className="space-y-2">
+            <Label className="text-base">Select Date</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full h-12 text-lg justify-start text-left font-normal",
+                    !selectedDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-5 w-5" />
+                  {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => date && setSelectedDate(date)}
+                  initialFocus
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="worker" className="text-base">Select Your Name</Label>
@@ -144,7 +184,7 @@ export function WorkerCashEntry() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="reported" className="text-base">Money I Reported Today</Label>
+            <Label htmlFor="reported" className="text-base">Money I Reported</Label>
             <div className="relative">
               <DollarSign className="absolute left-3 top-4 h-5 w-5 text-muted-foreground" />
               <Input
@@ -160,37 +200,87 @@ export function WorkerCashEntry() {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="given" className="text-base">Money Given/Received</Label>
-            <div className="relative">
-              <DollarSign className="absolute left-3 top-4 h-5 w-5 text-muted-foreground" />
-              <Input
-                id="given"
-                type="number"
-                step="0.01"
-                min="0"
-                value={cashGiven}
-                onChange={(e) => setCashGiven(e.target.value)}
-                placeholder="0.00"
-                className="pl-10 h-12 text-lg"
-              />
-            </div>
+          <div className="space-y-4">
+            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'dado' | 'recibido')}>
+              <TabsList className="grid w-full grid-cols-2 h-12">
+                <TabsTrigger value="dado" className="text-red-600 data-[state=active]:text-red-700">
+                  <Minus className="w-4 h-4 mr-2" />
+                  Dinero Dado
+                </TabsTrigger>
+                <TabsTrigger value="recibido" className="text-green-600 data-[state=active]:text-green-700">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Dinero Recibido
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="dado" className="mt-4">
+                <div className="space-y-2">
+                  <Label className="text-base text-red-600">Amount Given (Subtract from total)</Label>
+                  <div className="relative">
+                    <Minus className="absolute left-3 top-4 h-5 w-5 text-red-500" />
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={dineroAmount}
+                      onChange={(e) => setDineroAmount(e.target.value)}
+                      placeholder="0.00"
+                      className="pl-10 h-12 text-lg border-red-200 focus:border-red-400"
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="recibido" className="mt-4">
+                <div className="space-y-2">
+                  <Label className="text-base text-green-600">Amount Received (Add to total)</Label>
+                  <div className="relative">
+                    <Plus className="absolute left-3 top-4 h-5 w-5 text-green-500" />
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={dineroAmount}
+                      onChange={(e) => setDineroAmount(e.target.value)}
+                      placeholder="0.00"
+                      className="pl-10 h-12 text-lg border-green-200 focus:border-green-400"
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
 
-          {reportedCash && cashGiven && (
+          {reportedCash && dineroAmount && (
             <div className="p-4 bg-muted rounded-md">
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">Total Amount</p>
-                <p className="text-2xl font-bold text-foreground">
-                  ${((parseFloat(reportedCash) || 0) + (parseFloat(cashGiven) || 0)).toFixed(2)}
-                </p>
+              <div className="text-center space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Reported:</span>
+                  <span className="font-medium">${parseFloat(reportedCash).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className={`text-sm ${activeTab === 'dado' ? 'text-red-600' : 'text-green-600'}`}>
+                    {activeTab === 'dado' ? 'Given (-)' : 'Received (+)'}:
+                  </span>
+                  <span className={`font-medium ${activeTab === 'dado' ? 'text-red-600' : 'text-green-600'}`}>
+                    {activeTab === 'dado' ? '-' : '+'}${parseFloat(dineroAmount).toFixed(2)}
+                  </span>
+                </div>
+                <div className="border-t pt-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Final Total:</span>
+                    <span className="text-xl font-bold text-foreground">
+                      ${(parseFloat(reportedCash) + (activeTab === 'recibido' ? parseFloat(dineroAmount) : -parseFloat(dineroAmount))).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           )}
 
           <Button 
             onClick={handleSubmit} 
-            disabled={!selectedWorker || !reportedCash || !cashGiven}
+            disabled={!selectedWorker || !reportedCash || !dineroAmount}
             className="w-full h-12 text-lg"
           >
             Submit Report

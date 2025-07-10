@@ -21,9 +21,12 @@ interface DailyCashEntry {
   worker_id: string;
   worker_name: string;
   reported_cash: number;
-  cash_given: number;
+  dinero_dado?: number;
+  dinero_recibido?: number;
+  cash_given?: number; // Keep for backward compatibility
   total_cash: number;
   source?: 'worker' | 'admin';
+  entry_date?: string;
 }
 
 export function SimpleCashAdmin() {
@@ -139,7 +142,13 @@ export function SimpleCashAdmin() {
   };
 
   const totalReported = dailyEntries.reduce((sum, entry) => sum + entry.reported_cash, 0);
-  const totalGiven = dailyEntries.reduce((sum, entry) => sum + entry.cash_given, 0);
+  const totalGiven = dailyEntries.reduce((sum, entry) => {
+    // Handle both old format (cash_given) and new format (dinero_dado - dinero_recibido)
+    if (entry.dinero_dado !== undefined || entry.dinero_recibido !== undefined) {
+      return sum + (entry.dinero_dado || 0) - (entry.dinero_recibido || 0);
+    }
+    return sum + (entry.cash_given || 0);
+  }, 0);
   const grandTotal = dailyEntries.reduce((sum, entry) => sum + entry.total_cash, 0);
 
   return (
@@ -309,17 +318,34 @@ export function SimpleCashAdmin() {
                         {entry.source === 'worker' ? 'Worker Submitted' : 'Admin Added'}
                       </Badge>
                     </div>
-                    <div className="grid grid-cols-3 gap-4 mt-2 text-sm">
+                    <div className="grid grid-cols-2 gap-4 mt-2 text-sm">
                       <div>
                         <span className="text-muted-foreground">Reported: </span>
                         <span className="font-medium">${entry.reported_cash.toFixed(2)}</span>
                       </div>
-                      <div>
-                        <span className="text-muted-foreground">Given: </span>
-                        <span className="font-medium">${entry.cash_given.toFixed(2)}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Total: </span>
+                      {entry.dinero_dado !== undefined || entry.dinero_recibido !== undefined ? (
+                        <>
+                          {entry.dinero_dado! > 0 && (
+                            <div>
+                              <span className="text-red-600">Dinero Dado (-): </span>
+                              <span className="font-medium text-red-600">${entry.dinero_dado!.toFixed(2)}</span>
+                            </div>
+                          )}
+                          {entry.dinero_recibido! > 0 && (
+                            <div>
+                              <span className="text-green-600">Dinero Recibido (+): </span>
+                              <span className="font-medium text-green-600">${entry.dinero_recibido!.toFixed(2)}</span>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div>
+                          <span className="text-muted-foreground">Given: </span>
+                          <span className="font-medium">${(entry.cash_given || 0).toFixed(2)}</span>
+                        </div>
+                      )}
+                      <div className="col-span-2 border-t pt-2">
+                        <span className="text-muted-foreground">Final Total: </span>
                         <span className="font-bold text-primary">${entry.total_cash.toFixed(2)}</span>
                       </div>
                     </div>
