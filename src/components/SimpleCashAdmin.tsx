@@ -40,6 +40,7 @@ export function SimpleCashAdmin() {
   const [cashGiven, setCashGiven] = useState("");
   const [loading, setLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   const dateKey = format(selectedDate, 'yyyy-MM-dd');
   
@@ -195,7 +196,7 @@ export function SimpleCashAdmin() {
         <CardContent>
           <div className="flex items-center gap-4">
             <Label className="text-base">Date:</Label>
-            <Popover>
+            <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -212,7 +213,12 @@ export function SimpleCashAdmin() {
                 <Calendar
                   mode="single"
                   selected={selectedDate}
-                  onSelect={(date) => date && setSelectedDate(date)}
+                  onSelect={(date) => {
+                    if (date) {
+                      setSelectedDate(date);
+                      setDatePickerOpen(false); // Close the popover when date is selected
+                    }
+                  }}
                   initialFocus
                   className="pointer-events-auto"
                 />
