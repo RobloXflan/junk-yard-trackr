@@ -76,6 +76,10 @@ export function SimpleCashAdmin() {
     console.log('Admin - loading entries for date:', date);
     console.log('Admin - checking localStorage key:', `dailyCash_${date}`);
     
+    // Debug: Show all localStorage keys that start with 'dailyCash_'
+    const allKeys = Object.keys(localStorage).filter(key => key.startsWith('dailyCash_'));
+    console.log('Admin - all dailyCash localStorage keys found:', allKeys);
+    
     // Load from localStorage for the selected date
     const stored = localStorage.getItem(`dailyCash_${date}`);
     console.log('Admin - found stored data:', stored);
