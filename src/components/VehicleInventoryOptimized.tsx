@@ -171,7 +171,7 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
 
   // Load status-specific vehicles when filter changes
   useEffect(() => {
-    if (statusFilter !== 'all' && statusFilter === 'sold') {
+    if (statusFilter !== 'all' && statusFilter !== 'yard') {
       loadAllVehiclesForStatus(statusFilter);
     } else {
       setStatusSpecificVehicles([]);
@@ -179,7 +179,7 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
   }, [statusFilter]);
 
   // Use status-specific vehicles when available, otherwise filter from paginated results
-  const filteredVehicles = statusFilter === 'sold' && statusSpecificVehicles.length > 0
+  const filteredVehicles = (statusFilter !== 'all' && statusFilter !== 'yard' && statusSpecificVehicles.length > 0)
     ? statusSpecificVehicles
     : vehicles.filter((vehicle) => {
         if (statusFilter !== 'all' && vehicle.status !== statusFilter) {
@@ -191,11 +191,15 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
   const statusCounts = {
     all: vehicles.length,
     yard: vehicles.filter(v => v.status === 'yard').length,
-    sold: statusFilter === 'sold' && statusSpecificVehicles.length > 0 
+    sold: (statusFilter === 'sold' && statusSpecificVehicles.length > 0) 
       ? statusSpecificVehicles.length 
       : vehicles.filter(v => v.status === 'sold').length,
-    'pick-your-part': vehicles.filter(v => v.status === 'pick-your-part').length,
-    'sa-recycling': vehicles.filter(v => v.status === 'sa-recycling').length,
+    'pick-your-part': (statusFilter === 'pick-your-part' && statusSpecificVehicles.length > 0)
+      ? statusSpecificVehicles.length 
+      : vehicles.filter(v => v.status === 'pick-your-part').length,
+    'sa-recycling': (statusFilter === 'sa-recycling' && statusSpecificVehicles.length > 0)
+      ? statusSpecificVehicles.length 
+      : vehicles.filter(v => v.status === 'sa-recycling').length,
   };
 
   const paperworkOptions = [
@@ -581,11 +585,11 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
               )}
 
               {/* Loading indicator for initial load and status-specific loading */}
-              {(isLoading && vehicles.length === 0) || (statusSpecificLoading && statusFilter === 'sold') ? (
+              {(isLoading && vehicles.length === 0) || (statusSpecificLoading && statusFilter !== 'all' && statusFilter !== 'yard') ? (
                 <div className="flex justify-center py-8">
                   <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
                   <span className="ml-2 text-muted-foreground">
-                    {statusFilter === 'sold' ? 'Loading all sold vehicles...' : 'Loading vehicles...'}
+                    {statusSpecificLoading ? `Loading all ${statusFilter.replace('-', ' ')} vehicles...` : 'Loading vehicles...'}
                   </span>
                 </div>
               ) : null}
