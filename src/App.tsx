@@ -10,6 +10,7 @@ import { InventoryOptimized } from "@/pages/InventoryOptimized";
 import { PendingReleases } from "@/pages/PendingReleases";
 import { Released } from "@/pages/Released";
 import { Quotes } from "@/pages/Quotes";
+import { Metrics } from "@/pages/Metrics";
 import { SimpleCashAdmin } from "@/components/SimpleCashAdmin";
 import { WorkerCashEntry } from "@/components/WorkerCashEntry";
 import { PublicInventory } from "@/pages/PublicInventory";
@@ -58,6 +59,8 @@ const App = () => {
         return <Released />;
       case 'quotes':
         return <Quotes />;
+      case 'metrics':
+        return <Metrics />;
       case 'admin':
         return <SimpleCashAdmin />;
       case 'public-inventory':
@@ -195,6 +198,16 @@ const App = () => {
                       }`}
                     >
                       Quotes
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage("metrics")}
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                        currentPage === "metrics"
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      }`}
+                    >
+                      Metrics
                     </button>
                     <button
                       onClick={() => {
