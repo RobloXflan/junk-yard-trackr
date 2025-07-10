@@ -38,6 +38,9 @@ export function WorkerCashEntry() {
   const [error, setError] = useState("");
 
   const dateKey = format(selectedDate, 'yyyy-MM-dd');
+  
+  console.log('Worker form - selected date:', selectedDate);
+  console.log('Worker form - dateKey:', dateKey);
 
   const handleSubmit = () => {
     // Reset error
@@ -80,14 +83,22 @@ export function WorkerCashEntry() {
     const stored = localStorage.getItem(`dailyCash_${dateKey}`);
     const existingEntries: WorkerCashEntry[] = stored ? JSON.parse(stored) : [];
 
+    console.log('Worker form - saving data for date:', dateKey);
+    console.log('Worker form - existing entries:', existingEntries);
+    console.log('Worker form - new entry:', newEntry);
+
     // Remove any existing entry for this worker on this date
     const filteredEntries = existingEntries.filter(entry => entry.worker_id !== selectedWorker);
     
     // Add the new entry
     const updatedEntries = [...filteredEntries, newEntry];
     
+    console.log('Worker form - final entries to save:', updatedEntries);
+    
     // Save to localStorage
     localStorage.setItem(`dailyCash_${dateKey}`, JSON.stringify(updatedEntries));
+
+    console.log('Worker form - data saved to localStorage key:', `dailyCash_${dateKey}`);
 
     setIsSubmitted(true);
   };

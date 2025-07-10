@@ -42,6 +42,9 @@ export function SimpleCashAdmin() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   const dateKey = format(selectedDate, 'yyyy-MM-dd');
+  
+  console.log('Admin - selected date:', selectedDate);
+  console.log('Admin - dateKey:', dateKey);
 
   useEffect(() => {
     fetchWorkers();
@@ -69,11 +72,19 @@ export function SimpleCashAdmin() {
   };
 
   const loadEntriesForDate = async (date: string) => {
+    console.log('Admin - loading entries for date:', date);
+    console.log('Admin - checking localStorage key:', `dailyCash_${date}`);
+    
     // Load from localStorage for the selected date
     const stored = localStorage.getItem(`dailyCash_${date}`);
+    console.log('Admin - found stored data:', stored);
+    
     if (stored) {
-      setDailyEntries(JSON.parse(stored));
+      const parsedData = JSON.parse(stored);
+      console.log('Admin - parsed data:', parsedData);
+      setDailyEntries(parsedData);
     } else {
+      console.log('Admin - no data found, setting empty array');
       setDailyEntries([]);
     }
   };
