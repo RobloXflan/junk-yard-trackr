@@ -1,18 +1,123 @@
-import { useVehicleStorePaginated } from "@/hooks/useVehicleStorePaginated";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Copy, Car, User, Calendar, MapPin, Hash, CreditCard, Clock, ExternalLink, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useVehicleStore } from "@/hooks/useVehicleStore";
+import { Vehicle, CarImage } from "@/stores/vehicleStore";
 
 export function PendingReleases() {
-  const { vehicles, isLoading } = useVehicleStorePaginated();
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { markVehicleAsReleased } = useVehicleStore();
   const { toast } = useToast();
 
+  const deserializeCarImages = (carImagesData: any): CarImage[] => {
+    if (!carImagesData || !Array.isArray(carImagesData)) {
+      return [];
+    }
+    
+    return carImagesData.map(img => ({
+      id: img.id || `img_${Date.now()}`,
+      name: img.name || 'Untitled Image',
+      size: img.size || 0,
+      url: img.url || '',
+      uploadedAt: img.uploadedAt || new Date().toISOString()
+    }));
+  };
+
+  // Load ALL sold vehicles that haven't been released yet
+  useEffect(() => {
+    const loadSoldVehicles = async () => {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('vehicles')
+          .select(`
+            id,
+            year,
+            make,
+            model,
+            vehicle_id,
+            license_plate,
+            seller_name,
+            purchase_date,
+            purchase_price,
+            title_present,
+            bill_of_sale,
+            destination,
+            buyer_name,
+            buyer_first_name,
+            buyer_last_name,
+            buyer_address,
+            buyer_city,
+            buyer_state,
+            buyer_zip,
+            sale_date,
+            sale_price,
+            notes,
+            paperwork,
+            paperwork_other,
+            status,
+            is_released,
+            car_images,
+            created_at,
+            updated_at
+          `)
+          .eq('status', 'sold')
+          .eq('is_released', false)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        const transformedVehicles: Vehicle[] = (data || []).map(vehicle => ({
+          id: vehicle.id,
+          year: vehicle.year || '',
+          make: vehicle.make || '',
+          model: vehicle.model || '',
+          vehicleId: vehicle.vehicle_id || '',
+          licensePlate: vehicle.license_plate || undefined,
+          sellerName: vehicle.seller_name || undefined,
+          purchaseDate: vehicle.purchase_date || undefined,
+          purchasePrice: vehicle.purchase_price || undefined,
+          titlePresent: Boolean(vehicle.title_present),
+          billOfSale: Boolean(vehicle.bill_of_sale),
+          destination: vehicle.destination || undefined,
+          buyerName: vehicle.buyer_name || undefined,
+          buyerFirstName: vehicle.buyer_first_name || undefined,
+          buyerLastName: vehicle.buyer_last_name || undefined,
+          buyerAddress: vehicle.buyer_address || undefined,
+          buyerCity: vehicle.buyer_city || undefined,
+          buyerState: vehicle.buyer_state || undefined,
+          buyerZip: vehicle.buyer_zip || undefined,
+          saleDate: vehicle.sale_date || undefined,
+          salePrice: vehicle.sale_price || undefined,
+          notes: vehicle.notes || undefined,
+          paperwork: vehicle.paperwork || undefined,
+          paperworkOther: vehicle.paperwork_other || undefined,
+          status: (vehicle.status as Vehicle['status']) || 'yard',
+          isReleased: Boolean(vehicle.is_released),
+          carImages: deserializeCarImages(vehicle.car_images),
+          createdAt: vehicle.created_at,
+          documents: []
+        }));
+
+        setVehicles(transformedVehicles);
+      } catch (error) {
+        console.error('Error loading sold vehicles:', error);
+        setVehicles([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadSoldVehicles();
+  }, []);
+
   // Filter vehicles with status 'sold' that haven't been released yet
-  const soldVehicles = vehicles.filter(vehicle => vehicle.status === 'sold' && !vehicle.isReleased);
+  const soldVehicles = vehicles;
 
   const copyToClipboard = async (text: string, label: string) => {
     try {

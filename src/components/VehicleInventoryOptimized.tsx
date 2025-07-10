@@ -1,5 +1,6 @@
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useVehicleStorePaginated } from "@/hooks/useVehicleStorePaginated";
 import { VehicleDetailsDialog } from "@/components/VehicleDetailsDialog";
-import { Vehicle } from "@/stores/vehicleStore";
+import { Vehicle, CarImage } from "@/stores/vehicleStore";
 import { toast } from "sonner";
 
 interface VehicleInventoryOptimizedProps {
@@ -54,6 +55,8 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
   const [loadingDocuments, setLoadingDocuments] = useState(false);
   const [editingPaperworkId, setEditingPaperworkId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<Vehicle['status'] | 'all'>('all');
+  const [statusSpecificVehicles, setStatusSpecificVehicles] = useState<Vehicle[]>([]);
+  const [statusSpecificLoading, setStatusSpecificLoading] = useState(false);
   
   const { 
     vehicles, 
@@ -69,18 +72,128 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
     updateVehiclePaperwork
   } = useVehicleStorePaginated();
 
-  // Filter vehicles by status
-  const filteredVehicles = vehicles.filter((vehicle) => {
-    if (statusFilter !== 'all' && vehicle.status !== statusFilter) {
-      return false;
+  const deserializeCarImages = (carImagesData: any): CarImage[] => {
+    if (!carImagesData || !Array.isArray(carImagesData)) {
+      return [];
     }
-    return true;
-  });
+    
+    return carImagesData.map(img => ({
+      id: img.id || `img_${Date.now()}`,
+      name: img.name || 'Untitled Image',
+      size: img.size || 0,
+      url: img.url || '',
+      uploadedAt: img.uploadedAt || new Date().toISOString()
+    }));
+  };
+
+  // Load ALL vehicles for specific status filters
+  const loadAllVehiclesForStatus = async (status: Vehicle['status']) => {
+    setStatusSpecificLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('vehicles')
+        .select(`
+          id,
+          year,
+          make,
+          model,
+          vehicle_id,
+          license_plate,
+          seller_name,
+          purchase_date,
+          purchase_price,
+          title_present,
+          bill_of_sale,
+          destination,
+          buyer_name,
+          buyer_first_name,
+          buyer_last_name,
+          buyer_address,
+          buyer_city,
+          buyer_state,
+          buyer_zip,
+          sale_date,
+          sale_price,
+          notes,
+          paperwork,
+          paperwork_other,
+          status,
+          is_released,
+          car_images,
+          created_at,
+          updated_at
+        `)
+        .eq('status', status)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const transformedVehicles: Vehicle[] = (data || []).map(vehicle => ({
+        id: vehicle.id,
+        year: vehicle.year || '',
+        make: vehicle.make || '',
+        model: vehicle.model || '',
+        vehicleId: vehicle.vehicle_id || '',
+        licensePlate: vehicle.license_plate || undefined,
+        sellerName: vehicle.seller_name || undefined,
+        purchaseDate: vehicle.purchase_date || undefined,
+        purchasePrice: vehicle.purchase_price || undefined,
+        titlePresent: Boolean(vehicle.title_present),
+        billOfSale: Boolean(vehicle.bill_of_sale),
+        destination: vehicle.destination || undefined,
+        buyerName: vehicle.buyer_name || undefined,
+        buyerFirstName: vehicle.buyer_first_name || undefined,
+        buyerLastName: vehicle.buyer_last_name || undefined,
+        buyerAddress: vehicle.buyer_address || undefined,
+        buyerCity: vehicle.buyer_city || undefined,
+        buyerState: vehicle.buyer_state || undefined,
+        buyerZip: vehicle.buyer_zip || undefined,
+        saleDate: vehicle.sale_date || undefined,
+        salePrice: vehicle.sale_price || undefined,
+        notes: vehicle.notes || undefined,
+        paperwork: vehicle.paperwork || undefined,
+        paperworkOther: vehicle.paperwork_other || undefined,
+        status: (vehicle.status as Vehicle['status']) || 'yard',
+        isReleased: Boolean(vehicle.is_released),
+        carImages: deserializeCarImages(vehicle.car_images),
+        createdAt: vehicle.created_at,
+        documents: []
+      }));
+
+      setStatusSpecificVehicles(transformedVehicles);
+    } catch (error) {
+      console.error('Error loading vehicles for status:', status, error);
+      setStatusSpecificVehicles([]);
+    } finally {
+      setStatusSpecificLoading(false);
+    }
+  };
+
+  // Load status-specific vehicles when filter changes
+  useEffect(() => {
+    if (statusFilter !== 'all' && statusFilter === 'sold') {
+      loadAllVehiclesForStatus(statusFilter);
+    } else {
+      setStatusSpecificVehicles([]);
+    }
+  }, [statusFilter]);
+
+  // Use status-specific vehicles when available, otherwise filter from paginated results
+  const filteredVehicles = statusFilter === 'sold' && statusSpecificVehicles.length > 0
+    ? statusSpecificVehicles
+    : vehicles.filter((vehicle) => {
+        if (statusFilter !== 'all' && vehicle.status !== statusFilter) {
+          return false;
+        }
+        return true;
+      });
 
   const statusCounts = {
     all: vehicles.length,
     yard: vehicles.filter(v => v.status === 'yard').length,
-    sold: vehicles.filter(v => v.status === 'sold').length,
+    sold: statusFilter === 'sold' && statusSpecificVehicles.length > 0 
+      ? statusSpecificVehicles.length 
+      : vehicles.filter(v => v.status === 'sold').length,
     'pick-your-part': vehicles.filter(v => v.status === 'pick-your-part').length,
     'sa-recycling': vehicles.filter(v => v.status === 'sa-recycling').length,
   };
@@ -467,12 +580,15 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
                 </div>
               )}
 
-              {/* Loading indicator for initial load */}
-              {isLoading && vehicles.length === 0 && (
+              {/* Loading indicator for initial load and status-specific loading */}
+              {(isLoading && vehicles.length === 0) || (statusSpecificLoading && statusFilter === 'sold') ? (
                 <div className="flex justify-center py-8">
                   <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
+                  <span className="ml-2 text-muted-foreground">
+                    {statusFilter === 'sold' ? 'Loading all sold vehicles...' : 'Loading vehicles...'}
+                  </span>
                 </div>
-              )}
+              ) : null}
             </>
           )}
         </CardContent>
