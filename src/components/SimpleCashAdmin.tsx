@@ -4,10 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DollarSign, Plus, Calculator } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { DollarSign, Plus, Calculator, QrCode, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { QRCodeDisplay } from "./QRCodeDisplay";
 
 interface Worker {
   id: string;
@@ -20,6 +23,7 @@ interface DailyCashEntry {
   reported_cash: number;
   cash_given: number;
   total_cash: number;
+  source?: 'worker' | 'admin';
 }
 
 export function SimpleCashAdmin() {
@@ -61,6 +65,12 @@ export function SimpleCashAdmin() {
     }
   };
 
+  // Auto-refresh entries every 10 seconds to pick up worker submissions
+  useEffect(() => {
+    const interval = setInterval(loadTodaysEntries, 10000);
+    return () => clearInterval(interval);
+  }, [today]);
+
   const saveTodaysEntries = (entries: DailyCashEntry[]) => {
     localStorage.setItem(`dailyCash_${today}`, JSON.stringify(entries));
     setDailyEntries(entries);
@@ -97,7 +107,8 @@ export function SimpleCashAdmin() {
       worker_name: worker.name,
       reported_cash: reportedAmount,
       cash_given: givenAmount,
-      total_cash: totalAmount
+      total_cash: totalAmount,
+      source: 'admin'
     };
 
     // Check if worker already has an entry today
@@ -139,6 +150,24 @@ export function SimpleCashAdmin() {
           <p className="text-muted-foreground">Simple cash tracking for {format(new Date(), "MMMM dd, yyyy")}</p>
         </div>
       </div>
+
+      <Tabs defaultValue="entries" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="entries" className="flex items-center gap-2">
+            <Calculator className="w-4 h-4" />
+            Cash Entries
+          </TabsTrigger>
+          <TabsTrigger value="qr-code" className="flex items-center gap-2">
+            <QrCode className="w-4 h-4" />
+            Worker QR Code
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="qr-code" className="space-y-4">
+          <QRCodeDisplay />
+        </TabsContent>
+
+        <TabsContent value="entries" className="space-y-4">
 
       {/* Quick Summary Cards */}
       <div className="grid gap-4 md:grid-cols-3">
@@ -274,7 +303,12 @@ export function SimpleCashAdmin() {
               {dailyEntries.map((entry) => (
                 <div key={entry.worker_id} className="flex items-center justify-between p-4 border rounded-lg bg-card">
                   <div className="flex-1">
-                    <h3 className="font-semibold text-lg">{entry.worker_name}</h3>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-semibold text-lg">{entry.worker_name}</h3>
+                      <Badge variant={entry.source === 'worker' ? 'default' : 'secondary'} className="text-xs">
+                        {entry.source === 'worker' ? 'Worker Submitted' : 'Admin Added'}
+                      </Badge>
+                    </div>
                     <div className="grid grid-cols-3 gap-4 mt-2 text-sm">
                       <div>
                         <span className="text-muted-foreground">Reported: </span>
@@ -304,6 +338,8 @@ export function SimpleCashAdmin() {
           )}
         </CardContent>
       </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

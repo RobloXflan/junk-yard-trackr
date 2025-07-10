@@ -11,6 +11,7 @@ import { PendingReleases } from "@/pages/PendingReleases";
 import { Released } from "@/pages/Released";
 import { Quotes } from "@/pages/Quotes";
 import { SimpleCashAdmin } from "@/components/SimpleCashAdmin";
+import { WorkerCashEntry } from "@/components/WorkerCashEntry";
 import { PublicInventory } from "@/pages/PublicInventory";
 import { SiteAuth } from "@/components/SiteAuth";
 import { ViewOnlyInventory } from "@/components/ViewOnlyInventory";
@@ -26,8 +27,9 @@ const App = () => {
   const [userType, setUserType] = useState<UserType>(null);
   const [username, setUsername] = useState("");
 
-  // Check if we're on the public inventory route
+  // Check if we're on special routes
   const isPublicInventory = window.location.pathname === "/public-inventory";
+  const isWorkerCash = window.location.pathname === "/worker-cash";
 
   const handleAuthentication = (type: UserType, user?: string) => {
     setUserType(type);
@@ -65,7 +67,7 @@ const App = () => {
     }
   };
 
-  // Handle URL-based routing for public inventory
+  // Handle URL-based routing for special routes
   if (isPublicInventory) {
     return (
       <QueryClientProvider client={queryClient}>
@@ -73,6 +75,18 @@ const App = () => {
           <Toaster />
           <Sonner />
           <PublicInventory />
+        </TooltipProvider>
+      </QueryClientProvider>
+    );
+  }
+
+  if (isWorkerCash) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <WorkerCashEntry />
         </TooltipProvider>
       </QueryClientProvider>
     );
