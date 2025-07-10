@@ -6,10 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, Plus, Calculator, QrCode, Users } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DollarSign, Plus, Calculator, QrCode, Users, CalendarIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { QRCodeDisplay } from "./QRCodeDisplay";
 
 interface Worker {
@@ -36,12 +39,17 @@ export function SimpleCashAdmin() {
   const [reportedCash, setReportedCash] = useState("");
   const [cashGiven, setCashGiven] = useState("");
   const [loading, setLoading] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
-  const today = format(new Date(), 'yyyy-MM-dd');
+  const dateKey = format(selectedDate, 'yyyy-MM-dd');
 
   useEffect(() => {
     fetchWorkers();
-    loadTodaysEntries();
+    loadEntriesForDate(dateKey);
+  }, [dateKey]);
+
+  useEffect(() => {
+    fetchWorkers();
   }, []);
 
   const fetchWorkers = async () => {
@@ -60,22 +68,24 @@ export function SimpleCashAdmin() {
     }
   };
 
-  const loadTodaysEntries = async () => {
-    // Load from localStorage first for immediate display
-    const stored = localStorage.getItem(`dailyCash_${today}`);
+  const loadEntriesForDate = async (date: string) => {
+    // Load from localStorage for the selected date
+    const stored = localStorage.getItem(`dailyCash_${date}`);
     if (stored) {
       setDailyEntries(JSON.parse(stored));
+    } else {
+      setDailyEntries([]);
     }
   };
 
   // Auto-refresh entries every 10 seconds to pick up worker submissions
   useEffect(() => {
-    const interval = setInterval(loadTodaysEntries, 10000);
+    const interval = setInterval(() => loadEntriesForDate(dateKey), 10000);
     return () => clearInterval(interval);
-  }, [today]);
+  }, [dateKey]);
 
-  const saveTodaysEntries = (entries: DailyCashEntry[]) => {
-    localStorage.setItem(`dailyCash_${today}`, JSON.stringify(entries));
+  const saveEntriesForDate = (entries: DailyCashEntry[], date: string) => {
+    localStorage.setItem(`dailyCash_${date}`, JSON.stringify(entries));
     setDailyEntries(entries);
   };
 
@@ -118,7 +128,7 @@ export function SimpleCashAdmin() {
     const existingEntries = dailyEntries.filter(entry => entry.worker_id !== selectedWorker);
     const updatedEntries = [...existingEntries, newEntry];
 
-    saveTodaysEntries(updatedEntries);
+    saveEntriesForDate(updatedEntries, dateKey);
 
     // Clear form
     setSelectedWorker("");
@@ -133,7 +143,7 @@ export function SimpleCashAdmin() {
 
   const handleRemoveEntry = (workerId: string) => {
     const updatedEntries = dailyEntries.filter(entry => entry.worker_id !== workerId);
-    saveTodaysEntries(updatedEntries);
+    saveEntriesForDate(updatedEntries, dateKey);
     
     toast({
       title: "Entry Removed",
@@ -156,9 +166,55 @@ export function SimpleCashAdmin() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Daily Cash Admin</h1>
-          <p className="text-muted-foreground">Simple cash tracking for {format(new Date(), "MMMM dd, yyyy")}</p>
+          <p className="text-muted-foreground">Simple cash tracking for {format(selectedDate, "MMMM dd, yyyy")}</p>
         </div>
       </div>
+
+      {/* Date Selection */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CalendarIcon className="h-5 w-5" />
+            Select Date to View
+          </CardTitle>
+          <CardDescription>
+            Choose a date to view cash entries for that day
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4">
+            <Label className="text-base">Date:</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-[240px] justify-start text-left font-normal",
+                    !selectedDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => date && setSelectedDate(date)}
+                  initialFocus
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+            {dailyEntries.length > 0 && (
+              <Badge variant="outline" className="ml-2">
+                {dailyEntries.length} entries found
+              </Badge>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="entries" className="space-y-4">
         <TabsList className="grid w-full grid-cols-2">
