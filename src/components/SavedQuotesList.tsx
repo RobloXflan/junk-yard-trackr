@@ -167,17 +167,14 @@ export function SavedQuotesList() {
             
             <div>
               <Label htmlFor="new-offer">Your Offer Amount</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-                <Input
-                  id="new-offer"
-                  type="number"
-                  placeholder="Enter your offer"
-                  value={newQuote.offer}
-                  onChange={(e) => setNewQuote(prev => ({ ...prev, offer: e.target.value }))}
-                  className="pl-8"
-                />
-              </div>
+              <Input
+                id="new-offer"
+                type="number"
+                placeholder="Enter your offer"
+                value={newQuote.offer}
+                onChange={(e) => setNewQuote(prev => ({ ...prev, offer: e.target.value }))}
+                className="w-full"
+              />
             </div>
 
             <div className="flex gap-2">

@@ -402,17 +402,14 @@ export function VehiclePricingTool() {
                 <div>
                   <Label htmlFor="manual-offer-standalone">Your Offer Amount</Label>
                   <div className="flex gap-2 mt-1">
-                    <div className="relative flex-1">
-                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-                      <Input
-                        id="manual-offer-standalone"
-                        type="number"
-                        placeholder="Enter your offer"
-                        value={manualOffer}
-                        onChange={(e) => setManualOffer(e.target.value)}
-                        className="pl-8"
-                      />
-                    </div>
+                    <Input
+                      id="manual-offer-standalone"
+                      type="number"
+                      placeholder="Enter your offer"
+                      value={manualOffer}
+                      onChange={(e) => setManualOffer(e.target.value)}
+                      className="flex-1"
+                    />
                     <Button onClick={saveQuote} variant="outline" className="flex items-center gap-2">
                       <Save className="w-4 h-4" />
                       Save Quote
@@ -466,17 +463,14 @@ export function VehiclePricingTool() {
                   <div>
                     <Label htmlFor="manual-offer">Adjust Your Offer</Label>
                     <div className="flex gap-2 mt-1">
-                      <div className="relative flex-1">
-                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-                        <Input
-                          id="manual-offer"
-                          type="number"
-                          placeholder="Enter your offer"
-                          value={manualOffer}
-                          onChange={(e) => setManualOffer(e.target.value)}
-                          className="pl-8"
-                        />
-                      </div>
+                      <Input
+                        id="manual-offer"
+                        type="number"
+                        placeholder="Enter your offer"
+                        value={manualOffer}
+                        onChange={(e) => setManualOffer(e.target.value)}
+                        className="flex-1"
+                      />
                       <Button onClick={saveQuote} variant="outline" className="flex items-center gap-2">
                         <Save className="w-4 h-4" />
                         Save Quote
