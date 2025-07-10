@@ -45,7 +45,7 @@ export function WorkerCashEntry() {
 
     // Validation
     if (!selectedWorker || !reportedCash || !dineroAmount) {
-      setError("Please fill in all fields");
+      setError("Por favor completa todos los campos");
       return;
     }
 
@@ -53,7 +53,7 @@ export function WorkerCashEntry() {
     const dineroAmountValue = parseFloat(dineroAmount);
 
     if (isNaN(reportedAmount) || isNaN(dineroAmountValue) || reportedAmount < 0 || dineroAmountValue < 0) {
-      setError("Please enter valid positive amounts");
+      setError("Por favor ingresa cantidades válidas positivas");
       return;
     }
 
@@ -101,9 +101,9 @@ export function WorkerCashEntry() {
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
                 <Check className="w-8 h-8 text-green-600" />
               </div>
-              <h2 className="text-2xl font-bold text-foreground">Success!</h2>
+              <h2 className="text-2xl font-bold text-foreground">¡Éxito!</h2>
               <p className="text-muted-foreground">
-                Your cash report has been submitted successfully.
+                Tu reporte de dinero ha sido enviado exitosamente.
               </p>
               <Button 
                 onClick={() => {
@@ -115,7 +115,7 @@ export function WorkerCashEntry() {
                 }}
                 className="w-full"
               >
-                Submit Another Report
+                Enviar Otro Reporte
               </Button>
             </div>
           </CardContent>
@@ -128,7 +128,7 @@ export function WorkerCashEntry() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Daily Cash Report</CardTitle>
+          <CardTitle className="text-2xl">Reporte Diario de Dinero</CardTitle>
           <p className="text-muted-foreground text-sm">
             {format(selectedDate, "MMMM dd, yyyy")}
           </p>
@@ -141,7 +141,7 @@ export function WorkerCashEntry() {
           )}
 
           <div className="space-y-2">
-            <Label className="text-base">Select Date</Label>
+            <Label className="text-base">Seleccionar Fecha</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -152,7 +152,7 @@ export function WorkerCashEntry() {
                   )}
                 >
                   <CalendarIcon className="mr-2 h-5 w-5" />
-                  {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+                  {selectedDate ? format(selectedDate, "PPP") : <span>Elegir una fecha</span>}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -168,10 +168,10 @@ export function WorkerCashEntry() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="worker" className="text-base">Select Your Name</Label>
+            <Label htmlFor="worker" className="text-base">Selecciona Tu Nombre</Label>
             <Select value={selectedWorker} onValueChange={setSelectedWorker}>
               <SelectTrigger className="h-12 text-lg">
-                <SelectValue placeholder="Choose your name..." />
+                <SelectValue placeholder="Elige tu nombre..." />
               </SelectTrigger>
               <SelectContent>
                 {workers.map((worker) => (
@@ -184,7 +184,7 @@ export function WorkerCashEntry() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="reported" className="text-base">Money I Reported</Label>
+            <Label htmlFor="reported" className="text-base">Dinero Reportado</Label>
             <div className="relative">
               <DollarSign className="absolute left-3 top-4 h-5 w-5 text-muted-foreground" />
               <Input
@@ -215,7 +215,7 @@ export function WorkerCashEntry() {
               
               <TabsContent value="dado" className="mt-4">
                 <div className="space-y-2">
-                  <Label className="text-base text-red-600">Amount Given (Subtract from total)</Label>
+                  <Label className="text-base text-red-600">Cantidad Dada (Restar del total)</Label>
                   <div className="relative">
                     <Minus className="absolute left-3 top-4 h-5 w-5 text-red-500" />
                     <Input
@@ -233,7 +233,7 @@ export function WorkerCashEntry() {
               
               <TabsContent value="recibido" className="mt-4">
                 <div className="space-y-2">
-                  <Label className="text-base text-green-600">Amount Received (Add to total)</Label>
+                  <Label className="text-base text-green-600">Cantidad Recibida (Sumar al total)</Label>
                   <div className="relative">
                     <Plus className="absolute left-3 top-4 h-5 w-5 text-green-500" />
                     <Input
@@ -255,12 +255,12 @@ export function WorkerCashEntry() {
             <div className="p-4 bg-muted rounded-md">
               <div className="text-center space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Reported:</span>
+                  <span className="text-sm text-muted-foreground">Reportado:</span>
                   <span className="font-medium">${parseFloat(reportedCash).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className={`text-sm ${activeTab === 'dado' ? 'text-red-600' : 'text-green-600'}`}>
-                    {activeTab === 'dado' ? 'Given (-)' : 'Received (+)'}:
+                    {activeTab === 'dado' ? 'Dado (-)' : 'Recibido (+)'}:
                   </span>
                   <span className={`font-medium ${activeTab === 'dado' ? 'text-red-600' : 'text-green-600'}`}>
                     {activeTab === 'dado' ? '-' : '+'}${parseFloat(dineroAmount).toFixed(2)}
@@ -268,7 +268,7 @@ export function WorkerCashEntry() {
                 </div>
                 <div className="border-t pt-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Final Total:</span>
+                    <span className="text-sm text-muted-foreground">Total Final:</span>
                     <span className="text-xl font-bold text-foreground">
                       ${(parseFloat(reportedCash) + (activeTab === 'recibido' ? parseFloat(dineroAmount) : -parseFloat(dineroAmount))).toFixed(2)}
                     </span>
@@ -283,7 +283,7 @@ export function WorkerCashEntry() {
             disabled={!selectedWorker || !reportedCash || !dineroAmount}
             className="w-full h-12 text-lg"
           >
-            Submit Report
+            Enviar Reporte
           </Button>
         </CardContent>
       </Card>
