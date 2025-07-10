@@ -57,6 +57,13 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
   const [statusFilter, setStatusFilter] = useState<Vehicle['status'] | 'all'>('all');
   const [statusSpecificVehicles, setStatusSpecificVehicles] = useState<Vehicle[]>([]);
   const [statusSpecificLoading, setStatusSpecificLoading] = useState(false);
+  const [actualStatusCounts, setActualStatusCounts] = useState({
+    all: 0,
+    yard: 0,
+    sold: 0,
+    'pick-your-part': 0,
+    'sa-recycling': 0,
+  });
   
   const { 
     vehicles, 
@@ -169,6 +176,41 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
     }
   };
 
+  // Load actual status counts from database
+  const loadStatusCounts = async () => {
+    try {
+      const [allResult, yardResult, soldResult, pypResult, saResult] = await Promise.all([
+        supabase.from('vehicles').select('id', { count: 'exact', head: true }),
+        supabase.from('vehicles').select('id', { count: 'exact', head: true }).eq('status', 'yard'),
+        supabase.from('vehicles').select('id', { count: 'exact', head: true }).eq('status', 'sold'),
+        supabase.from('vehicles').select('id', { count: 'exact', head: true }).eq('status', 'pick-your-part'),
+        supabase.from('vehicles').select('id', { count: 'exact', head: true }).eq('status', 'sa-recycling'),
+      ]);
+
+      setActualStatusCounts({
+        all: allResult.count || 0,
+        yard: yardResult.count || 0,
+        sold: soldResult.count || 0,
+        'pick-your-part': pypResult.count || 0,
+        'sa-recycling': saResult.count || 0,
+      });
+    } catch (error) {
+      console.error('Error loading status counts:', error);
+    }
+  };
+
+  // Load status counts on component mount and when vehicles change
+  useEffect(() => {
+    loadStatusCounts();
+  }, []);
+
+  // Reload status counts when vehicles are updated
+  useEffect(() => {
+    if (vehicles.length > 0) {
+      loadStatusCounts();
+    }
+  }, [vehicles.length]);
+
   // Load status-specific vehicles when filter changes
   useEffect(() => {
     if (statusFilter !== 'all' && statusFilter !== 'yard') {
@@ -188,19 +230,8 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
         return true;
       });
 
-  const statusCounts = {
-    all: vehicles.length,
-    yard: vehicles.filter(v => v.status === 'yard').length,
-    sold: (statusFilter === 'sold' && statusSpecificVehicles.length > 0) 
-      ? statusSpecificVehicles.length 
-      : vehicles.filter(v => v.status === 'sold').length,
-    'pick-your-part': (statusFilter === 'pick-your-part' && statusSpecificVehicles.length > 0)
-      ? statusSpecificVehicles.length 
-      : vehicles.filter(v => v.status === 'pick-your-part').length,
-    'sa-recycling': (statusFilter === 'sa-recycling' && statusSpecificVehicles.length > 0)
-      ? statusSpecificVehicles.length 
-      : vehicles.filter(v => v.status === 'sa-recycling').length,
-  };
+  // Use actual database counts for status badges
+  const statusCounts = actualStatusCounts;
 
   const paperworkOptions = [
     { value: "title", label: "Title" },
