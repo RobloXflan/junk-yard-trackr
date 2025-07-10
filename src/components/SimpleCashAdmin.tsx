@@ -87,9 +87,10 @@ export function SimpleCashAdmin() {
     if (stored) {
       const parsedData = JSON.parse(stored);
       console.log('Admin - parsed data:', parsedData);
+      console.log('Admin - entries count found:', parsedData.length);
       setDailyEntries(parsedData);
     } else {
-      console.log('Admin - no data found, setting empty array');
+      console.log('Admin - no data found for key:', `dailyCash_${date}`);
       setDailyEntries([]);
     }
   };

@@ -99,6 +99,7 @@ export function WorkerCashEntry() {
     localStorage.setItem(`dailyCash_${dateKey}`, JSON.stringify(updatedEntries));
 
     console.log('Worker form - data saved to localStorage key:', `dailyCash_${dateKey}`);
+    console.log('Worker form - final entries saved:', updatedEntries);
 
     setIsSubmitted(true);
   };
