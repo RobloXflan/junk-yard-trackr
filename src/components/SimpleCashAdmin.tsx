@@ -1,19 +1,14 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { DollarSign, Plus, Calculator, QrCode, Users, CalendarIcon } from "lucide-react";
+import { Calculator, QrCode } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
 import { QRCodeDisplay } from "./QRCodeDisplay";
+import { DateSelector } from "./cash-admin/DateSelector";
+import { CashSummaryCards } from "./cash-admin/CashSummaryCards";
+import { AddCashEntry } from "./cash-admin/AddCashEntry";
+import { CashEntriesList } from "./cash-admin/CashEntriesList";
 
 interface Worker {
   id: string;
@@ -168,15 +163,6 @@ export function SimpleCashAdmin() {
     });
   };
 
-  const totalReported = dailyEntries.reduce((sum, entry) => sum + entry.reported_cash, 0);
-  const totalGiven = dailyEntries.reduce((sum, entry) => {
-    // Handle both old format (cash_given) and new format (dinero_dado - dinero_recibido)
-    if (entry.dinero_dado !== undefined || entry.dinero_recibido !== undefined) {
-      return sum + (entry.dinero_dado || 0) - (entry.dinero_recibido || 0);
-    }
-    return sum + (entry.cash_given || 0);
-  }, 0);
-  const grandTotal = dailyEntries.reduce((sum, entry) => sum + entry.total_cash, 0);
 
   return (
     <div className="space-y-6">
@@ -187,56 +173,13 @@ export function SimpleCashAdmin() {
         </div>
       </div>
 
-      {/* Date Selection */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CalendarIcon className="h-5 w-5" />
-            Select Date to View
-          </CardTitle>
-          <CardDescription>
-            Choose a date to view cash entries for that day
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            <Label className="text-base">Date:</Label>
-            <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-[240px] justify-start text-left font-normal",
-                    !selectedDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(date) => {
-                    if (date) {
-                      setSelectedDate(date);
-                      setDatePickerOpen(false); // Close the popover when date is selected
-                    }
-                  }}
-                  initialFocus
-                  className="pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
-            {dailyEntries.length > 0 && (
-              <Badge variant="outline" className="ml-2">
-                {dailyEntries.length} entries found
-              </Badge>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <DateSelector
+        selectedDate={selectedDate}
+        onDateChange={setSelectedDate}
+        entriesCount={dailyEntries.length}
+        datePickerOpen={datePickerOpen}
+        onDatePickerOpenChange={setDatePickerOpen}
+      />
 
       <Tabs defaultValue="entries" className="space-y-4">
         <TabsList className="grid w-full grid-cols-2">
@@ -255,193 +198,25 @@ export function SimpleCashAdmin() {
         </TabsContent>
 
         <TabsContent value="entries" className="space-y-4">
+          <CashSummaryCards dailyEntries={dailyEntries} />
 
-      {/* Quick Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Reported</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${totalReported.toFixed(2)}</div>
-          </CardContent>
-        </Card>
+          <AddCashEntry
+            workers={workers}
+            selectedWorker={selectedWorker}
+            onWorkerChange={setSelectedWorker}
+            reportedCash={reportedCash}
+            onReportedCashChange={setReportedCash}
+            cashGiven={cashGiven}
+            onCashGivenChange={setCashGiven}
+            onAddEntry={handleAddEntry}
+            loading={loading}
+          />
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Given</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${totalGiven.toFixed(2)}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Grand Total</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">${grandTotal.toFixed(2)}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Add New Entry */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Plus className="h-5 w-5" />
-            Add Cash Entry
-          </CardTitle>
-          <CardDescription>
-            Record how much cash a worker reported and how much we gave them
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
-            <div className="space-y-2">
-              <Label htmlFor="worker">Select Worker</Label>
-              <Select value={selectedWorker} onValueChange={setSelectedWorker}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose worker..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {workers.map((worker) => (
-                    <SelectItem key={worker.id} value={worker.id}>
-                      {worker.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="reported">Cash Reported</Label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="reported"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={reportedCash}
-                  onChange={(e) => setReportedCash(e.target.value)}
-                  placeholder="0.00"
-                  className="pl-9"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="given">Cash Given</Label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="given"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={cashGiven}
-                  onChange={(e) => setCashGiven(e.target.value)}
-                  placeholder="0.00"
-                  className="pl-9"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Total</Label>
-              <div className="flex items-center h-10 px-3 py-2 border border-input bg-muted rounded-md">
-                <span className="text-lg font-semibold">
-                  ${((parseFloat(reportedCash) || 0) + (parseFloat(cashGiven) || 0)).toFixed(2)}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4">
-            <Button 
-              onClick={handleAddEntry} 
-              disabled={loading || !selectedWorker || !reportedCash || !cashGiven}
-              className="w-full md:w-auto"
-            >
-              <Calculator className="mr-2 h-4 w-4" />
-              Add Entry
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Today's Entries */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Cash Entries</CardTitle>
-          <CardDescription>
-            Cash entries for {format(selectedDate, "MMMM dd, yyyy")}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {dailyEntries.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No cash entries recorded for {format(selectedDate, "MMMM dd, yyyy")}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {dailyEntries.map((entry) => (
-                <div key={entry.worker_id} className="flex items-center justify-between p-4 border rounded-lg bg-card">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold text-lg">{entry.worker_name}</h3>
-                      <Badge variant={entry.source === 'worker' ? 'default' : 'secondary'} className="text-xs">
-                        {entry.source === 'worker' ? 'Worker Submitted' : 'Admin Added'}
-                      </Badge>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 mt-2 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Reported: </span>
-                        <span className="font-medium">${entry.reported_cash.toFixed(2)}</span>
-                      </div>
-                      {entry.dinero_dado !== undefined || entry.dinero_recibido !== undefined ? (
-                        <>
-                          {entry.dinero_dado! > 0 && (
-                            <div>
-                              <span className="text-red-600">Dinero Dado (-): </span>
-                              <span className="font-medium text-red-600">${entry.dinero_dado!.toFixed(2)}</span>
-                            </div>
-                          )}
-                          {entry.dinero_recibido! > 0 && (
-                            <div>
-                              <span className="text-green-600">Dinero Recibido (+): </span>
-                              <span className="font-medium text-green-600">${entry.dinero_recibido!.toFixed(2)}</span>
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <div>
-                          <span className="text-muted-foreground">Given: </span>
-                          <span className="font-medium">${(entry.cash_given || 0).toFixed(2)}</span>
-                        </div>
-                      )}
-                      <div className="col-span-2 border-t pt-2">
-                        <span className="text-muted-foreground">Final Total: </span>
-                        <span className="font-bold text-primary">${entry.total_cash.toFixed(2)}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleRemoveEntry(entry.worker_id)}
-                    className="ml-4"
-                  >
-                    Remove
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          <CashEntriesList
+            dailyEntries={dailyEntries}
+            selectedDate={selectedDate}
+            onRemoveEntry={handleRemoveEntry}
+          />
         </TabsContent>
       </Tabs>
     </div>
