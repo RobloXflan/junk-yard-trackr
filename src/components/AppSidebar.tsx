@@ -48,6 +48,7 @@ const menuItems = [
     title: "Business Purchases",
     page: "business-purchases",
     icon: ShoppingCart,
+    locked: true,
   },
   {
     title: "Smart Receipt Upload",
