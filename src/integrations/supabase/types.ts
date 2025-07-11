@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      business_purchases: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          item_name: string
+          notes_purpose: string | null
+          payment_method: string
+          purchase_date: string
+          purchase_price: number
+          receipt_url: string | null
+          updated_at: string
+          vendor_store: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          item_name: string
+          notes_purpose?: string | null
+          payment_method: string
+          purchase_date: string
+          purchase_price: number
+          receipt_url?: string | null
+          updated_at?: string
+          vendor_store: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          item_name?: string
+          notes_purpose?: string | null
+          payment_method?: string
+          purchase_date?: string
+          purchase_price?: number
+          receipt_url?: string | null
+          updated_at?: string
+          vendor_store?: string
+        }
+        Relationships: []
+      }
       buyers: {
         Row: {
           address: string

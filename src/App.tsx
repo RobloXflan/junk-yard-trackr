@@ -16,6 +16,7 @@ import { WorkerCashEntry } from "@/components/WorkerCashEntry";
 import { PublicInventory } from "@/pages/PublicInventory";
 import { SiteAuth } from "@/components/SiteAuth";
 import { ViewOnlyInventory } from "@/components/ViewOnlyInventory";
+import { BusinessPurchases } from "@/pages/BusinessPurchases";
 import { Menu } from "lucide-react";
 import { useState } from "react";
 
@@ -59,6 +60,8 @@ const App = () => {
         return <Released />;
       case 'quotes':
         return <Quotes />;
+      case 'business-purchases':
+        return <BusinessPurchases />;
       case 'metrics':
         return <Metrics />;
       case 'admin':

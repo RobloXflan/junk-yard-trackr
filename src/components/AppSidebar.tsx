@@ -1,4 +1,4 @@
-import { Car, BarChart3, Upload, Clock, Settings, CheckCircle, FileText, TrendingUp } from "lucide-react";
+import { Car, BarChart3, Upload, Clock, Settings, CheckCircle, FileText, TrendingUp, ShoppingCart } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -43,6 +43,11 @@ const menuItems = [
     title: "Quotes",
     page: "quotes",
     icon: FileText,
+  },
+  {
+    title: "Business Purchases",
+    page: "business-purchases",
+    icon: ShoppingCart,
   },
   {
     title: "Metrics",
