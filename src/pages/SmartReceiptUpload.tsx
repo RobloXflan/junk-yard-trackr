@@ -83,7 +83,7 @@ export const SmartReceiptUpload = () => {
     purchase_price: "",
     vendor_store: "",
     category: "",
-    payment_method: "Business Card",
+    payment_method: "Cash",
     notes_purpose: ""
   });
   const { toast } = useToast();
@@ -193,7 +193,7 @@ export const SmartReceiptUpload = () => {
       purchase_price: receipt.extractedData.purchase_price?.toString() || "",
       vendor_store: receipt.extractedData.vendor_store || "",
       category: receipt.extractedData.category || "",
-      payment_method: "Business Card",
+      payment_method: "Cash",
       notes_purpose: receipt.extractedData.notes_purpose || ""
     });
   };
@@ -322,7 +322,7 @@ export const SmartReceiptUpload = () => {
         purchase_price: "",
         vendor_store: "",
         category: "",
-        payment_method: "Business Card",
+        payment_method: "Cash",
         notes_purpose: ""
       });
       setShowManualEntry(false);
