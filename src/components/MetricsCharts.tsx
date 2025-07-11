@@ -189,41 +189,39 @@ export function MetricsCharts() {
         </CardContent>
       </Card>
 
-      {/* Business Categories Breakdown */}
-      {chartData.businessCategories.length > 0 && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Business Purchases by Category</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={chartConfig} className="h-96">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData.businessCategories}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis 
-                    dataKey="category" 
-                    className="text-sm text-muted-foreground"
-                  />
-                  <YAxis 
-                    className="text-sm text-muted-foreground"
-                    tickFormatter={formatCurrency}
-                  />
-                  <ChartTooltip 
-                    content={<ChartTooltipContent formatter={(value) => formatCurrency(Number(value))} />}
-                  />
-                  <Bar 
-                    dataKey="amount" 
-                    fill="var(--color-business)"
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Business Categories Breakdown */}
+        {chartData.businessCategories.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Business Purchases by Category</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={chartConfig} className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={chartData.businessCategories}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="amount"
+                      label={({ category, percent }) => `${category} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {chartData.businessCategories.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <ChartTooltip 
+                      content={<ChartTooltipContent formatter={(value) => formatCurrency(Number(value))} />}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Monthly Trends */}
         {chartData.monthlyTrends.length > 0 && (
