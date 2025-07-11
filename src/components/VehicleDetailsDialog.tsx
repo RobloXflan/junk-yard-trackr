@@ -348,6 +348,10 @@ export function VehicleDetailsDialog({
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
+    // Handle YYYY-MM-DD format without timezone conversion
+    if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      return dateString; // Return as-is for YYYY-MM-DD format
+    }
     return new Date(dateString).toLocaleDateString();
   };
 
