@@ -154,75 +154,75 @@ export function MetricsCharts() {
         </Card>
       </div>
 
-      {/* Main Spending Comparison Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
-            Spending Comparison
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ChartContainer config={chartConfig} className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData.totalSpending}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis 
-                  dataKey="category" 
-                  className="text-sm text-muted-foreground"
-                />
-                <YAxis 
-                  className="text-sm text-muted-foreground"
-                  tickFormatter={formatCurrency}
-                />
-                <ChartTooltip 
-                  content={<ChartTooltipContent formatter={(value) => formatCurrency(Number(value))} />}
-                />
-                <Bar 
-                  dataKey="amount" 
-                  fill="var(--color-amount)"
-                  radius={[4, 4, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartContainer>
-        </CardContent>
-      </Card>
+      {/* Business Categories Breakdown - Now Full Width */}
+      {chartData.businessCategories.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Business Purchases by Category</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData.businessCategories}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis 
+                    dataKey="category" 
+                    className="text-sm text-muted-foreground"
+                  />
+                  <YAxis 
+                    className="text-sm text-muted-foreground"
+                    tickFormatter={formatCurrency}
+                  />
+                  <ChartTooltip 
+                    content={<ChartTooltipContent formatter={(value) => formatCurrency(Number(value))} />}
+                  />
+                  <Bar 
+                    dataKey="amount" 
+                    fill="var(--color-business)"
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Business Categories Breakdown */}
-        {chartData.businessCategories.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Business Purchases by Category</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig} className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData.businessCategories}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis 
-                      dataKey="category" 
-                      className="text-sm text-muted-foreground"
-                    />
-                    <YAxis 
-                      className="text-sm text-muted-foreground"
-                      tickFormatter={formatCurrency}
-                    />
-                    <ChartTooltip 
-                      content={<ChartTooltipContent formatter={(value) => formatCurrency(Number(value))} />}
-                    />
-                    <Bar 
-                      dataKey="amount" 
-                      fill="var(--color-business)"
-                      radius={[4, 4, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-        )}
+        {/* Spending Comparison Chart - Now in Grid */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              Spending Comparison
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData.totalSpending}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis 
+                    dataKey="category" 
+                    className="text-sm text-muted-foreground"
+                  />
+                  <YAxis 
+                    className="text-sm text-muted-foreground"
+                    tickFormatter={formatCurrency}
+                  />
+                  <ChartTooltip 
+                    content={<ChartTooltipContent formatter={(value) => formatCurrency(Number(value))} />}
+                  />
+                  <Bar 
+                    dataKey="amount" 
+                    fill="var(--color-amount)"
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </CardContent>
+        </Card>
 
         {/* Monthly Trends */}
         {chartData.monthlyTrends.length > 0 && (
