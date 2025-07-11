@@ -13,26 +13,44 @@ const categories = [
   "Office Rent", "Utilities", "Professional Services", "Insurance", "Fuel", "Meals", "Other"
 ];
 
-serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+// Helper function to wait with exponential backoff
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Helper function to extract JSON from text with fallback parsing
+const extractJSON = (text: string) => {
   try {
-    const { image } = await req.json();
-
-    if (!image) {
-      throw new Error('No image provided');
+    // First try direct parsing
+    return JSON.parse(text);
+  } catch {
+    // Try to find JSON within the text using regex
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        return JSON.parse(jsonMatch[0]);
+      } catch {
+        // If that fails, try to fix common issues
+        const cleanedText = text
+          .replace(/```json\s*/, '')
+          .replace(/```\s*$/, '')
+          .trim();
+        return JSON.parse(cleanedText);
+      }
     }
+    throw new Error('No valid JSON found in response');
+  }
+};
 
-    if (!openAIApiKey) {
-      throw new Error('OpenAI API key not configured');
-    }
-
-    console.log('Processing receipt with OpenAI Vision API');
-    console.log('Image data length:', image.length);
-
+// Main OpenAI API call with retry logic
+const callOpenAI = async (image: string, model: string, retryCount = 0): Promise<any> => {
+  const maxRetries = 3;
+  const baseDelay = 1000;
+  
+  try {
+    console.log(`Attempting OpenAI call with ${model}, retry ${retryCount}`);
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -40,7 +58,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: model,
         messages: [
           {
             role: 'system',
@@ -82,34 +100,108 @@ serve(async (req) => {
         max_tokens: 300,
         temperature: 0.1
       }),
+      signal: controller.signal
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('OpenAI API Error:', response.status, errorText);
       throw new Error(`OpenAI API failed with status ${response.status}: ${errorText}`);
     }
 
     const data = await response.json();
-    console.log('OpenAI Response status:', response.status);
-    console.log('OpenAI Response data:', JSON.stringify(data, null, 2));
-
+    
     if (!data.choices || !data.choices[0] || !data.choices[0].message) {
       throw new Error('Invalid response structure from OpenAI');
     }
 
-    const extractedText = data.choices[0].message.content;
+    return data;
+    
+  } catch (error) {
+    console.error(`OpenAI call failed (attempt ${retryCount + 1}):`, error);
+    
+    if (retryCount < maxRetries) {
+      const delayMs = baseDelay * Math.pow(2, retryCount);
+      console.log(`Retrying in ${delayMs}ms...`);
+      await delay(delayMs);
+      return callOpenAI(image, model, retryCount + 1);
+    }
+    
+    throw error;
+  }
+};
+
+serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { image } = await req.json();
+
+    if (!image) {
+      throw new Error('No image provided');
+    }
+
+    if (!openAIApiKey) {
+      throw new Error('OpenAI API key not configured');
+    }
+
+    // Basic image validation
+    if (typeof image !== 'string' || !image.startsWith('data:image/')) {
+      throw new Error('Invalid image format. Expected base64 data URL.');
+    }
+
+    console.log('Processing receipt with OpenAI Vision API');
+    console.log('Image data length:', image.length);
+
+    let data;
+    let extractedText;
+    
+    try {
+      // Try with gpt-4o first
+      console.log('Attempting with gpt-4o model');
+      data = await callOpenAI(image, 'gpt-4o');
+      extractedText = data.choices[0].message.content;
+      console.log('gpt-4o response received');
+      
+    } catch (primaryError) {
+      console.log('gpt-4o failed, falling back to gpt-4o-mini');
+      console.error('Primary model error:', primaryError);
+      
+      try {
+        // Fallback to gpt-4o-mini
+        data = await callOpenAI(image, 'gpt-4o-mini');
+        extractedText = data.choices[0].message.content;
+        console.log('gpt-4o-mini response received');
+        
+      } catch (fallbackError) {
+        console.error('Fallback model also failed:', fallbackError);
+        throw new Error(`Both models failed. Primary: ${primaryError.message}, Fallback: ${fallbackError.message}`);
+      }
+    }
+
     console.log('Raw extracted text:', extractedText);
 
-    // Parse the JSON response
+    // Parse the JSON response with improved error handling
     let extractedData;
     try {
-      extractedData = JSON.parse(extractedText);
+      extractedData = extractJSON(extractedText);
       console.log('Successfully parsed JSON:', extractedData);
       
       // Validate required fields
       if (!extractedData.item_name || extractedData.purchase_price === undefined) {
         throw new Error('Missing required fields in extracted data');
+      }
+      
+      // Ensure purchase_price is a number
+      if (typeof extractedData.purchase_price === 'string') {
+        const numPrice = parseFloat(extractedData.purchase_price.replace(/[^0-9.-]/g, ''));
+        if (!isNaN(numPrice)) {
+          extractedData.purchase_price = numPrice;
+        }
       }
       
     } catch (parseError) {
@@ -128,9 +220,20 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in scan-receipt function:', error);
+    
+    // Provide more specific error messages
+    let errorMessage = error.message;
+    if (error.message.includes('abort')) {
+      errorMessage = 'Request timed out. Please try again with a smaller image.';
+    } else if (error.message.includes('rate limit')) {
+      errorMessage = 'API rate limit exceeded. Please wait a moment and try again.';
+    } else if (error.message.includes('Invalid image format')) {
+      errorMessage = 'Invalid image format. Please upload a JPG, PNG, or WebP image.';
+    }
+    
     return new Response(JSON.stringify({ 
       success: false,
-      error: error.message 
+      error: errorMessage 
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
