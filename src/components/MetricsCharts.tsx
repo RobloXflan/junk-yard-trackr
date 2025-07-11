@@ -52,21 +52,11 @@ export function MetricsCharts() {
       .reduce((sum, p) => sum + (parseFloat(p.purchase_price?.toString() || '0') || 0), 0);
 
     // Category breakdown for business purchases
-    // Define all possible categories to ensure they all appear in the chart
-    const allCategories = ['Fuel', 'Office Rent', 'Supplies', 'Other', 'Professional Services', 'Meals'];
-    
     const businessCategories = businessPurchases.reduce((acc, purchase) => {
       const category = purchase.category || 'Other';
       acc[category] = (acc[category] || 0) + (parseFloat(purchase.purchase_price?.toString() || '0') || 0);
       return acc;
     }, {} as Record<string, number>);
-
-    // Ensure all categories are included, even with 0 amounts
-    allCategories.forEach(category => {
-      if (!(category in businessCategories)) {
-        businessCategories[category] = 0;
-      }
-    });
 
     // Monthly spending trends
     const monthlySpending = vehicles
@@ -83,9 +73,9 @@ export function MetricsCharts() {
         { category: "Vehicle Purchases", amount: vehicleSpending, color: chartConfig.vehicles.color },
         { category: "Business Purchases", amount: businessSpending, color: chartConfig.business.color },
       ],
-      businessCategories: allCategories.map(category => ({
+      businessCategories: Object.entries(businessCategories).map(([category, amount]) => ({
         category,
-        amount: businessCategories[category] || 0,
+        amount,
       })),
       monthlyTrends: Object.entries(monthlySpending)
         .sort(([a], [b]) => a.localeCompare(b))
