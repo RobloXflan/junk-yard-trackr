@@ -2,7 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DollarSign, Calendar, ChevronDown, ChevronUp } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DollarSign, Calendar, ChevronDown, ChevronUp, BarChart3 } from "lucide-react";
 import { useVehicleStore } from "@/hooks/useVehicleStore";
 import { useMemo, useState } from "react";
 import { format, parseISO, isValid, startOfDay, endOfDay } from "date-fns";
@@ -11,6 +12,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { MetricsCharts } from "@/components/MetricsCharts";
 
 export function Metrics() {
   const { vehicles } = useVehicleStore();
@@ -109,119 +111,138 @@ export function Metrics() {
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Financial Metrics</h2>
         <p className="text-muted-foreground">
-          Track total spending based on vehicle purchase data
+          Track total spending and analyze financial data across different categories
         </p>
       </div>
 
-      {/* Grand Total Card */}
-      <Card className="border-2 border-primary/20">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-xl flex items-center gap-2">
-            <DollarSign className="h-6 w-6 text-primary" />
-            Grand Total Spent
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-4xl font-bold text-primary mb-2">
-            {formatCurrency(financialData.grandTotal)}
-          </div>
-          <p className="text-muted-foreground">
-            Across {financialData.totalVehicles} vehicle purchases
-          </p>
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="breakdown" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="breakdown" className="flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            Daily Breakdown
+          </TabsTrigger>
+          <TabsTrigger value="charts" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Charts & Analysis
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Date Filter */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Daily Purchase Breakdown
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-4 items-center">
-            <Input
-              type="date"
-              placeholder="Filter by date (YYYY-MM-DD)"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="max-w-xs"
-            />
-            {selectedDate && (
-              <Button 
-                variant="outline" 
-                onClick={() => setSelectedDate("")}
-                size="sm"
-              >
-                Clear Filter
-              </Button>
-            )}
-          </div>
+        <TabsContent value="breakdown" className="space-y-6">
+          {/* Grand Total Card */}
+          <Card className="border-2 border-primary/20">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl flex items-center gap-2">
+                <DollarSign className="h-6 w-6 text-primary" />
+                Grand Total Spent
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-4xl font-bold text-primary mb-2">
+                {formatCurrency(financialData.grandTotal)}
+              </div>
+              <p className="text-muted-foreground">
+                Across {financialData.totalVehicles} vehicle purchases
+              </p>
+            </CardContent>
+          </Card>
 
-          {filteredDates.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {selectedDate ? "No purchases found for the selected date." : "No purchase data available."}
-            </div>
-          ) : (
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {filteredDates.map((date) => {
-                const dayData = financialData.dailyBreakdown[date];
-                const isExpanded = expandedDates.has(date);
-                
-                return (
-                  <Collapsible key={date}>
-                    <CollapsibleTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-between p-4 h-auto"
-                        onClick={() => toggleDateExpansion(date)}
-                      >
-                        <div className="flex items-center gap-3">
-                          <Badge variant="outline" className="font-mono">
-                            {date}
-                          </Badge>
-                          <span className="font-medium">
-                            {formatDate(date)}
-                          </span>
-                          <span className="text-muted-foreground">
-                            ({dayData.vehicles.length} vehicle{dayData.vehicles.length !== 1 ? 's' : ''})
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-lg">
-                            {formatCurrency(dayData.total)}
-                          </span>
-                          {isExpanded ? (
-                            <ChevronUp className="h-4 w-4" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4" />
-                          )}
-                        </div>
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="px-4 pb-4">
-                      <div className="space-y-2 border-l-2 border-muted pl-4 ml-2">
-                        {dayData.vehicles.map((vehicle) => (
-                          <div key={vehicle.id} className="flex justify-between items-center p-2 bg-muted/30 rounded">
-                            <div className="text-sm">
-                              <span className="font-medium">{vehicle.year} {vehicle.make} {vehicle.model}</span>
-                              <span className="text-muted-foreground ml-2">#{vehicle.vehicleId}</span>
+          {/* Date Filter */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Daily Purchase Breakdown
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex gap-4 items-center">
+                <Input
+                  type="date"
+                  placeholder="Filter by date (YYYY-MM-DD)"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="max-w-xs"
+                />
+                {selectedDate && (
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setSelectedDate("")}
+                    size="sm"
+                  >
+                    Clear Filter
+                  </Button>
+                )}
+              </div>
+
+              {filteredDates.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  {selectedDate ? "No purchases found for the selected date." : "No purchase data available."}
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {filteredDates.map((date) => {
+                    const dayData = financialData.dailyBreakdown[date];
+                    const isExpanded = expandedDates.has(date);
+                    
+                    return (
+                      <Collapsible key={date}>
+                        <CollapsibleTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            className="w-full justify-between p-4 h-auto"
+                            onClick={() => toggleDateExpansion(date)}
+                          >
+                            <div className="flex items-center gap-3">
+                              <Badge variant="outline" className="font-mono">
+                                {date}
+                              </Badge>
+                              <span className="font-medium">
+                                {formatDate(date)}
+                              </span>
+                              <span className="text-muted-foreground">
+                                ({dayData.vehicles.length} vehicle{dayData.vehicles.length !== 1 ? 's' : ''})
+                              </span>
                             </div>
-                            <span className="font-medium">
-                              {formatCurrency(vehicle.purchasePrice)}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-lg">
+                                {formatCurrency(dayData.total)}
+                              </span>
+                              {isExpanded ? (
+                                <ChevronUp className="h-4 w-4" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4" />
+                              )}
+                            </div>
+                          </Button>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="px-4 pb-4">
+                          <div className="space-y-2 border-l-2 border-muted pl-4 ml-2">
+                            {dayData.vehicles.map((vehicle) => (
+                              <div key={vehicle.id} className="flex justify-between items-center p-2 bg-muted/30 rounded">
+                                <div className="text-sm">
+                                  <span className="font-medium">{vehicle.year} {vehicle.make} {vehicle.model}</span>
+                                  <span className="text-muted-foreground ml-2">#{vehicle.vehicleId}</span>
+                                </div>
+                                <span className="font-medium">
+                                  {formatCurrency(vehicle.purchasePrice)}
+                                </span>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="charts">
+          <MetricsCharts />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
