@@ -26,7 +26,12 @@ serve(async (req) => {
       throw new Error('No image provided');
     }
 
+    if (!openAIApiKey) {
+      throw new Error('OpenAI API key not configured');
+    }
+
     console.log('Processing receipt with OpenAI Vision API');
+    console.log('Image data length:', image.length);
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -39,25 +44,31 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a receipt scanner that extracts business purchase information. 
+            content: `You are an expert receipt scanner for tax purposes. Extract business purchase information with high accuracy.
             
-            Extract the following information from the receipt image and return it as a JSON object:
-            - item_name: Brief description of main items purchased (combine if multiple items)
-            - purchase_price: Total amount paid including tax (as number)
-            - purchase_date: Date in YYYY-MM-DD format
-            - vendor_store: Store/vendor name
-            - category: Best matching category from: ${categories.join(', ')}
-            - notes_purpose: Brief description of what this could be used for in business
+            IMPORTANT: You MUST return a valid JSON object with these exact fields:
+            {
+              "item_name": "Brief description of what was purchased",
+              "purchase_price": numeric_value_only,
+              "purchase_date": "YYYY-MM-DD",
+              "vendor_store": "Store/vendor name", 
+              "category": "One of: ${categories.join(', ')}",
+              "notes_purpose": "Brief business purpose"
+            }
             
-            If any information is unclear or missing, use your best judgment or return null for that field.
-            Return only the JSON object, no other text.`
+            Rules:
+            - purchase_price must be a number (no $ symbol)
+            - purchase_date must be YYYY-MM-DD format
+            - category must match one from the list exactly
+            - If unclear, make your best estimate but always return valid JSON
+            - Return ONLY the JSON object, no other text`
           },
           {
             role: 'user',
             content: [
               {
                 type: 'text',
-                text: 'Please extract the business purchase information from this receipt:'
+                text: 'Extract tax receipt information from this image:'
               },
               {
                 type: 'image_url',
@@ -68,38 +79,44 @@ serve(async (req) => {
             ]
           }
         ],
-        max_tokens: 500,
+        max_tokens: 300,
         temperature: 0.1
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('OpenAI API Error:', errorText);
-      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+      console.error('OpenAI API Error:', response.status, errorText);
+      throw new Error(`OpenAI API failed with status ${response.status}: ${errorText}`);
     }
 
     const data = await response.json();
-    console.log('OpenAI Response:', data);
+    console.log('OpenAI Response status:', response.status);
+    console.log('OpenAI Response data:', JSON.stringify(data, null, 2));
+
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      throw new Error('Invalid response structure from OpenAI');
+    }
 
     const extractedText = data.choices[0].message.content;
-    console.log('Extracted text:', extractedText);
+    console.log('Raw extracted text:', extractedText);
 
     // Parse the JSON response
     let extractedData;
     try {
       extractedData = JSON.parse(extractedText);
+      console.log('Successfully parsed JSON:', extractedData);
+      
+      // Validate required fields
+      if (!extractedData.item_name || extractedData.purchase_price === undefined) {
+        throw new Error('Missing required fields in extracted data');
+      }
+      
     } catch (parseError) {
-      console.error('Failed to parse JSON:', parseError);
-      // Fallback: try to extract basic info if JSON parsing fails
-      extractedData = {
-        item_name: "Unable to extract item details",
-        purchase_price: null,
-        purchase_date: null,
-        vendor_store: "Unknown vendor",
-        category: "Other",
-        notes_purpose: "Manual review required"
-      };
+      console.error('JSON parse error:', parseError);
+      console.error('Raw text that failed to parse:', extractedText);
+      
+      throw new Error(`Failed to parse AI response: ${parseError.message}. Raw response: ${extractedText}`);
     }
 
     return new Response(JSON.stringify({ 
