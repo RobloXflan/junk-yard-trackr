@@ -54,8 +54,8 @@ export const BusinessPurchases = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterCategory, setFilterCategory] = useState("");
-  const [filterVendor, setFilterVendor] = useState("");
+  const [filterCategory, setFilterCategory] = useState("all");
+  const [filterVendor, setFilterVendor] = useState("all");
   const [formData, setFormData] = useState({
     item_name: "",
     purchase_date: undefined as Date | undefined,
@@ -201,8 +201,8 @@ export const BusinessPurchases = () => {
         purchase.vendor_store.toLowerCase().includes(searchTerm.toLowerCase()) ||
         purchase.notes_purpose?.toLowerCase().includes(searchTerm.toLowerCase());
       
-      const matchesCategory = filterCategory === "" || purchase.category === filterCategory;
-      const matchesVendor = filterVendor === "" || purchase.vendor_store === filterVendor;
+      const matchesCategory = filterCategory === "all" || purchase.category === filterCategory;
+      const matchesVendor = filterVendor === "all" || purchase.vendor_store === filterVendor;
       
       return matchesSearch && matchesCategory && matchesVendor;
     });
@@ -273,7 +273,7 @@ export const BusinessPurchases = () => {
               <SelectValue placeholder="All Categories" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Categories</SelectItem>
+              <SelectItem value="all">All Categories</SelectItem>
               {categories.map(category => (
                 <SelectItem key={category} value={category}>{category}</SelectItem>
               ))}
@@ -285,7 +285,7 @@ export const BusinessPurchases = () => {
               <SelectValue placeholder="All Vendors" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Vendors</SelectItem>
+              <SelectItem value="all">All Vendors</SelectItem>
               {uniqueVendors.map(vendor => (
                 <SelectItem key={vendor} value={vendor}>{vendor}</SelectItem>
               ))}
