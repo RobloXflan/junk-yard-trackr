@@ -199,24 +199,25 @@ export function MetricsCharts() {
             <CardContent>
               <ChartContainer config={chartConfig} className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={chartData.businessCategories}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="amount"
-                      label={({ category, percent }) => `${category} ${(percent * 100).toFixed(0)}%`}
-                    >
-                      {chartData.businessCategories.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
+                  <BarChart data={chartData.businessCategories}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis 
+                      dataKey="category" 
+                      className="text-sm text-muted-foreground"
+                    />
+                    <YAxis 
+                      className="text-sm text-muted-foreground"
+                      tickFormatter={formatCurrency}
+                    />
                     <ChartTooltip 
                       content={<ChartTooltipContent formatter={(value) => formatCurrency(Number(value))} />}
                     />
-                  </PieChart>
+                    <Bar 
+                      dataKey="amount" 
+                      fill="var(--color-business)"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
                 </ResponsiveContainer>
               </ChartContainer>
             </CardContent>
