@@ -51,29 +51,12 @@ export function MetricsCharts() {
     const businessSpending = businessPurchases
       .reduce((sum, p) => sum + (parseFloat(p.purchase_price?.toString() || '0') || 0), 0);
 
-    // Category breakdown for business purchases - include all categories
-    const allCategories = [
-      'Equipment & Tools',
-      'Fuel & Transportation', 
-      'Office Rent',
-      'Supplies',
-      'Meals & Entertainment',
-      'Professional Services',
-      'Other'
-    ];
-    
+    // Category breakdown for business purchases
     const businessCategories = businessPurchases.reduce((acc, purchase) => {
       const category = purchase.category || 'Other';
       acc[category] = (acc[category] || 0) + (parseFloat(purchase.purchase_price?.toString() || '0') || 0);
       return acc;
     }, {} as Record<string, number>);
-    
-    // Ensure all categories are included, even with $0
-    allCategories.forEach(category => {
-      if (!(category in businessCategories)) {
-        businessCategories[category] = 0;
-      }
-    });
 
     // Monthly spending trends
     const monthlySpending = vehicles
