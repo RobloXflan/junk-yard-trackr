@@ -171,13 +171,25 @@ export const SmartReceiptUpload = () => {
     ));
   };
 
+  // Helper function to safely parse YYYY-MM-DD dates without timezone issues
+  const parseYYYYMMDD = (dateString: string): Date | undefined => {
+    if (!dateString) return undefined;
+    
+    const match = dateString.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return undefined;
+    
+    const [, year, month, day] = match;
+    // Create date in local timezone without UTC conversion
+    return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+  };
+
   const startEditing = (receipt: ReceiptUpload) => {
     if (!receipt.extractedData) return;
     
     setEditingReceipt(receipt.id);
     setFormData({
       item_name: receipt.extractedData.item_name || "",
-      purchase_date: receipt.extractedData.purchase_date ? new Date(receipt.extractedData.purchase_date) : undefined,
+      purchase_date: parseYYYYMMDD(receipt.extractedData.purchase_date || ""),
       purchase_price: receipt.extractedData.purchase_price?.toString() || "",
       vendor_store: receipt.extractedData.vendor_store || "",
       category: receipt.extractedData.category || "",
