@@ -36,13 +36,11 @@ ${appointmentData.notes || 'No additional notes'}
 
 ⏰ Recorded: ${new Date().toLocaleString()}`
 
-    // Create inline keyboard with worker buttons
+    // Create inline keyboard with just copy button
     const inlineKeyboard = {
       inline_keyboard: [
         [
-          { text: "👷 Angel", callback_data: `assign_worker_angel_${appointmentData.id}` },
-          { text: "👷 CHINO", callback_data: `assign_worker_chino_${appointmentData.id}` },
-          { text: "👷 Dante", callback_data: `assign_worker_dante_${appointmentData.id}` }
+          { text: "📋 Copy to Clipboard", callback_data: `copy_appointment_${appointmentData.id}` }
         ]
       ]
     }
