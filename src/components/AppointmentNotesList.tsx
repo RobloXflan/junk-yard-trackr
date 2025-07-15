@@ -19,17 +19,31 @@ interface AppointmentNote {
   created_at: string;
 }
 
-export function AppointmentNotesList() {
+interface AppointmentNotesListProps {
+  filter: 'saved' | 'pending';
+}
+
+export function AppointmentNotesList({ filter }: AppointmentNotesListProps) {
   const [notes, setNotes] = useState<AppointmentNote[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   const fetchNotes = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("appointment_notes")
-        .select("*")
-        .order("created_at", { ascending: false });
+        .select("*");
+
+      // Apply filter based on type
+      if (filter === 'saved') {
+        // Saved notes: not sent to telegram
+        query = query.eq('telegram_sent', false);
+      } else if (filter === 'pending') {
+        // Pending appointments: sent to telegram
+        query = query.eq('telegram_sent', true);
+      }
+
+      const { data, error } = await query.order("created_at", { ascending: false });
 
       if (error) throw error;
       setNotes(data || []);

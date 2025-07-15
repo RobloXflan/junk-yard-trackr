@@ -79,11 +79,11 @@ export function Appointments() {
         </TabsContent>
 
         <TabsContent value="saved" className="space-y-4">
-          <AppointmentNotesList />
+          <AppointmentNotesList filter="saved" />
         </TabsContent>
 
         <TabsContent value="pending" className="space-y-4">
-          <AppointmentNotesList />
+          <AppointmentNotesList filter="pending" />
         </TabsContent>
       </Tabs>
     </div>
