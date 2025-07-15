@@ -17,7 +17,7 @@ interface NominatimResult {
   };
 }
 
-// Southern California counties for filtering
+// Southern California counties and major cities for filtering
 const SOUTHERN_CALIFORNIA_COUNTIES = [
   'Los Angeles County',
   'Orange County', 
@@ -31,7 +31,30 @@ const SOUTHERN_CALIFORNIA_COUNTIES = [
   'Fresno County',
   'Kings County',
   'Inyo County',
-  'Mono County'
+  'Mono County',
+  // County variations
+  'Los Angeles',
+  'Orange',
+  'Riverside',
+  'San Bernardino',
+  'Ventura',
+  'Imperial',
+  'Kern',
+  'Santa Barbara',
+  'Tulare',
+  'Fresno',
+  'Kings',
+  'Inyo',
+  'Mono'
+];
+
+// Major Southern California cities as backup
+const SOUTHERN_CALIFORNIA_CITIES = [
+  'Los Angeles', 'San Diego', 'Anaheim', 'Santa Ana', 'Long Beach',
+  'Riverside', 'San Bernardino', 'Oxnard', 'Huntington Beach', 'Glendale',
+  'Pasadena', 'Burbank', 'Irvine', 'Costa Mesa', 'Newport Beach',
+  'Santa Monica', 'Beverly Hills', 'Torrance', 'Fullerton', 'Pomona',
+  'Palm Springs', 'Ventura', 'Santa Barbara', 'Bakersfield', 'Fresno'
 ];
 
 interface AddressAutocompleteProps {
@@ -73,31 +96,65 @@ export function AddressAutocomplete({ value, onChange, placeholder, className }:
 
     setLoading(true);
     try {
+      // Enhance query to prioritize California if not already included
+      let enhancedQuery = query;
+      if (!query.toLowerCase().includes('california') && !query.toLowerCase().includes(' ca')) {
+        enhancedQuery = `${query}, California`;
+      }
+
+      const params = new URLSearchParams({
+        q: enhancedQuery,
+        format: 'json',
+        addressdetails: '1',
+        limit: '10', // Get more results to have better filtering options
+        countrycodes: 'us',
+        // Add bounding box for Southern California (rough coordinates)
+        viewbox: '-121.0,32.5,-114.0,36.0', // West, South, East, North
+        bounded: '1'
+      });
+
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?` +
-        new URLSearchParams({
-          q: query,
-          format: 'json',
-          addressdetails: '1',
-          limit: '5',
-          countrycodes: 'us', // Limit to US addresses - remove this line for worldwide
-        }),
+        `https://nominatim.openstreetmap.org/search?${params}`,
         {
           headers: {
-            'User-Agent': 'AppointmentNotepad/1.0 (contact@yourapp.com)', // Replace with your app info
+            'User-Agent': 'AppointmentNotepad/1.0 (contact@yourapp.com)',
           },
         }
       );
 
       if (response.ok) {
         const results: NominatimResult[] = await response.json();
-        // Filter results to only include Southern California counties
+        
+        // Enhanced filtering: Check county, city, and state
         const socCalResults = results.filter(result => {
           const county = result.address?.county;
-          return county && SOUTHERN_CALIFORNIA_COUNTIES.includes(county);
+          const city = result.address?.city;
+          const state = result.address?.state;
+          
+          // Must be in California
+          if (state !== 'California') return false;
+          
+          // Check if county matches (with or without "County" suffix)
+          if (county && SOUTHERN_CALIFORNIA_COUNTIES.includes(county)) {
+            return true;
+          }
+          
+          // Fallback: Check if city is a major SoCal city
+          if (city && SOUTHERN_CALIFORNIA_CITIES.includes(city)) {
+            return true;
+          }
+          
+          return false;
         });
-        setSuggestions(socCalResults);
-        setIsOpen(socCalResults.length > 0);
+
+        console.log(`Filtered ${results.length} results to ${socCalResults.length} Southern California addresses`);
+        
+        // If no SoCal results found, try fallback with just California filtering
+        const finalResults = socCalResults.length > 0 ? socCalResults : 
+          results.filter(result => result.address?.state === 'California').slice(0, 5);
+        
+        setSuggestions(finalResults);
+        setIsOpen(finalResults.length > 0);
       }
     } catch (error) {
       console.error('Error searching addresses:', error);
