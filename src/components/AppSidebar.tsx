@@ -13,7 +13,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-const menuItems = [
+const mainMenuItems = [
   {
     title: "Dashboard",
     page: "dashboard",
@@ -50,15 +50,23 @@ const menuItems = [
     icon: Calendar,
   },
   {
+    title: "Smart Receipt Upload",
+    page: "smart-receipt-upload",
+    icon: ScanLine,
+  },
+  {
+    title: "Settings",
+    page: "settings",
+    icon: Settings,
+  },
+];
+
+const adminMenuItems = [
+  {
     title: "Business Purchases",
     page: "business-purchases",
     icon: ShoppingCart,
     locked: true,
-  },
-  {
-    title: "Smart Receipt Upload",
-    page: "smart-receipt-upload",
-    icon: ScanLine,
   },
   {
     title: "Metrics",
@@ -71,11 +79,6 @@ const menuItems = [
     page: "admin",  
     icon: Settings,
     locked: true,
-  },
-  {
-    title: "Settings",
-    page: "settings",
-    icon: Settings,
   },
 ];
 
@@ -121,10 +124,38 @@ export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => (
+              {mainMenuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton 
-                    onClick={() => handleNavigation(item.page, (item as any).locked)}
+                    onClick={() => handleNavigation(item.page)}
+                    isActive={currentPage === item.page}
+                    className={`hover:bg-slate-100 cursor-pointer py-3 px-3 touch-manipulation ${
+                      currentPage === item.page 
+                        ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' 
+                        : 'text-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <item.icon className="w-5 h-5 sm:w-4 sm:h-4" />
+                      <span className="font-medium text-base sm:text-sm">{item.title}</span>
+                    </div>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-slate-600 font-medium">
+            Admin Menu
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {adminMenuItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton 
+                    onClick={() => handleNavigation(item.page, item.locked)}
                     isActive={currentPage === item.page}
                     className={`hover:bg-slate-100 cursor-pointer py-3 px-3 touch-manipulation ${
                       currentPage === item.page 
