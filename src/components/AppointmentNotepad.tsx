@@ -25,14 +25,25 @@ interface PriceEstimate {
   dataPoints: number;
 }
 
-export function AppointmentNotepad() {
+interface VehicleData {
+  year: string;
+  make: string;
+  model: string;
+}
+
+interface AppointmentNotepadProps {
+  vehicleData?: VehicleData;
+  onVehicleDataChange?: (data: VehicleData) => void;
+}
+
+export function AppointmentNotepad({ vehicleData, onVehicleDataChange }: AppointmentNotepadProps) {
   const { toast } = useToast();
   const { quotes } = useQuotesStore();
   
   const [appointmentData, setAppointmentData] = useState<AppointmentData>({
-    vehicle_year: "",
-    vehicle_make: "",
-    vehicle_model: "",
+    vehicle_year: vehicleData?.year || "",
+    vehicle_make: vehicleData?.make || "",
+    vehicle_model: vehicleData?.model || "",
     estimated_price: null,
     notes: "",
     appointment_booked: false,
@@ -181,7 +192,15 @@ export function AppointmentNotepad() {
             <Input
               id="vehicle_year"
               value={appointmentData.vehicle_year}
-              onChange={(e) => setAppointmentData(prev => ({ ...prev, vehicle_year: e.target.value }))}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                setAppointmentData(prev => ({ ...prev, vehicle_year: newValue }));
+                onVehicleDataChange?.({
+                  year: newValue,
+                  make: appointmentData.vehicle_make,
+                  model: appointmentData.vehicle_model
+                });
+              }}
               placeholder="2020"
             />
           </div>
@@ -190,7 +209,15 @@ export function AppointmentNotepad() {
             <Input
               id="vehicle_make"
               value={appointmentData.vehicle_make}
-              onChange={(e) => setAppointmentData(prev => ({ ...prev, vehicle_make: e.target.value }))}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                setAppointmentData(prev => ({ ...prev, vehicle_make: newValue }));
+                onVehicleDataChange?.({
+                  year: appointmentData.vehicle_year,
+                  make: newValue,
+                  model: appointmentData.vehicle_model
+                });
+              }}
               placeholder="Toyota"
             />
           </div>
@@ -199,7 +226,15 @@ export function AppointmentNotepad() {
             <Input
               id="vehicle_model"
               value={appointmentData.vehicle_model}
-              onChange={(e) => setAppointmentData(prev => ({ ...prev, vehicle_model: e.target.value }))}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                setAppointmentData(prev => ({ ...prev, vehicle_model: newValue }));
+                onVehicleDataChange?.({
+                  year: appointmentData.vehicle_year,
+                  make: appointmentData.vehicle_make,
+                  model: newValue
+                });
+              }}
               placeholder="Camry"
             />
           </div>

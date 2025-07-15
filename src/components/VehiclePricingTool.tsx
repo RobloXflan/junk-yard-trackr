@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,18 +29,45 @@ interface SimilarVehicle {
   source: 'inventory' | 'saved_quote';
 }
 
-export function VehiclePricingTool() {
+interface VehicleData {
+  year: string;
+  make: string;
+  model: string;
+}
+
+interface VehiclePricingToolProps {
+  vehicleData?: VehicleData;
+  onVehicleDataChange?: (data: VehicleData) => void;
+}
+
+export function VehiclePricingTool({ vehicleData, onVehicleDataChange }: VehiclePricingToolProps) {
   const { vehicles } = useVehicleStore();
   const { quotes, addQuote } = useQuotesStore();
   const { toast } = useToast();
   
-  const [searchYear, setSearchYear] = useState('');
-  const [searchMake, setSearchMake] = useState('');
-  const [searchModel, setSearchModel] = useState('');
+  const [searchYear, setSearchYear] = useState(vehicleData?.year || '');
+  const [searchMake, setSearchMake] = useState(vehicleData?.make || '');
+  const [searchModel, setSearchModel] = useState(vehicleData?.model || '');
   const [similarVehicles, setSimilarVehicles] = useState<SimilarVehicle[]>([]);
   const [priceEstimate, setPriceEstimate] = useState<PriceEstimate | null>(null);
   const [manualOffer, setManualOffer] = useState('');
   const [showResults, setShowResults] = useState(false);
+
+  // Sync with external vehicle data changes
+  useEffect(() => {
+    if (vehicleData) {
+      setSearchYear(vehicleData.year);
+      setSearchMake(vehicleData.make);
+      setSearchModel(vehicleData.model);
+    }
+  }, [vehicleData]);
+
+  // Auto-search when all fields are filled
+  useEffect(() => {
+    if (searchYear && searchMake && searchModel) {
+      searchSimilarVehicles();
+    }
+  }, [searchYear, searchMake, searchModel]);
 
   const filterOutliers = (vehicles: SimilarVehicle[]) => {
     if (vehicles.length < 4) {
@@ -355,7 +382,15 @@ export function VehiclePricingTool() {
                 id="year"
                 placeholder="e.g. 2003"
                 value={searchYear}
-                onChange={(e) => setSearchYear(e.target.value)}
+                onChange={(e) => {
+                  const newValue = e.target.value;
+                  setSearchYear(newValue);
+                  onVehicleDataChange?.({
+                    year: newValue,
+                    make: searchMake,
+                    model: searchModel
+                  });
+                }}
                 onKeyDown={(e) => e.key === 'Enter' && searchSimilarVehicles()}
               />
             </div>
@@ -365,7 +400,15 @@ export function VehiclePricingTool() {
                 id="make"
                 placeholder="e.g. Toyota"
                 value={searchMake}
-                onChange={(e) => setSearchMake(e.target.value)}
+                onChange={(e) => {
+                  const newValue = e.target.value;
+                  setSearchMake(newValue);
+                  onVehicleDataChange?.({
+                    year: searchYear,
+                    make: newValue,
+                    model: searchModel
+                  });
+                }}
                 onKeyDown={(e) => e.key === 'Enter' && searchSimilarVehicles()}
               />
             </div>
@@ -375,7 +418,15 @@ export function VehiclePricingTool() {
                 id="model"
                 placeholder="e.g. Matrix"
                 value={searchModel}
-                onChange={(e) => setSearchModel(e.target.value)}
+                onChange={(e) => {
+                  const newValue = e.target.value;
+                  setSearchModel(newValue);
+                  onVehicleDataChange?.({
+                    year: searchYear,
+                    make: searchMake,
+                    model: newValue
+                  });
+                }}
                 onKeyDown={(e) => e.key === 'Enter' && searchSimilarVehicles()}
               />
             </div>
