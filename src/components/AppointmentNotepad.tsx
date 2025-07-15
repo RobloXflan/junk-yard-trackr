@@ -195,7 +195,7 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange }: Appoint
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Customer & Vehicle Information */}
+        {/* Customer Information */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <Label htmlFor="customer_phone" className="flex items-center gap-2">
