@@ -18,9 +18,6 @@ export type Database = {
         Row: {
           appointment_booked: boolean | null
           created_at: string
-          customer_email: string | null
-          customer_name: string | null
-          customer_phone: string | null
           estimated_price: number | null
           id: string
           notes: string | null
@@ -33,9 +30,6 @@ export type Database = {
         Insert: {
           appointment_booked?: boolean | null
           created_at?: string
-          customer_email?: string | null
-          customer_name?: string | null
-          customer_phone?: string | null
           estimated_price?: number | null
           id?: string
           notes?: string | null
@@ -48,9 +42,6 @@ export type Database = {
         Update: {
           appointment_booked?: boolean | null
           created_at?: string
-          customer_email?: string | null
-          customer_name?: string | null
-          customer_phone?: string | null
           estimated_price?: number | null
           id?: string
           notes?: string | null
