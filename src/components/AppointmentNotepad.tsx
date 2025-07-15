@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Send, Save, Phone, Car, DollarSign, FileText, MapPin } from "lucide-react";
+import { AddressAutocomplete } from "./AddressAutocomplete";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQuotesStore } from "@/hooks/useQuotesStore";
@@ -213,11 +214,10 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange }: Appoint
               <MapPin className="w-4 h-4" />
               Address
             </Label>
-            <Input
-              id="customer_address"
+            <AddressAutocomplete
               value={appointmentData.customer_address}
-              onChange={(e) => setAppointmentData(prev => ({ ...prev, customer_address: e.target.value }))}
-              placeholder="123 Main St, City, State"
+              onChange={(value) => setAppointmentData(prev => ({ ...prev, customer_address: value }))}
+              placeholder="Start typing an address..."
             />
           </div>
           <div>
