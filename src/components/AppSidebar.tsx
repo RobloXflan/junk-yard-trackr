@@ -54,11 +54,6 @@ const mainMenuItems = [
     page: "smart-receipt-upload",
     icon: ScanLine,
   },
-  {
-    title: "Settings",
-    page: "settings",
-    icon: Settings,
-  },
 ];
 
 const adminMenuItems = [
