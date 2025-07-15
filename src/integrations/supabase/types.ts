@@ -19,12 +19,14 @@ export type Database = {
           appointment_booked: boolean | null
           assigned_worker_id: string | null
           created_at: string
+          customer_address: string | null
           customer_email: string | null
           customer_name: string | null
           customer_phone: string | null
           estimated_price: number | null
           id: string
           notes: string | null
+          paperwork: string | null
           telegram_sent: boolean | null
           updated_at: string
           vehicle_make: string | null
@@ -35,12 +37,14 @@ export type Database = {
           appointment_booked?: boolean | null
           assigned_worker_id?: string | null
           created_at?: string
+          customer_address?: string | null
           customer_email?: string | null
           customer_name?: string | null
           customer_phone?: string | null
           estimated_price?: number | null
           id?: string
           notes?: string | null
+          paperwork?: string | null
           telegram_sent?: boolean | null
           updated_at?: string
           vehicle_make?: string | null
@@ -51,12 +55,14 @@ export type Database = {
           appointment_booked?: boolean | null
           assigned_worker_id?: string | null
           created_at?: string
+          customer_address?: string | null
           customer_email?: string | null
           customer_name?: string | null
           customer_phone?: string | null
           estimated_price?: number | null
           id?: string
           notes?: string | null
+          paperwork?: string | null
           telegram_sent?: boolean | null
           updated_at?: string
           vehicle_make?: string | null

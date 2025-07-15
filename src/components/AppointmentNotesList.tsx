@@ -58,7 +58,7 @@ export function AppointmentNotesList({ filter }: AppointmentNotesListProps) {
       const { data, error } = await query.order("created_at", { ascending: false });
 
       if (error) throw error;
-      setNotes(data || []);
+      setNotes((data || []) as AppointmentNote[]);
     } catch (error) {
       console.error("Error fetching appointment notes:", error);
       toast({
