@@ -13,8 +13,26 @@ interface NominatimResult {
     state?: string;
     postcode?: string;
     country?: string;
+    county?: string;
   };
 }
+
+// Southern California counties for filtering
+const SOUTHERN_CALIFORNIA_COUNTIES = [
+  'Los Angeles County',
+  'Orange County', 
+  'Riverside County',
+  'San Bernardino County',
+  'Ventura County',
+  'Imperial County',
+  'Kern County',
+  'Santa Barbara County',
+  'Tulare County',
+  'Fresno County',
+  'Kings County',
+  'Inyo County',
+  'Mono County'
+];
 
 interface AddressAutocompleteProps {
   value: string;
@@ -73,8 +91,13 @@ export function AddressAutocomplete({ value, onChange, placeholder, className }:
 
       if (response.ok) {
         const results: NominatimResult[] = await response.json();
-        setSuggestions(results);
-        setIsOpen(results.length > 0);
+        // Filter results to only include Southern California counties
+        const socCalResults = results.filter(result => {
+          const county = result.address?.county;
+          return county && SOUTHERN_CALIFORNIA_COUNTIES.includes(county);
+        });
+        setSuggestions(socCalResults);
+        setIsOpen(socCalResults.length > 0);
       }
     } catch (error) {
       console.error('Error searching addresses:', error);
