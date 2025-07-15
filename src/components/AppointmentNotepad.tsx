@@ -195,56 +195,6 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange }: Appoint
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Customer Information */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <Label htmlFor="customer_phone" className="flex items-center gap-2">
-              <Phone className="w-4 h-4" />
-              Phone Number
-            </Label>
-            <Input
-              id="customer_phone"
-              value={appointmentData.customer_phone}
-              onChange={(e) => setAppointmentData(prev => ({ ...prev, customer_phone: e.target.value }))}
-              placeholder="(555) 123-4567"
-            />
-          </div>
-          <div>
-            <Label htmlFor="customer_address" className="flex items-center gap-2">
-              <MapPin className="w-4 h-4" />
-              Address
-            </Label>
-            <AddressAutocomplete
-              value={appointmentData.customer_address}
-              onChange={(value) => setAppointmentData(prev => ({ ...prev, customer_address: value }))}
-              placeholder="Start typing an address..."
-            />
-          </div>
-          <div>
-            <Label htmlFor="paperwork" className="flex items-center gap-2">
-              <FileText className="w-4 h-4" />
-              Paperwork
-            </Label>
-            <Select
-              value={appointmentData.paperwork}
-              onValueChange={(value) => setAppointmentData(prev => ({ ...prev, paperwork: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select paperwork type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="title">Title</SelectItem>
-                <SelectItem value="reg">Registration</SelectItem>
-                <SelectItem value="name">Name</SelectItem>
-                <SelectItem value="license">License</SelectItem>
-                <SelectItem value="junkslip">Junk Slip</SelectItem>
-                <SelectItem value="no-paperwork">No Paperwork</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
         {/* Vehicle Information */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -300,6 +250,56 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange }: Appoint
               }}
               placeholder="Camry"
             />
+          </div>
+        </div>
+
+        {/* Customer Information */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <Label htmlFor="customer_phone" className="flex items-center gap-2">
+              <Phone className="w-4 h-4" />
+              Phone Number
+            </Label>
+            <Input
+              id="customer_phone"
+              value={appointmentData.customer_phone}
+              onChange={(e) => setAppointmentData(prev => ({ ...prev, customer_phone: e.target.value }))}
+              placeholder="(555) 123-4567"
+            />
+          </div>
+          <div>
+            <Label htmlFor="customer_address" className="flex items-center gap-2">
+              <MapPin className="w-4 h-4" />
+              Address
+            </Label>
+            <AddressAutocomplete
+              value={appointmentData.customer_address}
+              onChange={(value) => setAppointmentData(prev => ({ ...prev, customer_address: value }))}
+              placeholder="Start typing an address..."
+            />
+          </div>
+          <div>
+            <Label htmlFor="paperwork" className="flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              Paperwork
+            </Label>
+            <Select
+              value={appointmentData.paperwork}
+              onValueChange={(value) => setAppointmentData(prev => ({ ...prev, paperwork: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select paperwork type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="title">Title</SelectItem>
+                <SelectItem value="reg">Registration</SelectItem>
+                <SelectItem value="name">Name</SelectItem>
+                <SelectItem value="license">License</SelectItem>
+                <SelectItem value="junkslip">Junk Slip</SelectItem>
+                <SelectItem value="no-paperwork">No Paperwork</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
