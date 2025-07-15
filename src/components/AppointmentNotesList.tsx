@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trash2, Calendar, Phone, DollarSign } from "lucide-react";
+import { Trash2, Calendar, Phone, DollarSign, Copy, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
@@ -17,6 +17,13 @@ interface AppointmentNote {
   appointment_booked: boolean | null;
   telegram_sent: boolean | null;
   created_at: string;
+  assigned_worker_id: string | null;
+  customer_name: string | null;
+  customer_phone: string | null;
+  customer_email: string | null;
+  workers?: {
+    name: string;
+  };
 }
 
 interface AppointmentNotesListProps {
@@ -32,7 +39,12 @@ export function AppointmentNotesList({ filter }: AppointmentNotesListProps) {
     try {
       let query = supabase
         .from("appointment_notes")
-        .select("*");
+        .select(`
+          *,
+          workers:assigned_worker_id (
+            name
+          )
+        `);
 
       // Apply filter based on type
       if (filter === 'saved') {
@@ -83,6 +95,40 @@ export function AppointmentNotesList({ filter }: AppointmentNotesListProps) {
     }
   };
 
+  const copyAppointmentMessage = async (note: AppointmentNote) => {
+    const vehicle = note.vehicle_year && note.vehicle_make && note.vehicle_model 
+      ? `${note.vehicle_year} ${note.vehicle_make} ${note.vehicle_model}` 
+      : "Vehicle Info Incomplete";
+    
+    const price = note.estimated_price ? `$${note.estimated_price.toLocaleString()}` : "Price not set";
+    
+    const customer = note.customer_name ? `Customer: ${note.customer_name}` : "";
+    const phone = note.customer_phone ? `Phone: ${note.customer_phone}` : "";
+    const email = note.customer_email ? `Email: ${note.customer_email}` : "";
+    
+    const contactInfo = [customer, phone, email].filter(Boolean).join("\n");
+    
+    const message = `🚗 ${vehicle}
+💰 ${price}
+${contactInfo ? `\n👤 ${contactInfo}` : ""}
+${note.notes ? `\n📝 ${note.notes}` : ""}`;
+
+    try {
+      await navigator.clipboard.writeText(message);
+      toast({
+        title: "Copied!",
+        description: "Appointment details copied to clipboard",
+      });
+    } catch (error) {
+      console.error("Failed to copy:", error);
+      toast({
+        title: "Error",
+        description: "Failed to copy to clipboard",
+        variant: "destructive",
+      });
+    }
+  };
+
   useEffect(() => {
     fetchNotes();
   }, []);
@@ -114,6 +160,12 @@ export function AppointmentNotesList({ filter }: AppointmentNotesListProps) {
                 }
               </CardTitle>
               <div className="flex items-center gap-2">
+                {note.workers?.name && (
+                  <Badge variant="default">
+                    <User className="w-3 h-3 mr-1" />
+                    Driver: {note.workers.name}
+                  </Badge>
+                )}
                 {note.appointment_booked && (
                   <Badge variant="secondary">
                     <Calendar className="w-3 h-3 mr-1" />
@@ -125,6 +177,16 @@ export function AppointmentNotesList({ filter }: AppointmentNotesListProps) {
                     <Phone className="w-3 h-3 mr-1" />
                     Sent to Telegram
                   </Badge>
+                )}
+                {filter === 'pending' && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => copyAppointmentMessage(note)}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
                 )}
                 <Button
                   variant="ghost"
