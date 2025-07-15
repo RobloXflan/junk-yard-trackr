@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      appointment_notes: {
+        Row: {
+          appointment_booked: boolean | null
+          created_at: string
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          estimated_price: number | null
+          id: string
+          notes: string | null
+          telegram_sent: boolean | null
+          updated_at: string
+          vehicle_make: string | null
+          vehicle_model: string | null
+          vehicle_year: string | null
+        }
+        Insert: {
+          appointment_booked?: boolean | null
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          estimated_price?: number | null
+          id?: string
+          notes?: string | null
+          telegram_sent?: boolean | null
+          updated_at?: string
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          vehicle_year?: string | null
+        }
+        Update: {
+          appointment_booked?: boolean | null
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          estimated_price?: number | null
+          id?: string
+          notes?: string | null
+          telegram_sent?: boolean | null
+          updated_at?: string
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          vehicle_year?: string | null
+        }
+        Relationships: []
+      }
       business_purchases: {
         Row: {
           category: string

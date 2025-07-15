@@ -1,0 +1,326 @@
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Send, Save, Phone, User, Car, DollarSign } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useQuotesStore } from "@/hooks/useQuotesStore";
+
+interface AppointmentData {
+  customer_name: string;
+  customer_phone: string;
+  customer_email: string;
+  vehicle_year: string;
+  vehicle_make: string;
+  vehicle_model: string;
+  estimated_price: number | null;
+  notes: string;
+  appointment_booked: boolean;
+}
+
+interface PriceEstimate {
+  estimatedPrice: number;
+  confidence: string;
+  dataPoints: number;
+}
+
+export function AppointmentNotepad() {
+  const { toast } = useToast();
+  const { quotes } = useQuotesStore();
+  
+  const [appointmentData, setAppointmentData] = useState<AppointmentData>({
+    customer_name: "",
+    customer_phone: "",
+    customer_email: "",
+    vehicle_year: "",
+    vehicle_make: "",
+    vehicle_model: "",
+    estimated_price: null,
+    notes: "",
+    appointment_booked: false,
+  });
+
+  const [priceEstimate, setPriceEstimate] = useState<PriceEstimate | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Auto-calculate price when vehicle details change
+  useEffect(() => {
+    if (appointmentData.vehicle_year && appointmentData.vehicle_make && appointmentData.vehicle_model) {
+      calculatePrice();
+    } else {
+      setPriceEstimate(null);
+      setAppointmentData(prev => ({ ...prev, estimated_price: null }));
+    }
+  }, [appointmentData.vehicle_year, appointmentData.vehicle_make, appointmentData.vehicle_model]);
+
+  const calculatePrice = () => {
+    // Use existing quotes to estimate price
+    const similarQuotes = quotes.filter(quote => {
+      const yearMatch = quote.year === appointmentData.vehicle_year;
+      const makeMatch = quote.make.toLowerCase() === appointmentData.vehicle_make.toLowerCase();
+      const modelMatch = quote.model.toLowerCase() === appointmentData.vehicle_model.toLowerCase();
+      
+      return yearMatch && makeMatch && modelMatch;
+    });
+
+    if (similarQuotes.length > 0) {
+      const avgPrice = similarQuotes.reduce((sum, quote) => sum + quote.adjustedOffer, 0) / similarQuotes.length;
+      const estimate = {
+        estimatedPrice: Math.round(avgPrice),
+        confidence: similarQuotes.length >= 3 ? "High" : similarQuotes.length >= 2 ? "Medium" : "Low",
+        dataPoints: similarQuotes.length
+      };
+      
+      setPriceEstimate(estimate);
+      setAppointmentData(prev => ({ ...prev, estimated_price: estimate.estimatedPrice }));
+    } else {
+      // Check for similar makes/years
+      const similarMakeYear = quotes.filter(quote => {
+        const yearMatch = quote.year === appointmentData.vehicle_year;
+        const makeMatch = quote.make.toLowerCase() === appointmentData.vehicle_make.toLowerCase();
+        return yearMatch && makeMatch;
+      });
+
+      if (similarMakeYear.length > 0) {
+        const avgPrice = similarMakeYear.reduce((sum, quote) => sum + quote.adjustedOffer, 0) / similarMakeYear.length;
+        const estimate = {
+          estimatedPrice: Math.round(avgPrice * 0.9), // Slightly lower for different model
+          confidence: "Low",
+          dataPoints: similarMakeYear.length
+        };
+        
+        setPriceEstimate(estimate);
+        setAppointmentData(prev => ({ ...prev, estimated_price: estimate.estimatedPrice }));
+      }
+    }
+  };
+
+  const saveNotes = async (withAppointment: boolean = false) => {
+    setIsLoading(true);
+    
+    try {
+      const { error } = await supabase
+        .from('appointment_notes')
+        .insert({
+          ...appointmentData,
+          appointment_booked: withAppointment
+        });
+
+      if (error) throw error;
+
+      if (withAppointment) {
+        // Send to Telegram
+        await sendToTelegram();
+      }
+
+      toast({
+        title: withAppointment ? "Appointment Sent!" : "Notes Saved",
+        description: withAppointment ? "Appointment details sent to Telegram" : "Customer notes saved for future reference"
+      });
+
+      // Reset form
+      setAppointmentData({
+        customer_name: "",
+        customer_phone: "",
+        customer_email: "",
+        vehicle_year: "",
+        vehicle_make: "",
+        vehicle_model: "",
+        estimated_price: null,
+        notes: "",
+        appointment_booked: false,
+      });
+      setPriceEstimate(null);
+
+    } catch (error) {
+      console.error('Error saving notes:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save notes. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const sendToTelegram = async () => {
+    try {
+      const { error } = await supabase.functions.invoke('send-telegram-appointment', {
+        body: { appointmentData: { ...appointmentData, appointment_booked: true } }
+      });
+
+      if (error) throw error;
+
+    } catch (error) {
+      console.error('Error sending to Telegram:', error);
+      // Don't throw - we still want to save the appointment
+    }
+  };
+
+  const getConfidenceColor = (confidence: string) => {
+    switch (confidence) {
+      case "High": return "bg-green-100 text-green-800";
+      case "Medium": return "bg-yellow-100 text-yellow-800";
+      case "Low": return "bg-orange-100 text-orange-800";
+      default: return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  return (
+    <Card className="w-full max-w-4xl mx-auto">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Phone className="w-5 h-5" />
+          Call Notepad
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Customer Information */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <Label htmlFor="customer_name" className="flex items-center gap-2">
+              <User className="w-4 h-4" />
+              Customer Name
+            </Label>
+            <Input
+              id="customer_name"
+              value={appointmentData.customer_name}
+              onChange={(e) => setAppointmentData(prev => ({ ...prev, customer_name: e.target.value }))}
+              placeholder="Enter customer name"
+            />
+          </div>
+          <div>
+            <Label htmlFor="customer_phone">Phone Number</Label>
+            <Input
+              id="customer_phone"
+              value={appointmentData.customer_phone}
+              onChange={(e) => setAppointmentData(prev => ({ ...prev, customer_phone: e.target.value }))}
+              placeholder="(555) 123-4567"
+            />
+          </div>
+          <div>
+            <Label htmlFor="customer_email">Email (Optional)</Label>
+            <Input
+              id="customer_email"
+              type="email"
+              value={appointmentData.customer_email}
+              onChange={(e) => setAppointmentData(prev => ({ ...prev, customer_email: e.target.value }))}
+              placeholder="customer@email.com"
+            />
+          </div>
+        </div>
+
+        {/* Vehicle Information */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <Label htmlFor="vehicle_year" className="flex items-center gap-2">
+              <Car className="w-4 h-4" />
+              Year
+            </Label>
+            <Input
+              id="vehicle_year"
+              value={appointmentData.vehicle_year}
+              onChange={(e) => setAppointmentData(prev => ({ ...prev, vehicle_year: e.target.value }))}
+              placeholder="2020"
+            />
+          </div>
+          <div>
+            <Label htmlFor="vehicle_make">Make</Label>
+            <Input
+              id="vehicle_make"
+              value={appointmentData.vehicle_make}
+              onChange={(e) => setAppointmentData(prev => ({ ...prev, vehicle_make: e.target.value }))}
+              placeholder="Toyota"
+            />
+          </div>
+          <div>
+            <Label htmlFor="vehicle_model">Model</Label>
+            <Input
+              id="vehicle_model"
+              value={appointmentData.vehicle_model}
+              onChange={(e) => setAppointmentData(prev => ({ ...prev, vehicle_model: e.target.value }))}
+              placeholder="Camry"
+            />
+          </div>
+        </div>
+
+        {/* Price Estimate Display */}
+        {priceEstimate && (
+          <Card className="bg-blue-50 border-blue-200">
+            <CardContent className="pt-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="w-5 h-5 text-blue-600" />
+                  <span className="text-lg font-semibold text-blue-800">
+                    Estimated Price: ${priceEstimate.estimatedPrice.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge className={getConfidenceColor(priceEstimate.confidence)}>
+                    {priceEstimate.confidence} Confidence
+                  </Badge>
+                  <span className="text-sm text-blue-600">
+                    {priceEstimate.dataPoints} data point{priceEstimate.dataPoints !== 1 ? 's' : ''}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Manual Price Override */}
+        <div>
+          <Label htmlFor="estimated_price">Quoted Price (Optional Override)</Label>
+          <Input
+            id="estimated_price"
+            type="number"
+            value={appointmentData.estimated_price || ""}
+            onChange={(e) => setAppointmentData(prev => ({ 
+              ...prev, 
+              estimated_price: e.target.value ? Number(e.target.value) : null 
+            }))}
+            placeholder="Enter custom quote amount"
+          />
+        </div>
+
+        {/* Notes */}
+        <div>
+          <Label htmlFor="notes">Call Notes</Label>
+          <Textarea
+            id="notes"
+            value={appointmentData.notes}
+            onChange={(e) => setAppointmentData(prev => ({ ...prev, notes: e.target.value }))}
+            placeholder="Type notes as you talk with the customer..."
+            rows={4}
+          />
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-3 pt-4">
+          <Button
+            onClick={() => saveNotes(true)}
+            disabled={isLoading || !appointmentData.customer_name}
+            className="flex items-center gap-2"
+          >
+            <Send className="w-4 h-4" />
+            Send Appointment
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => saveNotes(false)}
+            disabled={isLoading}
+            className="flex items-center gap-2"
+          >
+            <Save className="w-4 h-4" />
+            Save Notes Only
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
