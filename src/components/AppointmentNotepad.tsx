@@ -5,21 +5,21 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Send, Save, Phone, User, Car, DollarSign } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Send, Save, Phone, Car, DollarSign, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQuotesStore } from "@/hooks/useQuotesStore";
 
 interface AppointmentData {
-  customer_name: string;
   customer_phone: string;
-  customer_email: string;
   vehicle_year: string;
   vehicle_make: string;
   vehicle_model: string;
   estimated_price: number | null;
   notes: string;
   appointment_booked: boolean;
+  paperwork: string;
 }
 
 interface PriceEstimate {
@@ -44,15 +44,14 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange }: Appoint
   const { quotes } = useQuotesStore();
   
   const [appointmentData, setAppointmentData] = useState<AppointmentData>({
-    customer_name: "",
     customer_phone: "",
-    customer_email: "",
     vehicle_year: vehicleData?.year || "",
     vehicle_make: vehicleData?.make || "",
     vehicle_model: vehicleData?.model || "",
     estimated_price: null,
     notes: "",
     appointment_booked: false,
+    paperwork: "",
   });
 
   const [priceEstimate, setPriceEstimate] = useState<PriceEstimate | null>(null);
@@ -137,15 +136,14 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange }: Appoint
 
       // Reset form
       setAppointmentData({
-        customer_name: "",
         customer_phone: "",
-        customer_email: "",
         vehicle_year: "",
         vehicle_make: "",
         vehicle_model: "",
         estimated_price: null,
         notes: "",
         appointment_booked: false,
+        paperwork: "",
       });
       setPriceEstimate(null);
 
@@ -194,19 +192,7 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange }: Appoint
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Customer Information */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <Label htmlFor="customer_name" className="flex items-center gap-2">
-              <User className="w-4 h-4" />
-              Customer Name
-            </Label>
-            <Input
-              id="customer_name"
-              value={appointmentData.customer_name}
-              onChange={(e) => setAppointmentData(prev => ({ ...prev, customer_name: e.target.value }))}
-              placeholder="John Doe"
-            />
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="customer_phone" className="flex items-center gap-2">
               <Phone className="w-4 h-4" />
@@ -220,14 +206,27 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange }: Appoint
             />
           </div>
           <div>
-            <Label htmlFor="customer_email">Email (Optional)</Label>
-            <Input
-              id="customer_email"
-              type="email"
-              value={appointmentData.customer_email}
-              onChange={(e) => setAppointmentData(prev => ({ ...prev, customer_email: e.target.value }))}
-              placeholder="john@example.com"
-            />
+            <Label htmlFor="paperwork" className="flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              Paperwork
+            </Label>
+            <Select
+              value={appointmentData.paperwork}
+              onValueChange={(value) => setAppointmentData(prev => ({ ...prev, paperwork: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select paperwork type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="title">Title</SelectItem>
+                <SelectItem value="reg">Registration</SelectItem>
+                <SelectItem value="name">Name</SelectItem>
+                <SelectItem value="license">License</SelectItem>
+                <SelectItem value="junkslip">Junk Slip</SelectItem>
+                <SelectItem value="no-paperwork">No Paperwork</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
