@@ -6,13 +6,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Send, Save, Phone, Car, DollarSign, FileText } from "lucide-react";
+import { Send, Save, Phone, Car, DollarSign, FileText, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQuotesStore } from "@/hooks/useQuotesStore";
 
 interface AppointmentData {
   customer_phone: string;
+  customer_address: string;
   vehicle_year: string;
   vehicle_make: string;
   vehicle_model: string;
@@ -45,6 +46,7 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange }: Appoint
   
   const [appointmentData, setAppointmentData] = useState<AppointmentData>({
     customer_phone: "",
+    customer_address: "",
     vehicle_year: vehicleData?.year || "",
     vehicle_make: vehicleData?.make || "",
     vehicle_model: vehicleData?.model || "",
@@ -137,6 +139,7 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange }: Appoint
       // Reset form
       setAppointmentData({
         customer_phone: "",
+        customer_address: "",
         vehicle_year: "",
         vehicle_make: "",
         vehicle_model: "",
@@ -192,7 +195,7 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange }: Appoint
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Customer Information */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <Label htmlFor="customer_phone" className="flex items-center gap-2">
               <Phone className="w-4 h-4" />
@@ -203,6 +206,18 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange }: Appoint
               value={appointmentData.customer_phone}
               onChange={(e) => setAppointmentData(prev => ({ ...prev, customer_phone: e.target.value }))}
               placeholder="(555) 123-4567"
+            />
+          </div>
+          <div>
+            <Label htmlFor="customer_address" className="flex items-center gap-2">
+              <MapPin className="w-4 h-4" />
+              Address
+            </Label>
+            <Input
+              id="customer_address"
+              value={appointmentData.customer_address}
+              onChange={(e) => setAppointmentData(prev => ({ ...prev, customer_address: e.target.value }))}
+              placeholder="123 Main St, City, State"
             />
           </div>
           <div>
