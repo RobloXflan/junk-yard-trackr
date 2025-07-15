@@ -11,9 +11,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuotesStore } from "@/hooks/useQuotesStore";
 
 interface AppointmentData {
-  customer_name: string;
-  customer_phone: string;
-  customer_email: string;
   vehicle_year: string;
   vehicle_make: string;
   vehicle_model: string;
@@ -33,9 +30,6 @@ export function AppointmentNotepad() {
   const { quotes } = useQuotesStore();
   
   const [appointmentData, setAppointmentData] = useState<AppointmentData>({
-    customer_name: "",
-    customer_phone: "",
-    customer_email: "",
     vehicle_year: "",
     vehicle_make: "",
     vehicle_model: "",
@@ -124,9 +118,6 @@ export function AppointmentNotepad() {
 
       // Reset form
       setAppointmentData({
-        customer_name: "",
-        customer_phone: "",
-        customer_email: "",
         vehicle_year: "",
         vehicle_make: "",
         vehicle_model: "",
@@ -180,41 +171,6 @@ export function AppointmentNotepad() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Customer Information */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <Label htmlFor="customer_name" className="flex items-center gap-2">
-              <User className="w-4 h-4" />
-              Customer Name
-            </Label>
-            <Input
-              id="customer_name"
-              value={appointmentData.customer_name}
-              onChange={(e) => setAppointmentData(prev => ({ ...prev, customer_name: e.target.value }))}
-              placeholder="Enter customer name"
-            />
-          </div>
-          <div>
-            <Label htmlFor="customer_phone">Phone Number</Label>
-            <Input
-              id="customer_phone"
-              value={appointmentData.customer_phone}
-              onChange={(e) => setAppointmentData(prev => ({ ...prev, customer_phone: e.target.value }))}
-              placeholder="(555) 123-4567"
-            />
-          </div>
-          <div>
-            <Label htmlFor="customer_email">Email (Optional)</Label>
-            <Input
-              id="customer_email"
-              type="email"
-              value={appointmentData.customer_email}
-              onChange={(e) => setAppointmentData(prev => ({ ...prev, customer_email: e.target.value }))}
-              placeholder="customer@email.com"
-            />
-          </div>
-        </div>
-
         {/* Vehicle Information */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -304,7 +260,7 @@ export function AppointmentNotepad() {
         <div className="flex gap-3 pt-4">
           <Button
             onClick={() => saveNotes(true)}
-            disabled={isLoading || !appointmentData.customer_name}
+            disabled={isLoading}
             className="flex items-center gap-2"
           >
             <Send className="w-4 h-4" />

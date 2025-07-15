@@ -23,12 +23,8 @@ serve(async (req) => {
     // Format the message
     const message = `🚗 NEW APPOINTMENT ${appointmentData.appointment_booked ? '✅ BOOKED' : '📝 NOTES ONLY'}
 
-👤 Customer: ${appointmentData.customer_name || 'N/A'}
-📞 Phone: ${appointmentData.customer_phone || 'N/A'}
-📧 Email: ${appointmentData.customer_email || 'N/A'}
-
 🚙 Vehicle: ${appointmentData.vehicle_year || 'N/A'} ${appointmentData.vehicle_make || 'N/A'} ${appointmentData.vehicle_model || 'N/A'}
-💰 Estimated Price: ${appointmentData.estimated_price ? `$${appointmentData.estimated_price}` : 'N/A'}
+💰 Quoted Price: ${appointmentData.estimated_price ? `$${appointmentData.estimated_price}` : 'N/A'}
 
 📝 Notes:
 ${appointmentData.notes || 'No additional notes'}
