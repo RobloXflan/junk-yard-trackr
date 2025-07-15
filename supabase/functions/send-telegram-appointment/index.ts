@@ -23,6 +23,10 @@ serve(async (req) => {
     // Format the message
     const message = `🚗 NEW APPOINTMENT ${appointmentData.appointment_booked ? '✅ BOOKED' : '📝 NOTES ONLY'}
 
+👤 Customer: ${appointmentData.customer_name || 'N/A'}
+📞 Phone: ${appointmentData.customer_phone || 'N/A'}
+📧 Email: ${appointmentData.customer_email || 'N/A'}
+
 🚙 Vehicle: ${appointmentData.vehicle_year || 'N/A'} ${appointmentData.vehicle_make || 'N/A'} ${appointmentData.vehicle_model || 'N/A'}
 💰 Quoted Price: ${appointmentData.estimated_price ? `$${appointmentData.estimated_price}` : 'N/A'}
 
@@ -30,6 +34,17 @@ serve(async (req) => {
 ${appointmentData.notes || 'No additional notes'}
 
 ⏰ Recorded: ${new Date().toLocaleString()}`
+
+    // Create inline keyboard with worker buttons
+    const inlineKeyboard = {
+      inline_keyboard: [
+        [
+          { text: "👷 Angel", callback_data: `assign_worker_angel_${appointmentData.id}` },
+          { text: "👷 CHINO", callback_data: `assign_worker_chino_${appointmentData.id}` },
+          { text: "👷 Dante", callback_data: `assign_worker_dante_${appointmentData.id}` }
+        ]
+      ]
+    }
 
     // Send to Telegram
     const telegramUrl = `https://api.telegram.org/bot${botToken}/sendMessage`
@@ -41,7 +56,8 @@ ${appointmentData.notes || 'No additional notes'}
       body: JSON.stringify({
         chat_id: chatId,
         text: message,
-        parse_mode: 'HTML'
+        parse_mode: 'HTML',
+        reply_markup: inlineKeyboard
       })
     })
 

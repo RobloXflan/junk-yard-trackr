@@ -11,6 +11,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuotesStore } from "@/hooks/useQuotesStore";
 
 interface AppointmentData {
+  customer_name: string;
+  customer_phone: string;
+  customer_email: string;
   vehicle_year: string;
   vehicle_make: string;
   vehicle_model: string;
@@ -41,6 +44,9 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange }: Appoint
   const { quotes } = useQuotesStore();
   
   const [appointmentData, setAppointmentData] = useState<AppointmentData>({
+    customer_name: "",
+    customer_phone: "",
+    customer_email: "",
     vehicle_year: vehicleData?.year || "",
     vehicle_make: vehicleData?.make || "",
     vehicle_model: vehicleData?.model || "",
@@ -108,18 +114,20 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange }: Appoint
     setIsLoading(true);
     
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('appointment_notes')
         .insert({
           ...appointmentData,
           appointment_booked: withAppointment
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
 
-      if (withAppointment) {
-        // Send to Telegram
-        await sendToTelegram();
+      if (withAppointment && data) {
+        // Send to Telegram with the appointment ID
+        await sendToTelegram(data.id);
       }
 
       toast({
@@ -129,6 +137,9 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange }: Appoint
 
       // Reset form
       setAppointmentData({
+        customer_name: "",
+        customer_phone: "",
+        customer_email: "",
         vehicle_year: "",
         vehicle_make: "",
         vehicle_model: "",
@@ -150,10 +161,10 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange }: Appoint
     }
   };
 
-  const sendToTelegram = async () => {
+  const sendToTelegram = async (appointmentId: string) => {
     try {
       const { error } = await supabase.functions.invoke('send-telegram-appointment', {
-        body: { appointmentData: { ...appointmentData, appointment_booked: true } }
+        body: { appointmentData: { ...appointmentData, id: appointmentId, appointment_booked: true } }
       });
 
       if (error) throw error;
@@ -182,6 +193,44 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange }: Appoint
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Customer Information */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <Label htmlFor="customer_name" className="flex items-center gap-2">
+              <User className="w-4 h-4" />
+              Customer Name
+            </Label>
+            <Input
+              id="customer_name"
+              value={appointmentData.customer_name}
+              onChange={(e) => setAppointmentData(prev => ({ ...prev, customer_name: e.target.value }))}
+              placeholder="John Doe"
+            />
+          </div>
+          <div>
+            <Label htmlFor="customer_phone" className="flex items-center gap-2">
+              <Phone className="w-4 h-4" />
+              Phone Number
+            </Label>
+            <Input
+              id="customer_phone"
+              value={appointmentData.customer_phone}
+              onChange={(e) => setAppointmentData(prev => ({ ...prev, customer_phone: e.target.value }))}
+              placeholder="(555) 123-4567"
+            />
+          </div>
+          <div>
+            <Label htmlFor="customer_email">Email (Optional)</Label>
+            <Input
+              id="customer_email"
+              type="email"
+              value={appointmentData.customer_email}
+              onChange={(e) => setAppointmentData(prev => ({ ...prev, customer_email: e.target.value }))}
+              placeholder="john@example.com"
+            />
+          </div>
+        </div>
+
         {/* Vehicle Information */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>

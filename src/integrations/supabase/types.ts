@@ -17,7 +17,11 @@ export type Database = {
       appointment_notes: {
         Row: {
           appointment_booked: boolean | null
+          assigned_worker_id: string | null
           created_at: string
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
           estimated_price: number | null
           id: string
           notes: string | null
@@ -29,7 +33,11 @@ export type Database = {
         }
         Insert: {
           appointment_booked?: boolean | null
+          assigned_worker_id?: string | null
           created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
           estimated_price?: number | null
           id?: string
           notes?: string | null
@@ -41,7 +49,11 @@ export type Database = {
         }
         Update: {
           appointment_booked?: boolean | null
+          assigned_worker_id?: string | null
           created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
           estimated_price?: number | null
           id?: string
           notes?: string | null
@@ -51,7 +63,15 @@ export type Database = {
           vehicle_model?: string | null
           vehicle_year?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "appointment_notes_assigned_worker_id_fkey"
+            columns: ["assigned_worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       business_purchases: {
         Row: {
