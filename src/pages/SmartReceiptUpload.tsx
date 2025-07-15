@@ -77,6 +77,8 @@ export const SmartReceiptUpload = () => {
   const [savedPurchases, setSavedPurchases] = useState<BusinessPurchase[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
+  const [editingDateFor, setEditingDateFor] = useState<string | null>(null);
+  const [newDate, setNewDate] = useState<Date | undefined>(undefined);
   const [formData, setFormData] = useState({
     item_name: "",
     purchase_date: undefined as Date | undefined,
@@ -401,6 +403,55 @@ export const SmartReceiptUpload = () => {
       newExpandedDates.add(date);
     }
     setExpandedDates(newExpandedDates);
+  };
+
+  const startDateCorrection = (purchase: BusinessPurchase) => {
+    setEditingDateFor(purchase.id);
+    setNewDate(parseYYYYMMDD(purchase.purchase_date));
+  };
+
+  const saveDateCorrection = async (purchaseId: string) => {
+    if (!newDate) {
+      toast({
+        title: "Error",
+        description: "Please select a date",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('business_purchases')
+        .update({ 
+          purchase_date: format(newDate, 'yyyy-MM-dd'),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', purchaseId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Date corrected successfully"
+      });
+
+      setEditingDateFor(null);
+      setNewDate(undefined);
+      fetchSavedPurchases();
+    } catch (error) {
+      console.error('Error updating date:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update date",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const cancelDateCorrection = () => {
+    setEditingDateFor(null);
+    setNewDate(undefined);
   };
 
   // Filter dates based on selected date
@@ -892,36 +943,93 @@ export const SmartReceiptUpload = () => {
                     </CollapsibleTrigger>
                     <CollapsibleContent className="px-4 pb-4">
                       <div className="space-y-2 border-l-2 border-muted pl-4 ml-2">
-                        {dayData.purchases.map((purchase) => (
-                          <div key={purchase.id} className="flex justify-between items-start p-3 bg-muted/30 rounded">
-                            <div className="text-sm space-y-1">
-                              <div className="font-medium">{purchase.item_name}</div>
-                              <div className="text-muted-foreground">
-                                {purchase.vendor_store} • {purchase.category}
-                              </div>
-                              {purchase.notes_purpose && (
-                                <div className="text-xs text-muted-foreground">
-                                  Purpose: {purchase.notes_purpose}
-                                </div>
-                              )}
-                            </div>
-                            <div className="text-right">
-                              <div className="font-medium">
-                                {formatCurrency(purchase.purchase_price)}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {purchase.payment_method}
-                              </div>
-                              {purchase.receipt_url && (
-                                <a href={purchase.receipt_url} target="_blank" rel="noopener noreferrer">
-                                  <Button variant="outline" size="sm" className="mt-1">
-                                    <Receipt className="w-3 h-3" />
-                                  </Button>
-                                </a>
-                              )}
-                            </div>
-                          </div>
-                        ))}
+                         {dayData.purchases.map((purchase) => (
+                           <div key={purchase.id} className="space-y-3">
+                             <div className="flex justify-between items-start p-3 bg-muted/30 rounded">
+                               <div className="text-sm space-y-1">
+                                 <div className="font-medium">{purchase.item_name}</div>
+                                 <div className="text-muted-foreground">
+                                   {purchase.vendor_store} • {purchase.category}
+                                 </div>
+                                 {purchase.notes_purpose && (
+                                   <div className="text-xs text-muted-foreground">
+                                     Purpose: {purchase.notes_purpose}
+                                   </div>
+                                 )}
+                               </div>
+                               <div className="text-right">
+                                 <div className="font-medium">
+                                   {formatCurrency(purchase.purchase_price)}
+                                 </div>
+                                 <div className="text-xs text-muted-foreground">
+                                   {purchase.payment_method}
+                                 </div>
+                                 <div className="flex gap-1 mt-1">
+                                   {purchase.receipt_url && (
+                                     <a href={purchase.receipt_url} target="_blank" rel="noopener noreferrer">
+                                       <Button variant="outline" size="sm">
+                                         <Receipt className="w-3 h-3" />
+                                       </Button>
+                                     </a>
+                                   )}
+                                   <Button 
+                                     variant="outline" 
+                                     size="sm"
+                                     onClick={() => startDateCorrection(purchase)}
+                                   >
+                                     <CalendarIcon className="w-3 h-3" />
+                                   </Button>
+                                 </div>
+                               </div>
+                             </div>
+                             
+                             {editingDateFor === purchase.id && (
+                               <div className="p-4 bg-muted/50 rounded-lg border">
+                                 <div className="space-y-3">
+                                   <div className="text-sm font-medium">Correct Date</div>
+                                   <Popover>
+                                     <PopoverTrigger asChild>
+                                       <Button
+                                         variant="outline"
+                                         className={cn(
+                                           "w-full justify-start text-left font-normal",
+                                           !newDate && "text-muted-foreground"
+                                         )}
+                                       >
+                                         <CalendarIcon className="mr-2 h-4 w-4" />
+                                         {newDate ? format(newDate, "yyyy-MM-dd") : "Pick a date"}
+                                       </Button>
+                                     </PopoverTrigger>
+                                     <PopoverContent className="w-auto p-0">
+                                       <Calendar
+                                         mode="single"
+                                         selected={newDate}
+                                         onSelect={setNewDate}
+                                         initialFocus
+                                         className="pointer-events-auto"
+                                       />
+                                     </PopoverContent>
+                                   </Popover>
+                                   <div className="flex gap-2">
+                                     <Button 
+                                       size="sm" 
+                                       onClick={() => saveDateCorrection(purchase.id)}
+                                     >
+                                       Save
+                                     </Button>
+                                     <Button 
+                                       size="sm" 
+                                       variant="outline" 
+                                       onClick={cancelDateCorrection}
+                                     >
+                                       Cancel
+                                     </Button>
+                                   </div>
+                                 </div>
+                               </div>
+                             )}
+                           </div>
+                         ))}
                       </div>
                     </CollapsibleContent>
                   </Collapsible>
