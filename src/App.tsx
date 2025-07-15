@@ -19,6 +19,7 @@ import { ViewOnlyInventory } from "@/components/ViewOnlyInventory";
 import { BusinessPurchases } from "@/pages/BusinessPurchases";
 import { SmartReceiptUpload } from "@/pages/SmartReceiptUpload";
 import { Appointments } from "@/pages/Appointments";
+import TelegramSetup from "@/pages/TelegramSetup";
 import { Menu } from "lucide-react";
 import { useState } from "react";
 
@@ -68,6 +69,8 @@ const App = () => {
         return <BusinessPurchases />;
       case 'smart-receipt-upload':
         return <SmartReceiptUpload />;
+      case 'telegram-setup':
+        return <TelegramSetup />;
       case 'metrics':
         return <Metrics />;
       case 'admin':
