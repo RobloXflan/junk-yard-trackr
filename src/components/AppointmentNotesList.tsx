@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trash2, Calendar, Phone, DollarSign, Copy, User } from "lucide-react";
+import { Trash2, Calendar, Phone, DollarSign, Copy, User, MapPin, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
@@ -199,18 +199,45 @@ ${note.notes ? `\n📝 ${note.notes}` : ""}`;
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-4">
+            {/* Price Section */}
             {note.estimated_price && (
               <div className="flex items-center gap-2">
                 <DollarSign className="w-4 h-4 text-muted-foreground" />
                 <span className="font-medium">${note.estimated_price.toLocaleString()}</span>
               </div>
             )}
+
+            {/* Customer Contact Information */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {note.customer_phone && (
+                <div className="flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm">{note.customer_phone}</span>
+                </div>
+              )}
+              {note.customer_address && (
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm">{note.customer_address}</span>
+                </div>
+              )}
+              {note.paperwork && (
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm capitalize">{note.paperwork}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Notes Section */}
             {note.notes && (
               <div className="bg-muted p-3 rounded-md">
                 <p className="text-sm whitespace-pre-wrap">{note.notes}</p>
               </div>
             )}
+
+            {/* Created Date */}
             <div className="text-xs text-muted-foreground">
               Created: {format(new Date(note.created_at), "MMM d, yyyy 'at' h:mm a")}
             </div>
