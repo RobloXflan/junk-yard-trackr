@@ -18,6 +18,7 @@ import { SiteAuth } from "@/components/SiteAuth";
 import { ViewOnlyInventory } from "@/components/ViewOnlyInventory";
 import { BusinessPurchases } from "@/pages/BusinessPurchases";
 import { SmartReceiptUpload } from "@/pages/SmartReceiptUpload";
+import { Appointments } from "@/pages/Appointments";
 import { Menu } from "lucide-react";
 import { useState } from "react";
 
@@ -61,6 +62,8 @@ const App = () => {
         return <Released />;
       case 'quotes':
         return <Quotes />;
+      case 'appointments':
+        return <Appointments />;
       case 'business-purchases':
         return <BusinessPurchases />;
       case 'smart-receipt-upload':
