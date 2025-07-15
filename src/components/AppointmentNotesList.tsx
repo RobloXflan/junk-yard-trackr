@@ -18,9 +18,9 @@ interface AppointmentNote {
   telegram_sent: boolean | null;
   created_at: string;
   assigned_worker_id: string | null;
-  customer_name: string | null;
   customer_phone: string | null;
-  customer_email: string | null;
+  customer_address: string | null;
+  paperwork: string | null;
   workers?: {
     name: string;
   };
@@ -102,15 +102,15 @@ export function AppointmentNotesList({ filter }: AppointmentNotesListProps) {
     
     const price = note.estimated_price ? `$${note.estimated_price.toLocaleString()}` : "Price not set";
     
-    const customer = note.customer_name ? `Customer: ${note.customer_name}` : "";
-    const phone = note.customer_phone ? `Phone: ${note.customer_phone}` : "";
-    const email = note.customer_email ? `Email: ${note.customer_email}` : "";
+    const phone = note.customer_phone ? `📞 Phone: ${note.customer_phone}` : "";
+    const address = note.customer_address ? `📍 Address: ${note.customer_address}` : "";
+    const paperwork = note.paperwork ? `📄 Paperwork: ${note.paperwork}` : "";
     
-    const contactInfo = [customer, phone, email].filter(Boolean).join("\n");
+    const contactInfo = [phone, address, paperwork].filter(Boolean).join("\n");
     
     const message = `🚗 ${vehicle}
 💰 ${price}
-${contactInfo ? `\n👤 ${contactInfo}` : ""}
+${contactInfo ? `\n${contactInfo}` : ""}
 ${note.notes ? `\n📝 ${note.notes}` : ""}`;
 
     try {
