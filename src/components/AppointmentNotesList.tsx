@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trash2, Calendar, Phone, DollarSign, Copy, User, MapPin, FileText, Edit } from "lucide-react";
+import { Trash2, Calendar, Phone, DollarSign, Copy, User, MapPin, FileText, Edit, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
@@ -34,6 +35,7 @@ interface AppointmentNotesListProps {
 export function AppointmentNotesList({ filter, onEditNote }: AppointmentNotesListProps) {
   const [notes, setNotes] = useState<AppointmentNote[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
 
   const fetchNotes = async () => {
@@ -130,6 +132,22 @@ ${note.notes ? `\n📝 ${note.notes}` : ""}`;
     }
   };
 
+  // Filter notes based on search term
+  const filteredNotes = notes.filter((note) => {
+    if (!searchTerm) return true;
+    
+    const searchLower = searchTerm.toLowerCase();
+    const vehicle = `${note.vehicle_year || ''} ${note.vehicle_make || ''} ${note.vehicle_model || ''}`.toLowerCase();
+    const customerInfo = `${note.customer_phone || ''} ${note.customer_address || ''}`.toLowerCase();
+    const noteText = (note.notes || '').toLowerCase();
+    const workerName = (note.workers?.name || '').toLowerCase();
+    
+    return vehicle.includes(searchLower) || 
+           customerInfo.includes(searchLower) || 
+           noteText.includes(searchLower) ||
+           workerName.includes(searchLower);
+  });
+
   useEffect(() => {
     fetchNotes();
   }, []);
@@ -150,110 +168,129 @@ ${note.notes ? `\n📝 ${note.notes}` : ""}`;
 
   return (
     <div className="space-y-4">
-      {notes.map((note) => (
-        <Card key={note.id}>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">
-                {note.vehicle_year && note.vehicle_make && note.vehicle_model ? 
-                  `${note.vehicle_year} ${note.vehicle_make} ${note.vehicle_model}` : 
-                  "Vehicle Info Incomplete"
-                }
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                {note.workers?.name && (
-                  <Badge variant="default">
-                    <User className="w-3 h-3 mr-1" />
-                    Driver: {note.workers.name}
-                  </Badge>
-                )}
-                {note.appointment_booked && (
-                  <Badge variant="secondary">
-                    <Calendar className="w-3 h-3 mr-1" />
-                    Appointment Booked
-                  </Badge>
-                )}
-                {note.telegram_sent && (
-                  <Badge variant="outline">
-                    <Phone className="w-3 h-3 mr-1" />
-                    Sent to Telegram
-                  </Badge>
-                )}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onEditNote?.(note)}
-                  className="text-muted-foreground hover:text-foreground"
-                  title="Edit/Use as Template"
-                >
-                  <Edit className="w-4 h-4" />
-                </Button>
-                {filter === 'pending' && (
+      {/* Search Bar */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+        <Input
+          placeholder="Search notes by vehicle, customer info, or notes..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+      
+      {filteredNotes.length === 0 && searchTerm ? (
+        <Card>
+          <CardContent className="py-8 text-center text-muted-foreground">
+            No notes found matching "{searchTerm}".
+          </CardContent>
+        </Card>
+      ) : (
+        filteredNotes.map((note) => (
+          <Card key={note.id}>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">
+                  {note.vehicle_year && note.vehicle_make && note.vehicle_model ? 
+                    `${note.vehicle_year} ${note.vehicle_make} ${note.vehicle_model}` : 
+                    "Vehicle Info Incomplete"
+                  }
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  {note.workers?.name && (
+                    <Badge variant="default">
+                      <User className="w-3 h-3 mr-1" />
+                      Driver: {note.workers.name}
+                    </Badge>
+                  )}
+                  {note.appointment_booked && (
+                    <Badge variant="secondary">
+                      <Calendar className="w-3 h-3 mr-1" />
+                      Appointment Booked
+                    </Badge>
+                  )}
+                  {note.telegram_sent && (
+                    <Badge variant="outline">
+                      <Phone className="w-3 h-3 mr-1" />
+                      Sent to Telegram
+                    </Badge>
+                  )}
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => copyAppointmentMessage(note)}
+                    onClick={() => onEditNote?.(note)}
                     className="text-muted-foreground hover:text-foreground"
+                    title="Edit/Use as Template"
                   >
-                    <Copy className="w-4 h-4" />
+                    <Edit className="w-4 h-4" />
                   </Button>
+                  {filter === 'pending' && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => copyAppointmentMessage(note)}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => deleteNote(note.id)}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Price Section */}
+              {note.estimated_price && (
+                <div className="flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-muted-foreground" />
+                  <span className="font-medium">${note.estimated_price.toLocaleString()}</span>
+                </div>
+              )}
+
+              {/* Customer Contact Information */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {note.customer_phone && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm">{note.customer_phone}</span>
+                  </div>
                 )}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => deleteNote(note.id)}
-                  className="text-destructive hover:text-destructive"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
+                {note.customer_address && (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm">{note.customer_address}</span>
+                  </div>
+                )}
+                {note.paperwork && (
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm capitalize">{note.paperwork}</span>
+                  </div>
+                )}
               </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Price Section */}
-            {note.estimated_price && (
-              <div className="flex items-center gap-2">
-                <DollarSign className="w-4 h-4 text-muted-foreground" />
-                <span className="font-medium">${note.estimated_price.toLocaleString()}</span>
-              </div>
-            )}
 
-            {/* Customer Contact Information */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {note.customer_phone && (
-                <div className="flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm">{note.customer_phone}</span>
+              {/* Notes Section */}
+              {note.notes && (
+                <div className="bg-muted p-3 rounded-md">
+                  <p className="text-sm whitespace-pre-wrap">{note.notes}</p>
                 </div>
               )}
-              {note.customer_address && (
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm">{note.customer_address}</span>
-                </div>
-              )}
-              {note.paperwork && (
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm capitalize">{note.paperwork}</span>
-                </div>
-              )}
-            </div>
 
-            {/* Notes Section */}
-            {note.notes && (
-              <div className="bg-muted p-3 rounded-md">
-                <p className="text-sm whitespace-pre-wrap">{note.notes}</p>
+              {/* Created Date */}
+              <div className="text-xs text-muted-foreground">
+                Created: {format(new Date(note.created_at), "MMM d, yyyy 'at' h:mm a")}
               </div>
-            )}
-
-            {/* Created Date */}
-            <div className="text-xs text-muted-foreground">
-              Created: {format(new Date(note.created_at), "MMM d, yyyy 'at' h:mm a")}
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+            </CardContent>
+          </Card>
+        ))
+      )}
     </div>
   );
 }
