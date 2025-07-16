@@ -106,11 +106,14 @@ export function AddressAutocomplete({ value, onChange, placeholder, className }:
         q: enhancedQuery,
         format: 'json',
         addressdetails: '1',
-        limit: '10', // Get more results to have better filtering options
+        limit: '15', // Get more results for better options
         countrycodes: 'us',
-        // Add bounding box for Southern California (rough coordinates)
-        viewbox: '-121.0,32.5,-114.0,36.0', // West, South, East, North
-        bounded: '1'
+        // More precise bounding box for Southern California
+        viewbox: '-120.5,32.5,-116.0,35.8', // Tighter bounds
+        bounded: '1',
+        // Add structured search parameters for better accuracy
+        extratags: '1',
+        namedetails: '1'
       });
 
       const response = await fetch(
@@ -125,8 +128,27 @@ export function AddressAutocomplete({ value, onChange, placeholder, className }:
       if (response.ok) {
         const results: NominatimResult[] = await response.json();
         
+        // Sort results by relevance: prioritize exact house number matches and complete addresses
+        const sortedResults = results.sort((a, b) => {
+          // Prioritize results with house numbers and street names
+          const aHasHouseNumber = Boolean(a.address?.house_number && a.address?.road);
+          const bHasHouseNumber = Boolean(b.address?.house_number && b.address?.road);
+          
+          if (aHasHouseNumber && !bHasHouseNumber) return -1;
+          if (!aHasHouseNumber && bHasHouseNumber) return 1;
+          
+          // Prioritize results with zip codes
+          const aHasZip = Boolean(a.address?.postcode);
+          const bHasZip = Boolean(b.address?.postcode);
+          
+          if (aHasZip && !bHasZip) return -1;
+          if (!aHasZip && bHasZip) return 1;
+          
+          return 0;
+        });
+
         // Enhanced filtering: Check county, city, and state
-        const socCalResults = results.filter(result => {
+        const socCalResults = sortedResults.filter(result => {
           const county = result.address?.county;
           const city = result.address?.city;
           const state = result.address?.state;
@@ -151,7 +173,7 @@ export function AddressAutocomplete({ value, onChange, placeholder, className }:
         
         // If no SoCal results found, try fallback with just California filtering
         const finalResults = socCalResults.length > 0 ? socCalResults : 
-          results.filter(result => result.address?.state === 'California').slice(0, 5);
+          sortedResults.filter(result => result.address?.state === 'California').slice(0, 8);
         
         setSuggestions(finalResults);
         setIsOpen(finalResults.length > 0);
@@ -192,6 +214,7 @@ export function AddressAutocomplete({ value, onChange, placeholder, className }:
     const addr = result.address;
     const parts: string[] = [];
 
+    // Build address more precisely
     if (addr.house_number && addr.road) {
       parts.push(`${addr.house_number} ${addr.road}`);
     } else if (addr.road) {
@@ -202,7 +225,10 @@ export function AddressAutocomplete({ value, onChange, placeholder, className }:
       parts.push(addr.city);
     }
 
-    if (addr.state) {
+    // Use CA abbreviation instead of full state name for cleaner display
+    if (addr.state === 'California') {
+      parts.push('CA');
+    } else if (addr.state) {
       parts.push(addr.state);
     }
 
@@ -210,7 +236,14 @@ export function AddressAutocomplete({ value, onChange, placeholder, className }:
       parts.push(addr.postcode);
     }
 
-    return parts.join(', ') || result.display_name;
+    const formattedAddress = parts.join(', ');
+    
+    // Fallback to display_name if formatted address is incomplete, but clean it up
+    if (!formattedAddress || parts.length < 2) {
+      return result.display_name.split(',').slice(0, 4).join(',').trim();
+    }
+    
+    return formattedAddress;
   };
 
   return (
@@ -242,11 +275,10 @@ export function AddressAutocomplete({ value, onChange, placeholder, className }:
               <div className="font-medium text-sm">
                 {formatAddress(suggestion)}
               </div>
-              {suggestion.address.city && suggestion.address.state && (
-                <div className="text-xs text-muted-foreground mt-1">
-                  {suggestion.address.city}, {suggestion.address.state}
-                </div>
-              )}
+              <div className="text-xs text-muted-foreground mt-1">
+                {suggestion.address.county && `${suggestion.address.county} • `}
+                {suggestion.address.postcode && suggestion.address.postcode}
+              </div>
             </button>
           ))}
         </div>
