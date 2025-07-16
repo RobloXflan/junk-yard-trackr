@@ -34,7 +34,7 @@ ${appointmentData.paperwork ? `📄 Paperwork: ${appointmentData.paperwork}` : '
 📝 Notes:
 ${appointmentData.notes || 'No additional notes'}
 
-⏰ Recorded: ${new Date().toLocaleString()}`
+⏰ Recorded: ${new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles', month: 'numeric', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}`
 
     // Create inline keyboard with just copy button
     const inlineKeyboard = {
