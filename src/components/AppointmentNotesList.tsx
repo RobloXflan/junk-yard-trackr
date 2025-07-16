@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trash2, Calendar, Phone, DollarSign, Copy, User, MapPin, FileText } from "lucide-react";
+import { Trash2, Calendar, Phone, DollarSign, Copy, User, MapPin, FileText, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
@@ -28,9 +28,10 @@ interface AppointmentNote {
 
 interface AppointmentNotesListProps {
   filter: 'saved' | 'pending';
+  onEditNote?: (noteData: AppointmentNote) => void;
 }
 
-export function AppointmentNotesList({ filter }: AppointmentNotesListProps) {
+export function AppointmentNotesList({ filter, onEditNote }: AppointmentNotesListProps) {
   const [notes, setNotes] = useState<AppointmentNote[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -178,6 +179,15 @@ ${note.notes ? `\n📝 ${note.notes}` : ""}`;
                     Sent to Telegram
                   </Badge>
                 )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onEditNote?.(note)}
+                  className="text-muted-foreground hover:text-foreground"
+                  title="Edit/Use as Template"
+                >
+                  <Edit className="w-4 h-4" />
+                </Button>
                 {filter === 'pending' && (
                   <Button
                     variant="ghost"

@@ -36,29 +36,59 @@ interface VehicleData {
   model: string;
 }
 
+interface PrefillData {
+  customer_phone: string;
+  customer_address: string;
+  vehicle_year: string;
+  vehicle_make: string;
+  vehicle_model: string;
+  estimated_price: number | null;
+  notes: string;
+  paperwork: string;
+}
+
 interface AppointmentNotepadProps {
   vehicleData?: VehicleData;
   onVehicleDataChange?: (data: VehicleData) => void;
+  prefillData?: PrefillData | null;
+  onClearPrefill?: () => void;
 }
 
-export function AppointmentNotepad({ vehicleData, onVehicleDataChange }: AppointmentNotepadProps) {
+export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillData, onClearPrefill }: AppointmentNotepadProps) {
   const { toast } = useToast();
   const { quotes } = useQuotesStore();
   
   const [appointmentData, setAppointmentData] = useState<AppointmentData>({
-    customer_phone: "",
-    customer_address: "",
-    vehicle_year: vehicleData?.year || "",
-    vehicle_make: vehicleData?.make || "",
-    vehicle_model: vehicleData?.model || "",
-    estimated_price: null,
-    notes: "",
+    customer_phone: prefillData?.customer_phone || "",
+    customer_address: prefillData?.customer_address || "",
+    vehicle_year: prefillData?.vehicle_year || vehicleData?.year || "",
+    vehicle_make: prefillData?.vehicle_make || vehicleData?.make || "",
+    vehicle_model: prefillData?.vehicle_model || vehicleData?.model || "",
+    estimated_price: prefillData?.estimated_price || null,
+    notes: prefillData?.notes || "",
     appointment_booked: false,
-    paperwork: "",
+    paperwork: prefillData?.paperwork || "",
   });
 
   const [priceEstimate, setPriceEstimate] = useState<PriceEstimate | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Update form when prefillData changes
+  useEffect(() => {
+    if (prefillData) {
+      setAppointmentData({
+        customer_phone: prefillData.customer_phone,
+        customer_address: prefillData.customer_address,
+        vehicle_year: prefillData.vehicle_year,
+        vehicle_make: prefillData.vehicle_make,
+        vehicle_model: prefillData.vehicle_model,
+        estimated_price: prefillData.estimated_price,
+        notes: prefillData.notes,
+        appointment_booked: false,
+        paperwork: prefillData.paperwork,
+      });
+    }
+  }, [prefillData]);
 
   // Auto-calculate price when vehicle details change
   useEffect(() => {
@@ -150,6 +180,7 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange }: Appoint
         paperwork: "",
       });
       setPriceEstimate(null);
+      onClearPrefill?.();
 
     } catch (error) {
       console.error('Error saving notes:', error);
@@ -186,13 +217,42 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange }: Appoint
     }
   };
 
+  const clearForm = () => {
+    setAppointmentData({
+      customer_phone: "",
+      customer_address: "",
+      vehicle_year: "",
+      vehicle_make: "",
+      vehicle_model: "",
+      estimated_price: null,
+      notes: "",
+      appointment_booked: false,
+      paperwork: "",
+    });
+    setPriceEstimate(null);
+    onClearPrefill?.();
+    onVehicleDataChange?.({ year: "", make: "", model: "" });
+  };
+
   return (
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Phone className="w-5 h-5" />
-          Call Notepad
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Phone className="w-5 h-5" />
+            Call Notepad
+            {prefillData && (
+              <Badge variant="secondary" className="ml-2">
+                Editing Note
+              </Badge>
+            )}
+          </CardTitle>
+          {prefillData && (
+            <Button variant="outline" size="sm" onClick={clearForm}>
+              Clear Form
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Vehicle Information */}

@@ -12,14 +12,49 @@ interface VehicleData {
   model: string;
 }
 
+interface PrefillData {
+  customer_phone: string;
+  customer_address: string;
+  vehicle_year: string;
+  vehicle_make: string;
+  vehicle_model: string;
+  estimated_price: number | null;
+  notes: string;
+  paperwork: string;
+}
+
 export function Appointments() {
   const [vehicleData, setVehicleData] = useState<VehicleData>({
     year: "",
     make: "",
     model: ""
   });
+  
+  const [activeTab, setActiveTab] = useState("new");
+  const [prefillData, setPrefillData] = useState<PrefillData | null>(null);
 
   const hasVehicleData = vehicleData.year || vehicleData.make || vehicleData.model;
+
+  const handleEditNote = (noteData: any) => {
+    const prefill: PrefillData = {
+      customer_phone: noteData.customer_phone || "",
+      customer_address: noteData.customer_address || "",
+      vehicle_year: noteData.vehicle_year || "",
+      vehicle_make: noteData.vehicle_make || "",
+      vehicle_model: noteData.vehicle_model || "",
+      estimated_price: noteData.estimated_price,
+      notes: noteData.notes || "",
+      paperwork: noteData.paperwork || "",
+    };
+    
+    setPrefillData(prefill);
+    setVehicleData({
+      year: noteData.vehicle_year || "",
+      make: noteData.vehicle_make || "",
+      model: noteData.vehicle_model || ""
+    });
+    setActiveTab("new");
+  };
 
   return (
     <div className="space-y-6">
@@ -31,7 +66,7 @@ export function Appointments() {
         </div>
       </div>
 
-      <Tabs defaultValue="new" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="new">New Appointment</TabsTrigger>
           <TabsTrigger value="saved">Saved Notes</TabsTrigger>
@@ -45,6 +80,8 @@ export function Appointments() {
               <AppointmentNotepad 
                 vehicleData={vehicleData}
                 onVehicleDataChange={setVehicleData}
+                prefillData={prefillData}
+                onClearPrefill={() => setPrefillData(null)}
               />
             </div>
 
@@ -79,11 +116,11 @@ export function Appointments() {
         </TabsContent>
 
         <TabsContent value="saved" className="space-y-4">
-          <AppointmentNotesList filter="saved" />
+          <AppointmentNotesList filter="saved" onEditNote={handleEditNote} />
         </TabsContent>
 
         <TabsContent value="pending" className="space-y-4">
-          <AppointmentNotesList filter="pending" />
+          <AppointmentNotesList filter="pending" onEditNote={handleEditNote} />
         </TabsContent>
       </Tabs>
     </div>
