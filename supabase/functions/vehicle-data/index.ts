@@ -75,21 +75,18 @@ Deno.serve(async (req) => {
       );
       const data: NHTSAResponse<NHTSAModel> = await response.json();
       
-      // Filter out non-car/truck models (motorcycles, boats, components, etc.)
+      // Filter out only obvious non-car/truck models (motorcycles, boats, heavy equipment)
       const filterNonVehicles = (modelName: string): boolean => {
         const name = modelName.toLowerCase();
         const excludePatterns = [
-          // Motorcycles
-          'motorcycle', 'bike', 'scooter', 'chopper', 'cruiser', 'sportster', 
-          'street', 'ninja', 'rebel', 'shadow', 'vulcan', 'boulevard',
-          // Boats/Marine
-          'marine', 'outboard', 'inboard', 'boat', 'yacht', 'vessel',
-          // Components/Parts
-          'engine', 'transmission', 'motor', 'component', 'part', 'assembly',
+          // Only exclude obvious non-cars
+          'motorcycle', 'bike', 'scooter', 'chopper', 'sportster',
+          // Marine vehicles
+          'marine', 'outboard', 'boat',
           // Heavy equipment
-          'excavator', 'bulldozer', 'crane', 'loader', 'tractor', 'combine',
-          // Other non-passenger vehicles
-          'bus chassis', 'incomplete', 'cutaway', 'stripped chassis'
+          'excavator', 'bulldozer', 'crane', 'combine',
+          // Obvious components
+          'engine', 'transmission'
         ];
         
         return !excludePatterns.some(pattern => name.includes(pattern));
