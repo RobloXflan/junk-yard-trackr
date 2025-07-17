@@ -20,6 +20,7 @@ import { BusinessPurchases } from "@/pages/BusinessPurchases";
 import { SmartReceiptUpload } from "@/pages/SmartReceiptUpload";
 import { Appointments } from "@/pages/Appointments";
 import TelegramSetup from "@/pages/TelegramSetup";
+import TelegramDebug from "@/pages/TelegramDebug";
 import { Menu } from "lucide-react";
 import { useState } from "react";
 
@@ -71,6 +72,8 @@ const App = () => {
         return <SmartReceiptUpload />;
       case 'telegram-setup':
         return <TelegramSetup />;
+      case 'telegram-debug':
+        return <TelegramDebug />;
       case 'metrics':
         return <Metrics />;
       case 'admin':
