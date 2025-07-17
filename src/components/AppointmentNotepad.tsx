@@ -314,7 +314,7 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
         </div>
 
         {/* Customer Information */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="space-y-4">
             <div>
               <Label htmlFor="customer_phone" className="flex items-center gap-2">
@@ -328,18 +328,19 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
                 placeholder="(555) 123-4567"
               />
             </div>
-            <div>
-              <Label htmlFor="customer_address" className="flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
-                Address
-              </Label>
-              <AddressAutocomplete
-                value={appointmentData.customer_address}
-                onChange={(value) => setAppointmentData(prev => ({ ...prev, customer_address: value }))}
-                placeholder="Start typing an address..."
-              />
-            </div>
           </div>
+          <div className="md:col-span-2">
+            <Label htmlFor="customer_address" className="flex items-center gap-2">
+              <MapPin className="w-4 h-4" />
+              Address
+            </Label>
+            <AddressAutocomplete
+              value={appointmentData.customer_address}
+              onChange={(value) => setAppointmentData(prev => ({ ...prev, customer_address: value }))}
+              placeholder="Start typing an address..."
+            />
+          </div>
+          <div></div>
           <div>
             <Label htmlFor="paperwork" className="flex items-center gap-2">
               <FileText className="w-4 h-4" />
