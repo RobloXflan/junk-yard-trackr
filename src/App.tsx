@@ -215,6 +215,46 @@ const App = () => {
                       Quotes
                     </button>
                     <button
+                      onClick={() => setCurrentPage("appointments")}
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                        currentPage === "appointments"
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      }`}
+                    >
+                      Appointments
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage("business-purchases")}
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                        currentPage === "business-purchases"
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      }`}
+                    >
+                      Business Purchases
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage("telegram-setup")}
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                        currentPage === "telegram-setup"
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      }`}
+                    >
+                      Telegram Setup
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage("telegram-debug")}
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                        currentPage === "telegram-debug"
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      }`}
+                    >
+                      Telegram Debug
+                    </button>
+                    <button
                       onClick={() => setCurrentPage("metrics")}
                       className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                         currentPage === "metrics"
