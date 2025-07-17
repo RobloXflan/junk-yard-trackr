@@ -280,25 +280,35 @@ ${appointment.paperwork ? `📄 Paperwork: ${appointment.paperwork}` : ''}
     // Try to answer callback if we have the data
     try {
       const botToken = Deno.env.get('TELEGRAM_BOT_TOKEN')
-      if (botToken && req.body) {
-        const body = await req.clone().text()
-        const update = JSON.parse(body)
-        if (update.callback_query) {
-          await fetch(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              callback_query_id: update.callback_query.id,
-              text: '❌ Error processing request',
-              show_alert: true
+      if (botToken) {
+        // Try to get callback query from the request
+        const body = await req.text()
+        if (body) {
+          const update = JSON.parse(body)
+          if (update.callback_query) {
+            await fetch(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                callback_query_id: update.callback_query.id,
+                text: '❌ Error processing request',
+                show_alert: true
+              })
             })
-          })
+            console.log('✅ Answered callback query on error')
+          }
         }
       }
     } catch (callbackError) {
       console.error('Failed to answer callback on error:', callbackError)
     }
     
-    return new Response('OK', { status: 200 })
+    return new Response(JSON.stringify({ success: false, error: 'Internal error' }), { 
+      status: 200,
+      headers: { 
+        'Content-Type': 'application/json',
+        ...corsHeaders
+      }
+    })
   }
 })
