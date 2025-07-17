@@ -315,32 +315,30 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
 
         {/* Customer Information */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="customer_phone" className="flex items-center gap-2">
-                <Phone className="w-4 h-4" />
-                Phone Number
-              </Label>
-              <Input
-                id="customer_phone"
-                value={appointmentData.customer_phone}
-                onChange={(e) => setAppointmentData(prev => ({ ...prev, customer_phone: e.target.value }))}
-                placeholder="(555) 123-4567"
-              />
-            </div>
-            <div>
-              <Label htmlFor="customer_address" className="flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
-                Address
-              </Label>
-              <AddressAutocomplete
-                value={appointmentData.customer_address}
-                onChange={(value) => setAppointmentData(prev => ({ ...prev, customer_address: value }))}
-                placeholder="Start typing an address..."
-              />
-            </div>
+          <div>
+            <Label htmlFor="customer_phone" className="flex items-center gap-2">
+              <Phone className="w-4 h-4" />
+              Phone Number
+            </Label>
+            <Input
+              id="customer_phone"
+              value={appointmentData.customer_phone}
+              onChange={(e) => setAppointmentData(prev => ({ ...prev, customer_phone: e.target.value }))}
+              placeholder="(555) 123-4567"
+            />
           </div>
           <div className="md:col-span-2">
+            <Label htmlFor="customer_address" className="flex items-center gap-2">
+              <MapPin className="w-4 h-4" />
+              Address
+            </Label>
+            <AddressAutocomplete
+              value={appointmentData.customer_address}
+              onChange={(value) => setAppointmentData(prev => ({ ...prev, customer_address: value }))}
+              placeholder="Start typing an address..."
+            />
+          </div>
+          <div>
             <Label htmlFor="paperwork" className="flex items-center gap-2">
               <FileText className="w-4 h-4" />
               Paperwork
@@ -363,7 +361,6 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
               </SelectContent>
             </Select>
           </div>
-          <div></div>
         </div>
 
         {/* Price Estimate Display */}
