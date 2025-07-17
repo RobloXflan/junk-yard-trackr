@@ -39,21 +39,22 @@ Deno.serve(async (req) => {
     console.log('Vehicle data request:', { action, make, year, query });
 
     if (action === 'makes') {
-      // Fetch all vehicle makes
-      const response = await fetch('https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=json');
-      const data: NHTSAResponse<NHTSAMake> = await response.json();
+      // Use predefined list of common makes
+      const allMakes = [
+        'Acura', 'Alfa Romeo', 'Audi', 'BMW', 'Buick', 'Cadillac', 'Chevy',
+        'Chrysler', 'Dodge', 'Fiat', 'Ford', 'Genesis', 'GMC', 'Honda',
+        'Hyundai', 'Infiniti', 'Jaguar', 'Jeep', 'Kia', 'Land Rover',
+        'Lexus', 'Lincoln', 'Maserati', 'Mazda', 'Mercedes-Benz', 'MINI',
+        'Mitsubishi', 'Nissan', 'Porsche', 'RAM', 'Subaru', 'Tesla',
+        'Toyota', 'Volkswagen', 'Volvo'
+      ];
       
-      let makes = data.Results.map(item => {
-        // Shorten common long manufacturer names
-        const makeName = item.Make_Name;
-        if (makeName === 'CHEVROLET') return 'Chevy';
-        return makeName;
-      }).sort();
+      let makes = [...allMakes];
       
       // Filter by query if provided
       if (query) {
         makes = makes.filter(makeName => 
-          makeName.toLowerCase().includes(query)
+          makeName.toLowerCase().includes(query.toLowerCase())
         );
       }
       
