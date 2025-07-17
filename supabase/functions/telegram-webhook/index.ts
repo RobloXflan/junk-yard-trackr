@@ -150,12 +150,11 @@ serve(async (req) => {
       console.log('📱 Sending SMS to Dante...')
       
       try {
-        const twilioAccountSid = Deno.env.get('TWILIO_ACCOUNT_SID')
-        const twilioAuthToken = Deno.env.get('TWILIO_AUTH_TOKEN')
-        const twilioPhoneNumber = Deno.env.get('TWILIO_PHONE_NUMBER')
+        const clicksendUsername = Deno.env.get('CLICKSEND_USERNAME')
+        const clicksendApiKey = Deno.env.get('CLICKSEND_API_KEY')
         
-        if (!twilioAccountSid || !twilioAuthToken || !twilioPhoneNumber) {
-          console.error('❌ Missing Twilio configuration')
+        if (!clicksendUsername || !clicksendApiKey) {
+          console.error('❌ Missing ClickSend configuration')
           smsStatus = ' (SMS failed - missing config)'
         } else {
           // Format SMS message with appointment details
@@ -180,29 +179,32 @@ ${appointment.paperwork ? `📄 Paperwork: ${appointment.paperwork}` : ''}
   minute: '2-digit'
 })} PST`
 
-          // Send SMS via Twilio
-          console.log('📤 Sending SMS via Twilio...')
-          const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}/Messages.json`
-          const twilioResponse = await fetch(twilioUrl, {
+          // Send SMS via ClickSend
+          console.log('📤 Sending SMS via ClickSend...')
+          const clicksendResponse = await fetch('https://rest.clicksend.com/v3/sms/send', {
             method: 'POST',
             headers: {
-              'Authorization': `Basic ${btoa(`${twilioAccountSid}:${twilioAuthToken}`)}`,
-              'Content-Type': 'application/x-www-form-urlencoded',
+              'Authorization': `Basic ${btoa(`${clicksendUsername}:${clicksendApiKey}`)}`,
+              'Content-Type': 'application/json',
             },
-            body: new URLSearchParams({
-              From: twilioPhoneNumber,
-              To: '+13233527880', // Dante's phone number
-              Body: smsMessage
+            body: JSON.stringify({
+              messages: [
+                {
+                  to: '+13233527880', // Dante's phone number
+                  body: smsMessage,
+                  from: 'AutoYard'
+                }
+              ]
             })
           })
 
-          if (twilioResponse.ok) {
-            const twilioResult = await twilioResponse.json()
-            console.log('✅ SMS sent successfully:', twilioResult.sid)
+          if (clicksendResponse.ok) {
+            const clicksendResult = await clicksendResponse.json()
+            console.log('✅ SMS sent successfully via ClickSend:', clicksendResult)
             smsStatus = ' + SMS Sent ✓'
           } else {
-            const twilioError = await twilioResponse.text()
-            console.error('❌ Failed to send SMS:', twilioError)
+            const clicksendError = await clicksendResponse.text()
+            console.error('❌ Failed to send SMS via ClickSend:', clicksendError)
             smsStatus = ' (SMS failed)'
           }
         }
