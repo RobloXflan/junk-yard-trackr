@@ -36,11 +36,11 @@ ${appointmentData.notes || 'No additional notes'}
 
 ⏰ Recorded: ${new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles', month: 'numeric', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}`
 
-    // Create inline keyboard with just copy button
+    // Create inline keyboard with Dante button
     const inlineKeyboard = {
       inline_keyboard: [
         [
-          { text: "📋 Copy to Clipboard", callback_data: `copy_appointment_${appointmentData.id}` }
+          { text: "Dante", callback_data: `assign_worker_dante_${appointmentData.id}` }
         ]
       ]
     }
