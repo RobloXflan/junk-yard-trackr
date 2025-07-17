@@ -43,7 +43,12 @@ Deno.serve(async (req) => {
       const response = await fetch('https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=json');
       const data: NHTSAResponse<NHTSAMake> = await response.json();
       
-      let makes = data.Results.map(item => item.Make_Name).sort();
+      let makes = data.Results.map(item => {
+        // Shorten common long manufacturer names
+        const makeName = item.Make_Name;
+        if (makeName === 'CHEVROLET') return 'Chevy';
+        return makeName;
+      }).sort();
       
       // Filter by query if provided
       if (query) {
