@@ -7,26 +7,69 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Helper function to format phone numbers
+// Helper function to format phone numbers for display
 function formatPhoneNumber(phone: string | null): string {
-  if (!phone) return 'N/A'
+  console.log('📞 Raw phone number:', JSON.stringify(phone))
+  
+  if (!phone || phone.trim() === '') {
+    console.log('📞 Phone is empty/null, returning N/A')
+    return 'N/A'
+  }
   
   // Remove all non-digit characters
   const digits = phone.replace(/\D/g, '')
+  console.log('📞 Extracted digits:', digits)
+  
+  if (digits.length === 0) {
+    console.log('📞 No digits found, returning N/A')
+    return 'N/A'
+  }
   
   // Check if it's a 10-digit US number
   if (digits.length === 10) {
-    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
+    const formatted = `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
+    console.log('📞 Formatted 10-digit number:', formatted)
+    return formatted
   }
   
   // Check if it's an 11-digit number starting with 1 (US country code)
   if (digits.length === 11 && digits.startsWith('1')) {
     const tenDigits = digits.slice(1)
-    return `(${tenDigits.slice(0, 3)}) ${tenDigits.slice(3, 6)}-${tenDigits.slice(6)}`
+    const formatted = `(${tenDigits.slice(0, 3)}) ${tenDigits.slice(3, 6)}-${tenDigits.slice(6)}`
+    console.log('📞 Formatted 11-digit number:', formatted)
+    return formatted
   }
   
-  // Return original if it doesn't match expected patterns
+  // For other lengths, return original
+  console.log('📞 Unusual length, returning original:', phone)
   return phone
+}
+
+// Helper function to convert phone to E.164 format for ClickSend
+function toE164Format(phone: string | null): string {
+  if (!phone || phone.trim() === '') {
+    return '+13233527880' // Default to Dante's number if customer phone is invalid
+  }
+  
+  // Remove all non-digit characters
+  const digits = phone.replace(/\D/g, '')
+  
+  if (digits.length === 0) {
+    return '+13233527880' // Default if no digits
+  }
+  
+  // If it's a 10-digit US number, add +1
+  if (digits.length === 10) {
+    return `+1${digits}`
+  }
+  
+  // If it's an 11-digit number starting with 1, add +
+  if (digits.length === 11 && digits.startsWith('1')) {
+    return `+${digits}`
+  }
+  
+  // For other formats, assume US and add +1
+  return `+1${digits}`
 }
 
 serve(async (req) => {
@@ -201,7 +244,7 @@ ${appointment.paperwork ? `📄 Paperwork: ${appointment.paperwork}` : ''}
   minute: '2-digit'
 })} PST`
 
-          // Send SMS via ClickSend
+          // Send SMS via ClickSend with proper E.164 formatting
           console.log('📤 Sending SMS via ClickSend...')
           const clicksendResponse = await fetch('https://rest.clicksend.com/v3/sms/send', {
             method: 'POST',
@@ -212,7 +255,7 @@ ${appointment.paperwork ? `📄 Paperwork: ${appointment.paperwork}` : ''}
             body: JSON.stringify({
               messages: [
                 {
-                  to: '+13233527880', // Dante's phone number
+                  to: toE164Format('+13233527880'), // Dante's phone number in E.164 format
                   body: smsMessage,
                   from: 'AutoYard'
                 }
