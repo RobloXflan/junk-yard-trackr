@@ -1,6 +1,8 @@
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { VehicleAutocomplete } from "@/components/VehicleAutocomplete";
+import { useState, useEffect } from "react";
 
 interface VehicleDetailsProps {
   formData: {
@@ -14,6 +16,25 @@ interface VehicleDetailsProps {
 }
 
 export function VehicleDetails({ formData, onInputChange }: VehicleDetailsProps) {
+  const [selectedMakeId, setSelectedMakeId] = useState<number | undefined>();
+
+  // Find makeId when make changes
+  useEffect(() => {
+    if (formData.make) {
+      // This will be populated by the autocomplete selection
+      // For now, we'll let the model autocomplete handle the search
+      setSelectedMakeId(undefined);
+    }
+  }, [formData.make]);
+
+  const handleMakeChange = (value: string) => {
+    onInputChange("make", value);
+    // Clear model when make changes
+    if (formData.model && value !== formData.make) {
+      onInputChange("model", "");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -31,22 +52,26 @@ export function VehicleDetails({ formData, onInputChange }: VehicleDetailsProps)
         </div>
         <div className="space-y-2">
           <Label htmlFor="make" className="text-foreground font-medium">Make *</Label>
-          <Input
+          <VehicleAutocomplete
             id="make"
             placeholder="Honda"
             value={formData.make}
-            onChange={(e) => onInputChange("make", e.target.value)}
+            onChange={handleMakeChange}
+            type="make"
             required
             className="border-border focus:border-primary text-foreground"
           />
         </div>
         <div className="space-y-2">
           <Label htmlFor="model" className="text-foreground font-medium">Model *</Label>
-          <Input
+          <VehicleAutocomplete
             id="model"
             placeholder="Civic"
             value={formData.model}
-            onChange={(e) => onInputChange("model", e.target.value)}
+            onChange={(value) => onInputChange("model", value)}
+            type="model"
+            makeId={selectedMakeId}
+            year={formData.year}
             required
             className="border-border focus:border-primary text-foreground"
           />
