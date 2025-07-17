@@ -328,6 +328,29 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
                 placeholder="(555) 123-4567"
               />
             </div>
+            <div>
+              <Label htmlFor="paperwork" className="flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Paperwork
+              </Label>
+              <Select
+                value={appointmentData.paperwork}
+                onValueChange={(value) => setAppointmentData(prev => ({ ...prev, paperwork: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select paperwork type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="title">Title</SelectItem>
+                  <SelectItem value="reg">Registration</SelectItem>
+                  <SelectItem value="name">Name</SelectItem>
+                  <SelectItem value="license">License</SelectItem>
+                  <SelectItem value="junkslip">Junk Slip</SelectItem>
+                  <SelectItem value="no-paperwork">No Paperwork</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="md:col-span-2">
             <Label htmlFor="customer_address" className="flex items-center gap-2">
@@ -341,29 +364,6 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
             />
           </div>
           <div></div>
-          <div>
-            <Label htmlFor="paperwork" className="flex items-center gap-2">
-              <FileText className="w-4 h-4" />
-              Paperwork
-            </Label>
-            <Select
-              value={appointmentData.paperwork}
-              onValueChange={(value) => setAppointmentData(prev => ({ ...prev, paperwork: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select paperwork type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="title">Title</SelectItem>
-                <SelectItem value="reg">Registration</SelectItem>
-                <SelectItem value="name">Name</SelectItem>
-                <SelectItem value="license">License</SelectItem>
-                <SelectItem value="junkslip">Junk Slip</SelectItem>
-                <SelectItem value="no-paperwork">No Paperwork</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </div>
 
         {/* Price Estimate Display */}
