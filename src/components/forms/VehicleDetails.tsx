@@ -1,6 +1,7 @@
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { VehicleAutocomplete } from "@/components/VehicleAutocomplete";
 
 interface VehicleDetailsProps {
   formData: {
@@ -14,6 +15,14 @@ interface VehicleDetailsProps {
 }
 
 export function VehicleDetails({ formData, onInputChange }: VehicleDetailsProps) {
+  // Clear model when make changes
+  const handleMakeChange = (value: string) => {
+    onInputChange("make", value);
+    if (formData.model) {
+      onInputChange("model", "");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -31,24 +40,28 @@ export function VehicleDetails({ formData, onInputChange }: VehicleDetailsProps)
         </div>
         <div className="space-y-2">
           <Label htmlFor="make" className="text-foreground font-medium">Make *</Label>
-          <Input
+          <VehicleAutocomplete
             id="make"
-            placeholder="Honda"
+            placeholder="Honda, Toyota, Ford..."
             value={formData.make}
-            onChange={(e) => onInputChange("make", e.target.value)}
+            onChange={handleMakeChange}
             required
             className="border-border focus:border-primary text-foreground"
+            type="make"
           />
         </div>
         <div className="space-y-2">
           <Label htmlFor="model" className="text-foreground font-medium">Model *</Label>
-          <Input
+          <VehicleAutocomplete
             id="model"
-            placeholder="Civic"
+            placeholder="Civic, Camry, F-150..."
             value={formData.model}
-            onChange={(e) => onInputChange("model", e.target.value)}
+            onChange={(value) => onInputChange("model", value)}
             required
             className="border-border focus:border-primary text-foreground"
+            type="model"
+            year={formData.year}
+            make={formData.make}
           />
         </div>
       </div>
