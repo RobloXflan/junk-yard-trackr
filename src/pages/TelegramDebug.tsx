@@ -55,7 +55,10 @@ export default function TelegramDebug() {
         }
       };
 
-      const { data, error } = await supabase.functions.invoke('telegram-webhook', { body: testData });
+      const { data, error } = await supabase.functions.invoke('telegram-webhook', { 
+        body: JSON.stringify(testData),
+        headers: { 'Content-Type': 'application/json' }
+      });
       
       console.log('📤 Test result:', { data, error });
       
