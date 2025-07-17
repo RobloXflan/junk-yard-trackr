@@ -278,7 +278,10 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
             />
           </div>
           <div>
-            <Label htmlFor="vehicle_make">Make</Label>
+            <Label htmlFor="vehicle_make" className="flex items-center gap-2">
+              <Car className="w-4 h-4" />
+              Make
+            </Label>
             <Input
               id="vehicle_make"
               value={appointmentData.vehicle_make}
@@ -295,7 +298,10 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
             />
           </div>
           <div>
-            <Label htmlFor="vehicle_model">Model</Label>
+            <Label htmlFor="vehicle_model" className="flex items-center gap-2">
+              <Car className="w-4 h-4" />
+              Model
+            </Label>
             <Input
               id="vehicle_model"
               value={appointmentData.vehicle_model}
