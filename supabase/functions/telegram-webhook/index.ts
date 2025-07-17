@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0'
 
@@ -44,7 +45,7 @@ serve(async (req) => {
       })
     }
 
-    const workerName = parts[2] // angel, chino, or dante
+    const workerName = parts[2] // dante
     const appointmentId = parts[3]
 
     console.log(`Assigning appointment ${appointmentId} to worker ${workerName}`)
@@ -73,6 +74,18 @@ serve(async (req) => {
 
     const worker = workers[0]
 
+    // Get the full appointment details for SMS
+    const { data: appointment, error: appointmentError } = await supabase
+      .from('appointment_notes')
+      .select('*')
+      .eq('id', appointmentId)
+      .single()
+
+    if (appointmentError) {
+      console.error('Error fetching appointment:', appointmentError)
+      throw new Error('Failed to fetch appointment details')
+    }
+
     // Update the appointment with the assigned worker
     const { error: updateError } = await supabase
       .from('appointment_notes')
@@ -84,6 +97,63 @@ serve(async (req) => {
       throw new Error('Failed to assign worker to appointment')
     }
 
+    // Send SMS to Dante if he's being assigned
+    let smsStatus = ''
+    if (workerName.toLowerCase() === 'dante') {
+      try {
+        const twilioAccountSid = Deno.env.get('TWILIO_ACCOUNT_SID')
+        const twilioAuthToken = Deno.env.get('TWILIO_AUTH_TOKEN')
+        const twilioPhoneNumber = Deno.env.get('TWILIO_PHONE_NUMBER')
+        
+        if (!twilioAccountSid || !twilioAuthToken || !twilioPhoneNumber) {
+          console.error('Missing Twilio configuration')
+          smsStatus = ' (SMS failed - missing config)'
+        } else {
+          // Format SMS message with appointment details
+          const smsMessage = `🚗 NEW APPOINTMENT ASSIGNED TO YOU
+
+📞 Phone: ${appointment.customer_phone || 'N/A'}
+${appointment.customer_address ? `📍 Address: ${appointment.customer_address}` : ''}
+${appointment.paperwork ? `📄 Paperwork: ${appointment.paperwork}` : ''}
+
+🚙 Vehicle: ${appointment.vehicle_year || 'N/A'} ${appointment.vehicle_make || 'N/A'} ${appointment.vehicle_model || 'N/A'}
+💰 Price: ${appointment.estimated_price ? `$${appointment.estimated_price}` : 'N/A'}
+
+📝 Notes: ${appointment.notes || 'No additional notes'}
+
+⏰ Time: ${new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' })}`
+
+          // Send SMS via Twilio
+          const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}/Messages.json`
+          const twilioResponse = await fetch(twilioUrl, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Basic ${btoa(`${twilioAccountSid}:${twilioAuthToken}`)}`,
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+              From: twilioPhoneNumber,
+              To: '+13233527880', // Dante's phone number
+              Body: smsMessage
+            })
+          })
+
+          if (twilioResponse.ok) {
+            const twilioResult = await twilioResponse.json()
+            console.log('SMS sent successfully:', twilioResult.sid)
+            smsStatus = ' + SMS Sent'
+          } else {
+            const twilioError = await twilioResponse.text()
+            console.error('Failed to send SMS:', twilioError)
+            smsStatus = ' (SMS failed)'
+          }
+        }
+      } catch (smsError) {
+        console.error('SMS sending error:', smsError)
+        smsStatus = ' (SMS error)'
+      }
+    }
+
     // Get Telegram bot token
     const botToken = Deno.env.get('TELEGRAM_BOT_TOKEN')
     if (!botToken) {
@@ -91,7 +161,7 @@ serve(async (req) => {
     }
 
     // Edit the original message to show assignment
-    const messageText = callbackQuery.message.text + `\n\n✅ Assigned to: ${worker.name}`
+    const messageText = callbackQuery.message.text + `\n\n✅ Assigned to: ${worker.name}${smsStatus}`
     
     const editResponse = await fetch(`https://api.telegram.org/bot${botToken}/editMessageText`, {
       method: 'POST',
@@ -118,7 +188,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         callback_query_id: callbackQuery.id,
-        text: `✅ Assigned to ${worker.name}`,
+        text: `✅ Assigned to ${worker.name}${smsStatus}`,
         show_alert: false
       })
     })
@@ -127,10 +197,10 @@ serve(async (req) => {
       console.error('Failed to answer callback query:', await answerResponse.text())
     }
 
-    console.log(`Successfully assigned appointment ${appointmentId} to ${worker.name}`)
+    console.log(`Successfully assigned appointment ${appointmentId} to ${worker.name}${smsStatus}`)
 
     return new Response(
-      JSON.stringify({ success: true, assigned_to: worker.name }),
+      JSON.stringify({ success: true, assigned_to: worker.name, sms_status: smsStatus }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200 
