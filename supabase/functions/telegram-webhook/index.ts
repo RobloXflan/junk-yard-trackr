@@ -7,6 +7,28 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Helper function to format phone numbers
+function formatPhoneNumber(phone: string | null): string {
+  if (!phone) return 'N/A'
+  
+  // Remove all non-digit characters
+  const digits = phone.replace(/\D/g, '')
+  
+  // Check if it's a 10-digit US number
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
+  }
+  
+  // Check if it's an 11-digit number starting with 1 (US country code)
+  if (digits.length === 11 && digits.startsWith('1')) {
+    const tenDigits = digits.slice(1)
+    return `(${tenDigits.slice(0, 3)}) ${tenDigits.slice(3, 6)}-${tenDigits.slice(6)}`
+  }
+  
+  // Return original if it doesn't match expected patterns
+  return phone
+}
+
 serve(async (req) => {
   console.log('🔔 TELEGRAM WEBHOOK TRIGGERED')
   console.log('Method:', req.method)
@@ -161,7 +183,7 @@ serve(async (req) => {
           const smsMessage = `🚗 NEW APPOINTMENT ASSIGNED TO YOU
 
 📞 Customer: ${appointment.customer_name || 'N/A'}
-📞 Phone: ${appointment.customer_phone || 'N/A'}
+📞 Phone: ${formatPhoneNumber(appointment.customer_phone)}
 ${appointment.customer_address ? `📍 Address: ${appointment.customer_address}` : ''}
 ${appointment.paperwork ? `📄 Paperwork: ${appointment.paperwork}` : ''}
 
