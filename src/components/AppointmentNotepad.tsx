@@ -319,8 +319,8 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
           </div>
         </div>
 
-        {/* Customer Information */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Customer Information - Phone and Paperwork Row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="customer_phone" className="flex items-center gap-2">
               <Phone className="w-4 h-4" />
@@ -331,17 +331,6 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
               value={appointmentData.customer_phone}
               onChange={(e) => setAppointmentData(prev => ({ ...prev, customer_phone: e.target.value }))}
               placeholder="(555) 123-4567"
-            />
-          </div>
-          <div className="md:col-span-2">
-            <Label htmlFor="customer_address" className="flex items-center gap-2">
-              <MapPin className="w-4 h-4" />
-              Address
-            </Label>
-            <AddressAutocomplete
-              value={appointmentData.customer_address}
-              onChange={(value) => setAppointmentData(prev => ({ ...prev, customer_address: value }))}
-              placeholder="Start typing an address..."
             />
           </div>
           <div>
@@ -367,6 +356,20 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
               </SelectContent>
             </Select>
           </div>
+        </div>
+
+        {/* Customer Address - Full Width Row */}
+        <div>
+          <Label htmlFor="customer_address" className="flex items-center gap-2">
+            <MapPin className="w-4 h-4" />
+            Customer Address
+          </Label>
+          <AddressAutocomplete
+            value={appointmentData.customer_address}
+            onChange={(value) => setAppointmentData(prev => ({ ...prev, customer_address: value }))}
+            placeholder="Start typing an address... (includes zip code validation)"
+            className="w-full"
+          />
         </div>
 
         {/* Price Estimate Display */}

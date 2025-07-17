@@ -4,7 +4,7 @@ import { MapPin, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
-// Google Places API response structure
+// Enhanced Google Places API response structure
 interface PlacesResult {
   display_name: string;
   formatted_address: string;
@@ -12,6 +12,8 @@ interface PlacesResult {
   main_text: string;
   secondary_text: string;
   types: string[];
+  zip_code: string | null;
+  has_zip: boolean;
 }
 
 interface AddressAutocompleteProps {
@@ -119,18 +121,34 @@ export function AddressAutocomplete({ value, onChange, placeholder, className }:
       </div>
 
       {isOpen && suggestions.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
+        <div className="absolute z-50 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-80 overflow-y-auto min-w-[400px]">
           {suggestions.map((suggestion) => (
             <button
               key={suggestion.place_id}
               onClick={() => handleSuggestionSelect(suggestion)}
-              className="w-full px-3 py-2 text-left hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none transition-colors"
+              className="w-full px-4 py-3 text-left hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none transition-colors border-b border-border last:border-b-0"
             >
-              <div className="font-medium text-sm">
-                {suggestion.main_text}
-              </div>
-              <div className="text-xs text-muted-foreground mt-1">
-                {suggestion.secondary_text}
+              <div className="flex items-center justify-between">
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-sm text-foreground truncate">
+                    {suggestion.main_text}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                    {suggestion.display_name}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+                  {suggestion.has_zip && suggestion.zip_code && (
+                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                      {suggestion.zip_code}
+                    </span>
+                  )}
+                  {!suggestion.has_zip && (
+                    <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded">
+                      No ZIP
+                    </span>
+                  )}
+                </div>
               </div>
             </button>
           ))}

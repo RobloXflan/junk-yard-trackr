@@ -18,6 +18,19 @@ interface GooglePlacesResponse {
   status: string;
 }
 
+interface PlaceDetailsResponse {
+  result: {
+    formatted_address: string;
+    address_components: Array<{
+      long_name: string;
+      short_name: string;
+      types: string[];
+    }>;
+    place_id: string;
+  };
+  status: string;
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -79,33 +92,83 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Filter and format results for Southern California
+    // Filter results for Southern California
     const southernCaliforniaCounties = [
       'los angeles', 'orange', 'riverside', 'san bernardino', 'ventura', 
       'kern', 'imperial', 'santa barbara', 'fresno', 'kings', 'tulare'
     ];
 
-    const filteredResults = data.predictions
+    const filteredPredictions = data.predictions
       .filter(prediction => {
         const description = prediction.description.toLowerCase();
         return southernCaliforniaCounties.some(county => 
           description.includes(county) || description.includes('ca') || description.includes('california')
         );
       })
-      .slice(0, 10) // Limit to 10 results
-      .map(prediction => ({
-        display_name: prediction.description,
-        formatted_address: prediction.description,
-        place_id: prediction.place_id,
-        main_text: prediction.structured_formatting.main_text,
-        secondary_text: prediction.structured_formatting.secondary_text,
-        types: prediction.types
-      }));
+      .slice(0, 5); // Limit to 5 for faster detailed lookups
 
-    console.log(`Returning ${filteredResults.length} filtered results`);
+    // Get detailed information for each prediction including zip codes
+    const detailedResults = await Promise.all(
+      filteredPredictions.map(async (prediction) => {
+        try {
+          const detailsUrl = new URL('https://maps.googleapis.com/maps/api/place/details/json');
+          detailsUrl.searchParams.set('place_id', prediction.place_id);
+          detailsUrl.searchParams.set('fields', 'formatted_address,address_components');
+          detailsUrl.searchParams.set('key', googleApiKey);
+          
+          const detailsResponse = await fetch(detailsUrl.toString());
+          const detailsData: PlaceDetailsResponse = await detailsResponse.json();
+          
+          if (detailsData.status === 'OK') {
+            // Extract zip code from address components
+            const zipComponent = detailsData.result.address_components.find(component => 
+              component.types.includes('postal_code')
+            );
+            
+            return {
+              display_name: detailsData.result.formatted_address,
+              formatted_address: detailsData.result.formatted_address,
+              place_id: prediction.place_id,
+              main_text: prediction.structured_formatting.main_text,
+              secondary_text: prediction.structured_formatting.secondary_text,
+              types: prediction.types,
+              zip_code: zipComponent?.long_name || null,
+              has_zip: !!zipComponent
+            };
+          } else {
+            // Fallback to original prediction if details fail
+            return {
+              display_name: prediction.description,
+              formatted_address: prediction.description,
+              place_id: prediction.place_id,
+              main_text: prediction.structured_formatting.main_text,
+              secondary_text: prediction.structured_formatting.secondary_text,
+              types: prediction.types,
+              zip_code: null,
+              has_zip: false
+            };
+          }
+        } catch (error) {
+          console.error('Error fetching place details for', prediction.place_id, ':', error);
+          // Fallback to original prediction
+          return {
+            display_name: prediction.description,
+            formatted_address: prediction.description,
+            place_id: prediction.place_id,
+            main_text: prediction.structured_formatting.main_text,
+            secondary_text: prediction.structured_formatting.secondary_text,
+            types: prediction.types,
+            zip_code: null,
+            has_zip: false
+          };
+        }
+      })
+    );
+
+    console.log(`Returning ${detailedResults.length} detailed results with zip codes`);
 
     return new Response(
-      JSON.stringify({ suggestions: filteredResults }),
+      JSON.stringify({ suggestions: detailedResults }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
