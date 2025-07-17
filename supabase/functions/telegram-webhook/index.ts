@@ -153,6 +153,12 @@ serve(async (req) => {
         const clicksendUsername = Deno.env.get('CLICKSEND_USERNAME')
         const clicksendApiKey = Deno.env.get('CLICKSEND_API_KEY')
         
+        console.log('🔧 ClickSend Config Check:')
+        console.log('  - Username exists:', !!clicksendUsername)
+        console.log('  - API Key exists:', !!clicksendApiKey)
+        console.log('  - Username length:', clicksendUsername?.length || 0)
+        console.log('  - API Key length:', clicksendApiKey?.length || 0)
+        
         if (!clicksendUsername || !clicksendApiKey) {
           console.error('❌ Missing ClickSend configuration')
           smsStatus = ' (SMS failed - missing config)'
@@ -181,31 +187,63 @@ ${appointment.paperwork ? `📄 Paperwork: ${appointment.paperwork}` : ''}
 
           // Send SMS via ClickSend
           console.log('📤 Sending SMS via ClickSend...')
+          console.log('📞 Target phone number: +13233527880')
+          console.log('📄 Message length:', smsMessage.length)
+          console.log('🔐 Auth header format: Basic [base64_encoded]')
+          
+          const authString = `${clicksendUsername}:${clicksendApiKey}`
+          const base64Auth = btoa(authString)
+          console.log('🔗 Auth string length:', authString.length)
+          console.log('🔒 Base64 auth length:', base64Auth.length)
+          
+          const requestPayload = {
+            messages: [
+              {
+                to: '+13233527880', // Dante's phone number
+                body: smsMessage,
+                from: 'AutoYard'
+              }
+            ]
+          }
+          
+          console.log('📦 Request payload:', JSON.stringify(requestPayload, null, 2))
+          
           const clicksendResponse = await fetch('https://rest.clicksend.com/v3/sms/send', {
             method: 'POST',
             headers: {
-              'Authorization': `Basic ${btoa(`${clicksendUsername}:${clicksendApiKey}`)}`,
+              'Authorization': `Basic ${base64Auth}`,
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-              messages: [
-                {
-                  to: '+13233527880', // Dante's phone number
-                  body: smsMessage,
-                  from: 'AutoYard'
-                }
-              ]
-            })
+            body: JSON.stringify(requestPayload)
           })
 
+          console.log('📡 ClickSend Response Status:', clicksendResponse.status)
+          console.log('📡 ClickSend Response Headers:', Object.fromEntries(clicksendResponse.headers.entries()))
+          
           if (clicksendResponse.ok) {
             const clicksendResult = await clicksendResponse.json()
-            console.log('✅ SMS sent successfully via ClickSend:', clicksendResult)
+            console.log('✅ SMS sent successfully via ClickSend:', JSON.stringify(clicksendResult, null, 2))
+            console.log('💰 Message cost:', clicksendResult.data?.total_cost || 'Unknown')
+            console.log('📊 Messages processed:', clicksendResult.data?.total_count || 'Unknown')
             smsStatus = ' + SMS Sent ✓'
           } else {
             const clicksendError = await clicksendResponse.text()
-            console.error('❌ Failed to send SMS via ClickSend:', clicksendError)
-            smsStatus = ' (SMS failed)'
+            console.error('❌ ClickSend API Error Response:', clicksendError)
+            console.error('❌ Response Status:', clicksendResponse.status)
+            console.error('❌ Response Status Text:', clicksendResponse.statusText)
+            
+            // Try to parse error as JSON for better details
+            try {
+              const errorJson = JSON.parse(clicksendError)
+              console.error('❌ Parsed ClickSend Error:', JSON.stringify(errorJson, null, 2))
+              if (errorJson.response_msg) {
+                console.error('❌ ClickSend Error Message:', errorJson.response_msg)
+              }
+            } catch (parseError) {
+              console.error('❌ Could not parse ClickSend error as JSON')
+            }
+            
+            smsStatus = ' (SMS failed - see logs)'
           }
         }
       } catch (smsError) {
