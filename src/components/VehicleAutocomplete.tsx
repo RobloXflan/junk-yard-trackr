@@ -34,6 +34,26 @@ export function VehicleAutocomplete({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const fetchSuggestions = async (query: string) => {
+    // For model field on focus without query, fetch all models
+    if (type === 'model' && !query && make && year) {
+      setIsLoading(true);
+      try {
+        const url = `https://lvqvoigbdqhruudmfcou.supabase.co/functions/v1/vehicle-data?action=model&make=${encodeURIComponent(make)}&year=${year}`;
+        const response = await fetch(url);
+        const result = await response.json();
+        
+        if (result.models) {
+          setSuggestions(result.models);
+        }
+      } catch (error) {
+        console.error('Error fetching vehicle suggestions:', error);
+        setSuggestions([]);
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
     if (query.length < 1) {
       setSuggestions([]);
       return;
@@ -42,21 +62,11 @@ export function VehicleAutocomplete({
     setIsLoading(true);
 
     try {
-      let url = `https://lvqvoigbdqhruudmfcou.supabase.co/functions/v1/vehicle-data?action=${type}&query=${encodeURIComponent(query)}`;
+      let url = `https://lvqvoigbdqhruudmfcou.supabase.co/functions/v1/vehicle-data?action=${type === 'make' ? 'makes' : 'models'}&query=${encodeURIComponent(query)}`;
       
       if (type === 'model' && make && year) {
         url += `&make=${encodeURIComponent(make)}&year=${year}`;
       }
-
-      const { data, error } = await supabase.functions.invoke('vehicle-data', {
-        body: null,
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (error) throw error;
 
       const response = await fetch(url);
       const result = await response.json();
@@ -137,8 +147,10 @@ export function VehicleAutocomplete({
   };
 
   const handleFocus = () => {
-    if (suggestions.length > 0) {
-      setIsOpen(true);
+    setIsOpen(true);
+    // For model field, fetch all models when focused if make and year are available
+    if (type === 'model' && make && year && suggestions.length === 0) {
+      fetchSuggestions('');
     }
   };
 

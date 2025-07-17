@@ -78,10 +78,11 @@ Deno.serve(async (req) => {
         );
       }
       
-      // Limit to 15 results for performance
-      models = models.slice(0, 15);
+      // Limit results - more for no query (showing all), fewer for filtered search
+      const limit = query ? 15 : 50;
+      models = models.slice(0, limit);
       
-      console.log(`Returning ${models.length} models for ${make} ${year}`);
+      console.log(`Returning ${models.length} models for ${make} ${year}${query ? ` (filtered by "${query}")` : ' (all models)'}`);
       
       return new Response(JSON.stringify({ models }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
