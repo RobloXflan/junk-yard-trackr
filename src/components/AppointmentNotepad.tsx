@@ -352,6 +352,7 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
               </Select>
             </div>
           </div>
+          <div></div>
           <div>
             <Label htmlFor="customer_address" className="flex items-center gap-2">
               <MapPin className="w-4 h-4" />
@@ -363,7 +364,6 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
               placeholder="Start typing an address..."
             />
           </div>
-          <div></div>
         </div>
 
         {/* Price Estimate Display */}
