@@ -57,6 +57,7 @@ interface AppointmentNotepadProps {
 }
 
 export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillData, onClearPrefill }: AppointmentNotepadProps) {
+  console.log('AppointmentNotepad component is rendering');
   const { toast } = useToast();
   const { quotes } = useQuotesStore();
   
@@ -334,7 +335,10 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setShowVoiceAssistant(!showVoiceAssistant)}
+              onClick={() => {
+                console.log('Voice Assistant button clicked, current state:', showVoiceAssistant);
+                setShowVoiceAssistant(!showVoiceAssistant);
+              }}
               className="flex items-center gap-2"
             >
               <Mic className="w-4 h-4" />
