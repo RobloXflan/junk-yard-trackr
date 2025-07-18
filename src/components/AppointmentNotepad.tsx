@@ -6,9 +6,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Send, Save, Phone, Car, DollarSign, FileText, MapPin } from "lucide-react";
+import { Send, Save, Phone, Car, DollarSign, FileText, MapPin, Mic } from "lucide-react";
 import { AddressAutocomplete } from "./AddressAutocomplete";
 import { VehicleAutocomplete } from "./VehicleAutocomplete";
+import VoiceAssistant from "./VoiceAssistant";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQuotesStore } from "@/hooks/useQuotesStore";
@@ -73,6 +74,8 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
 
   const [priceEstimate, setPriceEstimate] = useState<PriceEstimate | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentAppointmentId, setCurrentAppointmentId] = useState<string | null>(null);
+  const [showVoiceAssistant, setShowVoiceAssistant] = useState(false);
 
   // Update form when prefillData changes
   useEffect(() => {
@@ -158,6 +161,11 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
 
       if (error) throw error;
 
+      // Store the appointment ID for voice assistant
+      if (data) {
+        setCurrentAppointmentId(data.id);
+      }
+
       if (withAppointment && data) {
         // Send to Telegram with the appointment ID
         await sendToTelegram(data.id);
@@ -231,6 +239,66 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
     });
   };
 
+  const handleVoiceDataExtracted = (extractedData: any[]) => {
+    console.log('Voice data extracted:', extractedData);
+    
+    extractedData.forEach(item => {
+      if (item.confidence_score < 0.6) return; // Only use high-confidence extractions
+      
+      switch (item.field_name) {
+        case 'vehicle_year':
+          setAppointmentData(prev => ({ ...prev, vehicle_year: item.extracted_value }));
+          break;
+        case 'vehicle_make':
+          setAppointmentData(prev => ({ ...prev, vehicle_make: item.extracted_value }));
+          break;
+        case 'vehicle_model':
+          setAppointmentData(prev => ({ ...prev, vehicle_model: item.extracted_value }));
+          break;
+        case 'customer_phone':
+          setAppointmentData(prev => ({ ...prev, customer_phone: item.extracted_value }));
+          break;
+        case 'customer_address':
+          setAppointmentData(prev => ({ ...prev, customer_address: item.extracted_value }));
+          break;
+        case 'offered_price':
+          setAppointmentData(prev => ({ ...prev, estimated_price: parseFloat(item.extracted_value) || null }));
+          break;
+        case 'damage_notes':
+        case 'vehicle_condition':
+        case 'additional_notes':
+          setAppointmentData(prev => ({ 
+            ...prev, 
+            notes: prev.notes ? `${prev.notes}\n${item.extracted_value}` : item.extracted_value 
+          }));
+          break;
+        case 'title_present':
+        case 'registration':
+        case 'lien_paperwork':
+        case 'junk_slip':
+        case 'other_paperwork':
+          setAppointmentData(prev => ({ 
+            ...prev, 
+            paperwork: prev.paperwork ? `${prev.paperwork}, ${item.field_name}: ${item.extracted_value}` : `${item.field_name}: ${item.extracted_value}`
+          }));
+          break;
+      }
+    });
+    
+    // Update vehicle data for parent component
+    const yearData = extractedData.find(item => item.field_name === 'vehicle_year');
+    const makeData = extractedData.find(item => item.field_name === 'vehicle_make');
+    const modelData = extractedData.find(item => item.field_name === 'vehicle_model');
+    
+    if (yearData || makeData || modelData) {
+      onVehicleDataChange?.({
+        year: yearData?.extracted_value || appointmentData.vehicle_year,
+        make: makeData?.extracted_value || appointmentData.vehicle_make,
+        model: modelData?.extracted_value || appointmentData.vehicle_model
+      });
+    }
+  };
+
   const clearForm = () => {
     setAppointmentData({
       customer_phone: "",
@@ -244,6 +312,7 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
       paperwork: "",
     });
     setPriceEstimate(null);
+    setCurrentAppointmentId(null);
     onClearPrefill?.();
     onVehicleDataChange?.({ year: "", make: "", model: "" });
   };
@@ -261,14 +330,34 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
               </Badge>
             )}
           </CardTitle>
-          {prefillData && (
-            <Button variant="outline" size="sm" onClick={clearForm}>
-              Clear Form
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowVoiceAssistant(!showVoiceAssistant)}
+              className="flex items-center gap-2"
+            >
+              <Mic className="w-4 h-4" />
+              Voice Assistant
             </Button>
-          )}
+            {prefillData && (
+              <Button variant="outline" size="sm" onClick={clearForm}>
+                Clear Form
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Voice Assistant */}
+        {showVoiceAssistant && (
+          <div className="p-4 border rounded-lg bg-blue-50">
+            <VoiceAssistant 
+              appointmentNoteId={currentAppointmentId}
+              onDataExtracted={handleVoiceDataExtracted}
+            />
+          </div>
+        )}
         {/* Vehicle Information */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>

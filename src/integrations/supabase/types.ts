@@ -157,6 +157,41 @@ export type Database = {
         }
         Relationships: []
       }
+      call_transcripts: {
+        Row: {
+          appointment_note_id: string | null
+          audio_duration: number | null
+          created_at: string
+          id: string
+          transcript_text: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_note_id?: string | null
+          audio_duration?: number | null
+          created_at?: string
+          id?: string
+          transcript_text: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_note_id?: string | null
+          audio_duration?: number | null
+          created_at?: string
+          id?: string
+          transcript_text?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_transcripts_appointment_note_id_fkey"
+            columns: ["appointment_note_id"]
+            isOneToOne: false
+            referencedRelation: "appointment_notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cash_transactions: {
         Row: {
           amount: number
@@ -268,6 +303,44 @@ export type Database = {
             columns: ["pending_intake_id"]
             isOneToOne: false
             referencedRelation: "pending_intakes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      extracted_data_log: {
+        Row: {
+          ai_reasoning: string | null
+          confidence_score: number | null
+          created_at: string
+          extracted_value: string | null
+          field_name: string
+          id: string
+          transcript_id: string | null
+        }
+        Insert: {
+          ai_reasoning?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          extracted_value?: string | null
+          field_name: string
+          id?: string
+          transcript_id?: string | null
+        }
+        Update: {
+          ai_reasoning?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          extracted_value?: string | null
+          field_name?: string
+          id?: string
+          transcript_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extracted_data_log_transcript_id_fkey"
+            columns: ["transcript_id"]
+            isOneToOne: false
+            referencedRelation: "call_transcripts"
             referencedColumns: ["id"]
           },
         ]
