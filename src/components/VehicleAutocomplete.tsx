@@ -38,7 +38,7 @@ export function VehicleAutocomplete({
     if (type === 'model' && !query && make && year) {
       setIsLoading(true);
       try {
-        const url = `https://lvqvoigbdqhruudmfcou.supabase.co/functions/v1/vehicle-data?action=model&make=${encodeURIComponent(make)}&year=${year}`;
+        const url = `https://lvqvoigbdqhruudmfcou.supabase.co/functions/v1/vehicle-data?action=models&make=${encodeURIComponent(make)}&year=${year}`;
         const response = await fetch(url);
         const result = await response.json();
         
