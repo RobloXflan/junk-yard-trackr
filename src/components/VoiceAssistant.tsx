@@ -261,4 +261,4 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
   );
 };
 
-export default VoiceAssistant;
+export { VoiceAssistant as default };
