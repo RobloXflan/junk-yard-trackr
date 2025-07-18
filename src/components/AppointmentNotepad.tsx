@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Send, Save, Phone, Car, DollarSign, FileText, MapPin } from "lucide-react";
 import { AddressAutocomplete } from "./AddressAutocomplete";
+import { VehicleAutocomplete } from "./VehicleAutocomplete";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQuotesStore } from "@/hooks/useQuotesStore";
@@ -217,6 +218,19 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
     }
   };
 
+  const handleMakeChange = (newMake: string) => {
+    setAppointmentData(prev => ({ 
+      ...prev, 
+      vehicle_make: newMake,
+      vehicle_model: "" // Clear model when make changes
+    }));
+    onVehicleDataChange?.({
+      year: appointmentData.vehicle_year,
+      make: newMake,
+      model: ""
+    });
+  };
+
   const clearForm = () => {
     setAppointmentData({
       customer_phone: "",
@@ -282,19 +296,13 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
               <Car className="w-4 h-4" />
               Make
             </Label>
-            <Input
+            <VehicleAutocomplete
               id="vehicle_make"
+              type="make"
               value={appointmentData.vehicle_make}
-              onChange={(e) => {
-                const newValue = e.target.value;
-                setAppointmentData(prev => ({ ...prev, vehicle_make: newValue }));
-                onVehicleDataChange?.({
-                  year: appointmentData.vehicle_year,
-                  make: newValue,
-                  model: appointmentData.vehicle_model
-                });
-              }}
+              onChange={handleMakeChange}
               placeholder="Toyota"
+              required
             />
           </div>
           <div>
@@ -302,11 +310,11 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
               <Car className="w-4 h-4" />
               Model
             </Label>
-            <Input
+            <VehicleAutocomplete
               id="vehicle_model"
+              type="model"
               value={appointmentData.vehicle_model}
-              onChange={(e) => {
-                const newValue = e.target.value;
+              onChange={(newValue) => {
                 setAppointmentData(prev => ({ ...prev, vehicle_model: newValue }));
                 onVehicleDataChange?.({
                   year: appointmentData.vehicle_year,
@@ -315,6 +323,9 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
                 });
               }}
               placeholder="Camry"
+              year={appointmentData.vehicle_year}
+              make={appointmentData.vehicle_make}
+              required
             />
           </div>
         </div>
