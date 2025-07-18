@@ -23,6 +23,7 @@ import TelegramSetup from "@/pages/TelegramSetup";
 import TelegramDebug from "@/pages/TelegramDebug";
 import { Menu } from "lucide-react";
 import { useState } from "react";
+import { Print } from "@/pages/Print";
 
 const queryClient = new QueryClient();
 
@@ -66,6 +67,8 @@ const App = () => {
         return <Quotes />;
       case 'appointments':
         return <Appointments />;
+      case 'print':
+        return <Print />;
       case 'business-purchases':
         return <BusinessPurchases />;
       case 'smart-receipt-upload':
@@ -223,6 +226,16 @@ const App = () => {
                       }`}
                     >
                       Appointments
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage("print")}
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                        currentPage === "print"
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      }`}
+                    >
+                      Print
                     </button>
                     <button
                       onClick={() => setCurrentPage("business-purchases")}

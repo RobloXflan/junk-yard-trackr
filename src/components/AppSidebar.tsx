@@ -1,4 +1,4 @@
-import { Car, BarChart3, Upload, Clock, Settings, CheckCircle, FileText, TrendingUp, ShoppingCart, ScanLine, Calendar } from "lucide-react";
+import { Car, BarChart3, Upload, Clock, Settings, CheckCircle, FileText, TrendingUp, ShoppingCart, ScanLine, Calendar, Printer } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -48,6 +48,11 @@ const mainMenuItems = [
     title: "Appointments",
     page: "appointments",
     icon: Calendar,
+  },
+  {
+    title: "Print",
+    page: "print",
+    icon: Printer,
   },
   {
     title: "Smart Receipt Upload",
