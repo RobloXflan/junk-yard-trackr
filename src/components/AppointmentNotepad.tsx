@@ -333,15 +333,15 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
           </CardTitle>
           <div className="flex items-center gap-2">
             <Button
-              variant="outline"
+              variant="default"
               size="sm"
               onClick={() => {
-                console.log('Voice Assistant button clicked!');
+                console.log('🎤 VOICE ASSISTANT BUTTON CLICKED - THIS SHOULD BE VISIBLE!');
+                alert('Voice Assistant clicked!');
                 setShowVoiceAssistant(!showVoiceAssistant);
               }}
-              className="flex items-center gap-2 bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-medium"
             >
-              <Mic className="w-4 h-4" />
               🎤 Voice Assistant
             </Button>
             {prefillData && (
