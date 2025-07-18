@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Upload, FileText, Image, X, Eye, Plus } from "lucide-react";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Upload, FileText, Image, X, Printer, Plus, Check } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -152,9 +152,14 @@ export function PrintDocumentManager() {
     setDocuments(docs => docs.filter(doc => doc.id !== docId));
   };
 
-  const viewFile = (url?: string) => {
+  const printPdf = (url?: string) => {
     if (url) {
-      window.open(url, '_blank');
+      const printWindow = window.open(url, '_blank');
+      if (printWindow) {
+        printWindow.onload = () => {
+          printWindow.print();
+        };
+      }
     }
   };
 
@@ -181,7 +186,7 @@ export function PrintDocumentManager() {
 
       <div className="grid gap-6">
         {documents.map((doc) => (
-          <Card key={doc.id} className="border border-border">
+          <Card key={doc.id} className="border border-border overflow-hidden">
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
@@ -189,135 +194,146 @@ export function PrintDocumentManager() {
                     type="text"
                     value={doc.title}
                     onChange={(e) => updateTitle(doc.id, e.target.value)}
-                    className="text-lg font-medium bg-transparent border-none outline-none text-foreground focus:bg-muted/20 rounded px-2 py-1 -mx-2"
+                    className="text-lg font-medium bg-transparent border-none outline-none text-foreground focus:bg-muted/20 rounded px-2 py-1 -mx-2 w-full"
                     placeholder="Document title..."
                   />
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => removeDocument(doc.id)}
-                  className="text-destructive hover:text-destructive"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
+                <div className="flex items-center gap-2">
+                  {doc.pdfUrl && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => printPdf(doc.pdfUrl)}
+                      className="gap-2"
+                    >
+                      <Printer className="w-4 h-4" />
+                      Print PDF
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => removeDocument(doc.id)}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             
-            <CardContent>
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* PDF Upload */}
-                <div className="space-y-3">
-                  <h3 className="font-medium text-foreground flex items-center gap-2">
-                    <FileText className="w-4 h-4" />
-                    PDF Document
-                  </h3>
-                  
-                  {doc.pdfFile ? (
-                    <div className="p-4 bg-muted/50 rounded-lg border border-border">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <FileText className="w-8 h-8 text-primary" />
-                          <div>
-                            <p className="font-medium text-foreground">{doc.pdfFile.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {(doc.pdfFile.size / 1024 / 1024).toFixed(2)} MB
-                            </p>
-                          </div>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => viewFile(doc.pdfUrl)}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
+            <CardContent className="space-y-6">
+              {/* PDF Status and Upload */}
+              <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <FileText className="w-5 h-5 text-primary" />
+                  <div>
+                    {doc.pdfFile ? (
+                      <div>
+                        <p className="font-medium text-foreground flex items-center gap-2">
+                          {doc.pdfFile.name}
+                          <Check className="w-4 h-4 text-green-500" />
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {(doc.pdfFile.size / 1024 / 1024).toFixed(2)} MB • Ready to print
+                        </p>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary transition-colors">
-                      <input
-                        type="file"
-                        id={`pdf-${doc.id}`}
-                        accept=".pdf"
-                        onChange={(e) => handlePdfUpload(doc.id, e)}
-                        disabled={uploading === `${doc.id}-pdf`}
-                        className="hidden"
-                      />
+                    ) : (
+                      <div>
+                        <p className="font-medium text-foreground">No PDF uploaded</p>
+                        <p className="text-sm text-muted-foreground">Upload a PDF to enable printing</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {!doc.pdfFile && (
+                  <div>
+                    <input
+                      type="file"
+                      id={`pdf-${doc.id}`}
+                      accept=".pdf"
+                      onChange={(e) => handlePdfUpload(doc.id, e)}
+                      disabled={uploading === `${doc.id}-pdf`}
+                      className="hidden"
+                    />
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      disabled={uploading === `${doc.id}-pdf`}
+                    >
                       <label htmlFor={`pdf-${doc.id}`} className="cursor-pointer">
-                        <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-                        <p className="text-sm text-foreground">
-                          {uploading === `${doc.id}-pdf` ? 'Uploading PDF...' : 'Upload PDF Document'}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          PDF up to 10MB
-                        </p>
+                        <Upload className="w-4 h-4 mr-2" />
+                        {uploading === `${doc.id}-pdf` ? 'Uploading...' : 'Upload PDF'}
                       </label>
-                    </div>
-                  )}
-                </div>
+                    </Button>
+                  </div>
+                )}
+              </div>
 
-                {/* Image Upload */}
-                <div className="space-y-3">
-                  <h3 className="font-medium text-foreground flex items-center gap-2">
-                    <Image className="w-4 h-4" />
-                    Preview Image
-                  </h3>
-                  
-                  {doc.imageFile ? (
-                    <div className="p-4 bg-muted/50 rounded-lg border border-border">
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <Image className="w-8 h-8 text-primary" />
-                            <div>
-                              <p className="font-medium text-foreground">{doc.imageFile.name}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {(doc.imageFile.size / 1024 / 1024).toFixed(2)} MB
-                              </p>
-                            </div>
-                          </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => viewFile(doc.imageUrl)}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                        </div>
-                        {doc.imageUrl && (
-                          <div className="rounded-lg overflow-hidden border border-border">
-                            <img
-                              src={doc.imageUrl}
-                              alt="Document preview"
-                              className="w-full h-32 object-cover"
-                            />
-                          </div>
-                        )}
-                      </div>
+              {/* Image Display and Upload */}
+              <div className="space-y-4">
+                {doc.imageUrl ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium text-foreground flex items-center gap-2">
+                        <Image className="w-4 h-4" />
+                        Preview Image
+                      </h3>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const input = document.getElementById(`image-${doc.id}`) as HTMLInputElement;
+                          input?.click();
+                        }}
+                        className="text-sm"
+                      >
+                        Change Image
+                      </Button>
                     </div>
-                  ) : (
-                    <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary transition-colors">
-                      <input
-                        type="file"
-                        id={`image-${doc.id}`}
-                        accept="image/*"
-                        onChange={(e) => handleImageUpload(doc.id, e)}
-                        disabled={uploading === `${doc.id}-image`}
-                        className="hidden"
+                    
+                    <div className="rounded-lg overflow-hidden border border-border shadow-sm">
+                      <img
+                        src={doc.imageUrl}
+                        alt={doc.title}
+                        className="w-full h-auto max-h-96 object-contain bg-white"
                       />
-                      <label htmlFor={`image-${doc.id}`} className="cursor-pointer">
-                        <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-                        <p className="text-sm text-foreground">
-                          {uploading === `${doc.id}-image` ? 'Uploading image...' : 'Upload Preview Image'}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          JPG, PNG up to 5MB
-                        </p>
-                      </label>
                     </div>
-                  )}
-                </div>
+                    
+                    <p className="text-sm text-muted-foreground text-center">
+                      {doc.imageFile?.name} • {doc.imageFile && (doc.imageFile.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary transition-colors">
+                    <Image className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                    <h3 className="font-medium text-foreground mb-2">Add Preview Image</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Upload an image to show how this document looks when printed
+                    </p>
+                    <Button
+                      asChild
+                      variant="outline"
+                      disabled={uploading === `${doc.id}-image`}
+                    >
+                      <label htmlFor={`image-${doc.id}`} className="cursor-pointer">
+                        <Upload className="w-4 h-4 mr-2" />
+                        {uploading === `${doc.id}-image` ? 'Uploading...' : 'Upload Image'}
+                      </label>
+                    </Button>
+                  </div>
+                )}
+                
+                <input
+                  type="file"
+                  id={`image-${doc.id}`}
+                  accept="image/*"
+                  onChange={(e) => handleImageUpload(doc.id, e)}
+                  disabled={uploading === `${doc.id}-image`}
+                  className="hidden"
+                />
               </div>
             </CardContent>
           </Card>
