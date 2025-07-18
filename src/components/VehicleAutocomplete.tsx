@@ -148,8 +148,8 @@ export function VehicleAutocomplete({
 
   const handleFocus = () => {
     setIsOpen(true);
-    // For model field, fetch all models when focused if make and year are available
-    if (type === 'model' && make && year && suggestions.length === 0) {
+    // For model field, always fetch all models when focused if make and year are available
+    if (type === 'model' && make && year) {
       fetchSuggestions('');
     }
   };
