@@ -336,13 +336,13 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
               variant="outline"
               size="sm"
               onClick={() => {
-                console.log('Voice Assistant button clicked, current state:', showVoiceAssistant);
+                console.log('Voice Assistant button clicked!');
                 setShowVoiceAssistant(!showVoiceAssistant);
               }}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
             >
               <Mic className="w-4 h-4" />
-              Voice Assistant
+              🎤 Voice Assistant
             </Button>
             {prefillData && (
               <Button variant="outline" size="sm" onClick={clearForm}>
