@@ -337,7 +337,6 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
             )}
           </CardTitle>
           <div className="flex items-center gap-2">
-            {console.log('🎤 RENDERING VOICE ASSISTANT BUTTON CONTAINER')}
             <Button
               variant="default"
               size="sm"
@@ -360,7 +359,6 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
               <Mic className="w-4 h-4 mr-2" />
               🎤 VOICE ASSISTANT
             </Button>
-            {console.log('🎤 Voice Assistant button should be visible now')}
             {prefillData && (
               <Button variant="outline" size="sm" onClick={clearForm}>
                 Clear Form
@@ -370,10 +368,8 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        {console.log('🎤 showVoiceAssistant state:', showVoiceAssistant)}
         {showVoiceAssistant && (
           <div className="p-4 border rounded-lg bg-blue-50">
-            {console.log('🎤 Rendering VoiceAssistant component')}
             <VoiceAssistant 
               appointmentNoteId={currentAppointmentId}
               onDataExtracted={handleVoiceDataExtracted}
