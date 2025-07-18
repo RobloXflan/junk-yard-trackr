@@ -57,10 +57,6 @@ interface AppointmentNotepadProps {
 }
 
 export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillData, onClearPrefill }: AppointmentNotepadProps) {
-  console.log('🚀 AppointmentNotepad component is mounting/rendering');
-  console.log('📍 Current URL:', window.location.href);
-  console.log('📍 Current pathname:', window.location.pathname);
-  
   const { toast } = useToast();
   const { quotes } = useQuotesStore();
   
@@ -80,13 +76,6 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
   const [isLoading, setIsLoading] = useState(false);
   const [currentAppointmentId, setCurrentAppointmentId] = useState<string | null>(null);
   const [showVoiceAssistant, setShowVoiceAssistant] = useState(false);
-
-  // Debug render count
-  const [renderCount, setRenderCount] = useState(0);
-  useEffect(() => {
-    setRenderCount(prev => prev + 1);
-    console.log(`🔄 AppointmentNotepad render #${renderCount + 1}`);
-  });
 
   // Update form when prefillData changes
   useEffect(() => {
@@ -116,6 +105,7 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
   }, [appointmentData.vehicle_year, appointmentData.vehicle_make, appointmentData.vehicle_model]);
 
   const calculatePrice = () => {
+    // Use existing quotes to estimate price
     const similarQuotes = quotes.filter(quote => {
       const yearMatch = quote.year === appointmentData.vehicle_year;
       const makeMatch = quote.make.toLowerCase() === appointmentData.vehicle_make.toLowerCase();
@@ -135,6 +125,7 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
       setPriceEstimate(estimate);
       setAppointmentData(prev => ({ ...prev, estimated_price: estimate.estimatedPrice }));
     } else {
+      // Check for similar makes/years
       const similarMakeYear = quotes.filter(quote => {
         const yearMatch = quote.year === appointmentData.vehicle_year;
         const makeMatch = quote.make.toLowerCase() === appointmentData.vehicle_make.toLowerCase();
@@ -144,7 +135,7 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
       if (similarMakeYear.length > 0) {
         const avgPrice = similarMakeYear.reduce((sum, quote) => sum + quote.adjustedOffer, 0) / similarMakeYear.length;
         const estimate = {
-          estimatedPrice: Math.round(avgPrice * 0.9),
+          estimatedPrice: Math.round(avgPrice * 0.9), // Slightly lower for different model
           confidence: "Low",
           dataPoints: similarMakeYear.length
         };
@@ -170,11 +161,13 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
 
       if (error) throw error;
 
+      // Store the appointment ID for voice assistant
       if (data) {
         setCurrentAppointmentId(data.id);
       }
 
       if (withAppointment && data) {
+        // Send to Telegram with the appointment ID
         await sendToTelegram(data.id);
       }
 
@@ -183,6 +176,7 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
         description: withAppointment ? "Appointment details sent to Telegram" : "Customer notes saved for future reference"
       });
 
+      // Reset form
       setAppointmentData({
         customer_phone: "",
         customer_address: "",
@@ -219,6 +213,7 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
 
     } catch (error) {
       console.error('Error sending to Telegram:', error);
+      // Don't throw - we still want to save the appointment
     }
   };
 
@@ -235,7 +230,7 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
     setAppointmentData(prev => ({ 
       ...prev, 
       vehicle_make: newMake,
-      vehicle_model: "" 
+      vehicle_model: "" // Clear model when make changes
     }));
     onVehicleDataChange?.({
       year: appointmentData.vehicle_year,
@@ -248,7 +243,7 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
     console.log('Voice data extracted:', extractedData);
     
     extractedData.forEach(item => {
-      if (item.confidence_score < 0.6) return;
+      if (item.confidence_score < 0.6) return; // Only use high-confidence extractions
       
       switch (item.field_name) {
         case 'vehicle_year':
@@ -290,6 +285,7 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
       }
     });
     
+    // Update vehicle data for parent component
     const yearData = extractedData.find(item => item.field_name === 'vehicle_year');
     const makeData = extractedData.find(item => item.field_name === 'vehicle_make');
     const modelData = extractedData.find(item => item.field_name === 'vehicle_model');
@@ -321,10 +317,8 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
     onVehicleDataChange?.({ year: "", make: "", model: "" });
   };
 
-  console.log('🎤 About to render Voice Assistant button in header');
-
   return (
-    <Card className="w-full max-w-4xl mx-auto" key={`appointment-card-${renderCount}`}>
+    <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
@@ -338,26 +332,13 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
           </CardTitle>
           <div className="flex items-center gap-2">
             <Button
-              variant="default"
+              variant="outline"
               size="sm"
-              onClick={() => {
-                console.log('🎤 VOICE ASSISTANT BUTTON CLICKED - SUCCESS!');
-                console.log('Current showVoiceAssistant state:', showVoiceAssistant);
-                alert(`Voice Assistant clicked! Current state: ${showVoiceAssistant}`);
-                setShowVoiceAssistant(!showVoiceAssistant);
-                console.log('New showVoiceAssistant state:', !showVoiceAssistant);
-              }}
-              className="bg-green-600 hover:bg-green-700 text-white font-bold border-2 border-green-800 shadow-lg min-w-[150px] min-h-[40px]"
-              style={{ 
-                backgroundColor: '#16a34a !important',
-                color: 'white !important',
-                border: '2px solid #15803d !important',
-                fontSize: '14px',
-                fontWeight: 'bold'
-              }}
+              onClick={() => setShowVoiceAssistant(!showVoiceAssistant)}
+              className="flex items-center gap-2"
             >
-              <Mic className="w-4 h-4 mr-2" />
-              🎤 VOICE ASSISTANT
+              <Mic className="w-4 h-4" />
+              Voice Assistant
             </Button>
             {prefillData && (
               <Button variant="outline" size="sm" onClick={clearForm}>
@@ -368,6 +349,7 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Voice Assistant */}
         {showVoiceAssistant && (
           <div className="p-4 border rounded-lg bg-blue-50">
             <VoiceAssistant 
@@ -376,7 +358,7 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
             />
           </div>
         )}
-        
+        {/* Vehicle Information */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <Label htmlFor="vehicle_year" className="flex items-center gap-2">
@@ -437,6 +419,7 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
           </div>
         </div>
 
+        {/* Customer Information - Phone and Paperwork Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="customer_phone" className="flex items-center gap-2">
@@ -475,6 +458,7 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
           </div>
         </div>
 
+        {/* Customer Address - Full Width Row */}
         <div>
           <Label htmlFor="customer_address" className="flex items-center gap-2">
             <MapPin className="w-4 h-4" />
@@ -488,6 +472,7 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
           />
         </div>
 
+        {/* Price Estimate Display */}
         {priceEstimate && (
           <Card className="bg-blue-50 border-blue-200">
             <CardContent className="pt-4">
@@ -511,6 +496,7 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
           </Card>
         )}
 
+        {/* Manual Price Override */}
         <div>
           <Label htmlFor="estimated_price">Quoted Price (Optional Override)</Label>
           <Input
@@ -525,6 +511,7 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
           />
         </div>
 
+        {/* Notes */}
         <div>
           <Label htmlFor="notes">Call Notes</Label>
           <Textarea
@@ -536,6 +523,7 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
           />
         </div>
 
+        {/* Action Buttons */}
         <div className="flex gap-3 pt-4">
           <Button
             onClick={() => saveNotes(true)}

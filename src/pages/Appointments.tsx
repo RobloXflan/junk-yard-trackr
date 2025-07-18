@@ -24,7 +24,6 @@ interface PrefillData {
 }
 
 export function Appointments() {
-  console.log('Appointments page is rendering');
   const [vehicleData, setVehicleData] = useState<VehicleData>({
     year: "",
     make: "",
