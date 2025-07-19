@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Upload, FileText, Image, Trash2, Printer } from "lucide-react";
+import { Upload, FileText, Image, Trash2, Printer, Search } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -22,6 +22,7 @@ const STORAGE_KEY = 'print-documents';
 export function PrintDocumentManager() {
   const [documents, setDocuments] = useState<PrintDocument[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const pdfInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
@@ -172,6 +173,11 @@ export function PrintDocumentManager() {
     ));
   };
 
+  // Filter documents based on search term
+  const filteredDocuments = documents.filter(doc =>
+    doc.title.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
       {/* Upload Section */}
@@ -219,10 +225,24 @@ export function PrintDocumentManager() {
         </CardContent>
       </Card>
 
-      {/* Documents Grid */}
+      {/* Search Bar */}
       {documents.length > 0 && (
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            type="text"
+            placeholder="Search documents..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      )}
+
+      {/* Documents Grid */}
+      {filteredDocuments.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {documents.map((doc) => (
+          {filteredDocuments.map((doc) => (
             <div key={doc.id} className="space-y-3">
               {/* Header Box */}
               <div className="bg-muted rounded-lg p-4 space-y-3">
