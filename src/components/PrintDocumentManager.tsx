@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Upload, FileText, Image, X, Printer, Plus, Check } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Upload, FileText, Image, Trash2, Printer } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -17,7 +18,9 @@ interface PrintDocument {
 
 export function PrintDocumentManager() {
   const [documents, setDocuments] = useState<PrintDocument[]>([]);
-  const [uploading, setUploading] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const uploadFileToStorage = async (file: File, folder: string): Promise<string> => {
     const fileExt = file.name.split('.').pop();
@@ -39,112 +42,74 @@ export function PrintDocumentManager() {
     return urlData.publicUrl;
   };
 
-  const createNewDocument = () => {
-    const newDoc: PrintDocument = {
-      id: `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      title: `Document ${documents.length + 1}`,
-      createdAt: new Date()
-    };
-    setDocuments([...documents, newDoc]);
-  };
+  const handleNewDocument = async () => {
+    const pdfFile = pdfInputRef.current?.files?.[0];
+    const imageFile = imageInputRef.current?.files?.[0];
 
-  const handlePdfUpload = async (docId: string, event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (file.type !== 'application/pdf') {
+    if (!pdfFile || !imageFile) {
       toast({
-        title: "Invalid file type",
-        description: "Please upload a PDF file.",
+        title: "Missing files",
+        description: "Please select both a PDF and an image file.",
         variant: "destructive",
       });
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
+    if (pdfFile.type !== 'application/pdf') {
       toast({
-        title: "File too large",
-        description: "Please upload a PDF smaller than 10MB.",
+        title: "Invalid PDF file",
+        description: "Please select a valid PDF file.",
         variant: "destructive",
       });
       return;
     }
 
-    setUploading(`${docId}-pdf`);
+    if (!imageFile.type.startsWith('image/')) {
+      toast({
+        title: "Invalid image file",
+        description: "Please select a valid image file.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploading(true);
 
     try {
-      const url = await uploadFileToStorage(file, 'pdfs');
+      const [pdfUrl, imageUrl] = await Promise.all([
+        uploadFileToStorage(pdfFile, 'pdfs'),
+        uploadFileToStorage(imageFile, 'previews')
+      ]);
+
+      const newDoc: PrintDocument = {
+        id: `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        title: pdfFile.name.replace('.pdf', ''),
+        pdfFile,
+        pdfUrl,
+        imageFile,
+        imageUrl,
+        createdAt: new Date()
+      };
+
+      setDocuments(prev => [...prev, newDoc]);
       
-      setDocuments(docs => docs.map(doc => 
-        doc.id === docId 
-          ? { ...doc, pdfFile: file, pdfUrl: url }
-          : doc
-      ));
+      // Clear inputs
+      if (pdfInputRef.current) pdfInputRef.current.value = '';
+      if (imageInputRef.current) imageInputRef.current.value = '';
 
       toast({
-        title: "PDF uploaded",
-        description: `${file.name} has been uploaded successfully.`,
+        title: "Document added",
+        description: "Your document is ready for printing.",
       });
     } catch (error) {
-      console.error('PDF upload failed:', error);
+      console.error('Upload failed:', error);
       toast({
         title: "Upload failed",
-        description: "Failed to upload PDF. Please try again.",
+        description: "Failed to upload files. Please try again.",
         variant: "destructive",
       });
     } finally {
-      setUploading(null);
-      event.target.value = '';
-    }
-  };
-
-  const handleImageUpload = async (docId: string, event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      toast({
-        title: "Invalid file type",
-        description: "Please upload an image file (JPG, PNG).",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "File too large",
-        description: "Please upload an image smaller than 5MB.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setUploading(`${docId}-image`);
-
-    try {
-      const url = await uploadFileToStorage(file, 'previews');
-      
-      setDocuments(docs => docs.map(doc => 
-        doc.id === docId 
-          ? { ...doc, imageFile: file, imageUrl: url }
-          : doc
-      ));
-
-      toast({
-        title: "Image uploaded",
-        description: `${file.name} has been uploaded successfully.`,
-      });
-    } catch (error) {
-      console.error('Image upload failed:', error);
-      toast({
-        title: "Upload failed",
-        description: "Failed to upload image. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setUploading(null);
-      event.target.value = '';
+      setUploading(false);
     }
   };
 
@@ -173,190 +138,116 @@ export function PrintDocumentManager() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold text-foreground">Document Collection</h2>
-          <p className="text-muted-foreground">Upload PDFs with preview images</p>
-        </div>
-        <Button onClick={createNewDocument} className="gap-2">
-          <Plus className="w-4 h-4" />
-          New Document
-        </Button>
-      </div>
+      {/* Upload Section */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Add New Document</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="pdf-input" className="block text-sm font-medium mb-2">
+                  PDF Document
+                </label>
+                <input
+                  id="pdf-input"
+                  ref={pdfInputRef}
+                  type="file"
+                  accept=".pdf"
+                  disabled={uploading}
+                  className="w-full p-2 border border-input rounded-md text-sm file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-primary file:text-primary-foreground hover:file:bg-primary/80"
+                />
+              </div>
+              <div>
+                <label htmlFor="image-input" className="block text-sm font-medium mb-2">
+                  Preview Image
+                </label>
+                <input
+                  id="image-input"
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/*"
+                  disabled={uploading}
+                  className="w-full p-2 border border-input rounded-md text-sm file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-primary file:text-primary-foreground hover:file:bg-primary/80"
+                />
+              </div>
+            </div>
+            <Button 
+              onClick={handleNewDocument} 
+              disabled={uploading}
+              className="w-full gap-2"
+            >
+              <Upload className="w-4 h-4" />
+              {uploading ? 'Uploading...' : 'Add Document'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-      <div className="grid gap-6">
-        {documents.map((doc) => (
-          <Card key={doc.id} className="border border-border overflow-hidden">
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <input
-                    type="text"
+      {/* Documents Grid */}
+      {documents.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {documents.map((doc) => (
+            <div key={doc.id} className="space-y-3">
+              {/* Header Box */}
+              <div className="bg-muted rounded-lg p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <Input
                     value={doc.title}
                     onChange={(e) => updateTitle(doc.id, e.target.value)}
-                    className="text-lg font-medium bg-transparent border-none outline-none text-foreground focus:bg-muted/20 rounded px-2 py-1 -mx-2 w-full"
-                    placeholder="Document title..."
+                    className="font-medium bg-transparent border-none p-0 h-auto focus-visible:ring-0 text-sm"
                   />
-                </div>
-                <div className="flex items-center gap-2">
-                  {doc.pdfUrl && (
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => printPdf(doc.pdfUrl)}
-                      className="gap-2"
-                    >
-                      <Printer className="w-4 h-4" />
-                      Print PDF
-                    </Button>
-                  )}
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => removeDocument(doc.id)}
-                    className="text-destructive hover:text-destructive"
+                    className="text-muted-foreground hover:text-destructive h-8 w-8 p-0 flex-shrink-0"
                   >
-                    <X className="w-4 h-4" />
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <FileText className="h-3 w-3" />
+                    <span>PDF Ready</span>
+                  </div>
+                  
+                  <Button
+                    onClick={() => printPdf(doc.pdfUrl)}
+                    size="sm"
+                    className="gap-2"
+                  >
+                    <Printer className="h-4 w-4" />
+                    Print
                   </Button>
                 </div>
               </div>
-            </CardHeader>
-            
-            <CardContent className="space-y-6">
-              {/* PDF Status and Upload */}
-              <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <FileText className="w-5 h-5 text-primary" />
-                  <div>
-                    {doc.pdfFile ? (
-                      <div>
-                        <p className="font-medium text-foreground flex items-center gap-2">
-                          {doc.pdfFile.name}
-                          <Check className="w-4 h-4 text-green-500" />
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {(doc.pdfFile.size / 1024 / 1024).toFixed(2)} MB • Ready to print
-                        </p>
-                      </div>
-                    ) : (
-                      <div>
-                        <p className="font-medium text-foreground">No PDF uploaded</p>
-                        <p className="text-sm text-muted-foreground">Upload a PDF to enable printing</p>
-                      </div>
-                    )}
-                  </div>
+
+              {/* Image Display */}
+              {doc.imageUrl && (
+                <div className="border rounded-lg overflow-hidden bg-background">
+                  <img 
+                    src={doc.imageUrl} 
+                    alt={doc.title}
+                    className="w-full h-auto object-contain"
+                    style={{ minHeight: '200px' }}
+                  />
                 </div>
-                
-                {!doc.pdfFile && (
-                  <div>
-                    <input
-                      type="file"
-                      id={`pdf-${doc.id}`}
-                      accept=".pdf"
-                      onChange={(e) => handlePdfUpload(doc.id, e)}
-                      disabled={uploading === `${doc.id}-pdf`}
-                      className="hidden"
-                    />
-                    <Button
-                      asChild
-                      variant="outline"
-                      size="sm"
-                      disabled={uploading === `${doc.id}-pdf`}
-                    >
-                      <label htmlFor={`pdf-${doc.id}`} className="cursor-pointer">
-                        <Upload className="w-4 h-4 mr-2" />
-                        {uploading === `${doc.id}-pdf` ? 'Uploading...' : 'Upload PDF'}
-                      </label>
-                    </Button>
-                  </div>
-                )}
-              </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
-              {/* Image Display and Upload */}
-              <div className="space-y-4">
-                {doc.imageUrl ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-medium text-foreground flex items-center gap-2">
-                        <Image className="w-4 h-4" />
-                        Preview Image
-                      </h3>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const input = document.getElementById(`image-${doc.id}`) as HTMLInputElement;
-                          input?.click();
-                        }}
-                        className="text-sm"
-                      >
-                        Change Image
-                      </Button>
-                    </div>
-                    
-                    <div className="rounded-lg overflow-hidden border border-border shadow-sm">
-                      <img
-                        src={doc.imageUrl}
-                        alt={doc.title}
-                        className="w-full h-auto max-h-96 object-contain bg-white"
-                      />
-                    </div>
-                    
-                    <p className="text-sm text-muted-foreground text-center">
-                      {doc.imageFile?.name} • {doc.imageFile && (doc.imageFile.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                  </div>
-                ) : (
-                  <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary transition-colors">
-                    <Image className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                    <h3 className="font-medium text-foreground mb-2">Add Preview Image</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Upload an image to show how this document looks when printed
-                    </p>
-                    <Button
-                      asChild
-                      variant="outline"
-                      disabled={uploading === `${doc.id}-image`}
-                    >
-                      <label htmlFor={`image-${doc.id}`} className="cursor-pointer">
-                        <Upload className="w-4 h-4 mr-2" />
-                        {uploading === `${doc.id}-image` ? 'Uploading...' : 'Upload Image'}
-                      </label>
-                    </Button>
-                  </div>
-                )}
-                
-                <input
-                  type="file"
-                  id={`image-${doc.id}`}
-                  accept="image/*"
-                  onChange={(e) => handleImageUpload(doc.id, e)}
-                  disabled={uploading === `${doc.id}-image`}
-                  className="hidden"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-
-        {documents.length === 0 && (
-          <Card className="border-2 border-dashed border-border">
-            <CardContent className="pt-6">
-              <div className="text-center py-12">
-                <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-medium text-foreground mb-2">No documents yet</h3>
-                <p className="text-muted-foreground mb-4">
-                  Create your first document to start organizing your PDFs with preview images
-                </p>
-                <Button onClick={createNewDocument} className="gap-2">
-                  <Plus className="w-4 h-4" />
-                  Create Document
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+      {documents.length === 0 && (
+        <div className="text-center py-12">
+          <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-2">No documents yet</h3>
+          <p className="text-muted-foreground">
+            Upload your first PDF and image to get started
+          </p>
+        </div>
+      )}
     </div>
   );
 }
