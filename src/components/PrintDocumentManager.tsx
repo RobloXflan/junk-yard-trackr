@@ -1,4 +1,5 @@
-import { useState, useRef } from "react";
+
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,11 +17,38 @@ interface PrintDocument {
   createdAt: Date;
 }
 
+const STORAGE_KEY = 'print-documents';
+
 export function PrintDocumentManager() {
   const [documents, setDocuments] = useState<PrintDocument[]>([]);
   const [uploading, setUploading] = useState(false);
   const pdfInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+
+  // Load documents from localStorage on component mount
+  useEffect(() => {
+    const savedDocuments = localStorage.getItem(STORAGE_KEY);
+    if (savedDocuments) {
+      try {
+        const parsed = JSON.parse(savedDocuments);
+        // Convert date strings back to Date objects
+        const documentsWithDates = parsed.map((doc: any) => ({
+          ...doc,
+          createdAt: new Date(doc.createdAt)
+        }));
+        setDocuments(documentsWithDates);
+      } catch (error) {
+        console.error('Error loading saved documents:', error);
+      }
+    }
+  }, []);
+
+  // Save documents to localStorage whenever documents change
+  useEffect(() => {
+    if (documents.length > 0) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(documents));
+    }
+  }, [documents]);
 
   const uploadFileToStorage = async (file: File, folder: string): Promise<string> => {
     const fileExt = file.name.split('.').pop();
@@ -114,7 +142,15 @@ export function PrintDocumentManager() {
   };
 
   const removeDocument = (docId: string) => {
-    setDocuments(docs => docs.filter(doc => doc.id !== docId));
+    const updatedDocuments = documents.filter(doc => doc.id !== docId);
+    setDocuments(updatedDocuments);
+    
+    // Update localStorage immediately
+    if (updatedDocuments.length === 0) {
+      localStorage.removeItem(STORAGE_KEY);
+    } else {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedDocuments));
+    }
   };
 
   const printPdf = (url?: string) => {
