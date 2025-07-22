@@ -13,6 +13,7 @@ import VoiceAssistant from "./VoiceAssistant";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQuotesStore } from "@/hooks/useQuotesStore";
+import { ZipcodeProximityChecker } from "./ZipcodeProximityChecker";
 
 interface AppointmentData {
   customer_phone: string;
@@ -358,6 +359,10 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
             />
           </div>
         )}
+
+        {/* Zipcode Proximity Checker */}
+        <ZipcodeProximityChecker />
+
         {/* Vehicle Information */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -446,14 +451,14 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
                 <SelectValue placeholder="Select paperwork type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="title">Title</SelectItem>
-                <SelectItem value="salvage-title">Salvage Title</SelectItem>
-                <SelectItem value="out-of-state-title">Out of State Title</SelectItem>
-                <SelectItem value="registered-owner">Registered Owner</SelectItem>
-                <SelectItem value="liensale">Liensale</SelectItem>
-                <SelectItem value="junkslip">Junkslip</SelectItem>
-                <SelectItem value="no-paperwork">No Paperwork</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
+                <SelectItem value="Title">Title</SelectItem>
+                <SelectItem value="Salvage Title">Salvage Title</SelectItem>
+                <SelectItem value="Out of State Title">Out of State Title</SelectItem>
+                <SelectItem value="Registered Owner">Registered Owner</SelectItem>
+                <SelectItem value="Liensale">Liensale</SelectItem>
+                <SelectItem value="Junkslip">Junkslip</SelectItem>
+                <SelectItem value="No Paperwork">No Paperwork</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
               </SelectContent>
             </Select>
           </div>
