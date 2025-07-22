@@ -89,15 +89,15 @@ export function WorkerCheckinStatus() {
     let mathDisplay = `$${starting_cash.toFixed(2)}`;
     
     if (money_added > 0) {
-      mathDisplay += ` + $${money_added.toFixed(2)} = $${final_total.toFixed(2)}`;
+      mathDisplay += ` + $${money_added.toFixed(2)} = `;
     } else if (money_subtracted > 0) {
-      mathDisplay += ` - $${money_subtracted.toFixed(2)} = $${final_total.toFixed(2)}`;
+      mathDisplay += ` - $${money_subtracted.toFixed(2)} = `;
     } else {
-      mathDisplay = `$${final_total.toFixed(2)}`;
+      mathDisplay = ``;
     }
     
     return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-      {mathDisplay}
+      {mathDisplay}<span className="font-bold text-green-700">${final_total.toFixed(2)}</span>
     </Badge>;
   };
 
