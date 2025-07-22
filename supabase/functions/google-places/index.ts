@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { query } = await req.json();
+    const { query, getCoordinates } = await req.json();
     
     if (!query || query.trim().length === 0) {
       return new Response(
@@ -60,6 +60,37 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );
+    }
+
+    // If coordinates are requested, use geocoding API
+    if (getCoordinates) {
+      const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${googleApiKey}`;
+      
+      console.log('Calling Google Geocoding API for coordinates');
+      
+      const geocodeResponse = await fetch(geocodeUrl);
+      const geocodeData = await geocodeResponse.json();
+      
+      if (geocodeData.status === 'OK' && geocodeData.results && geocodeData.results.length > 0) {
+        const location = geocodeData.results[0].geometry.location;
+        return new Response(
+          JSON.stringify({ 
+            coordinates: { lat: location.lat, lng: location.lng },
+            formatted_address: geocodeData.results[0].formatted_address 
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      } else {
+        return new Response(
+          JSON.stringify({ error: 'Could not geocode address' }),
+          { 
+            status: 400, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
     }
 
     // Enhance query for better California results
