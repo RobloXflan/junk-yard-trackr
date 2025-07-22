@@ -17,7 +17,10 @@ interface Worker {
 
 interface WorkerCheckin {
   worker_id: string;
-  response: string;
+  starting_cash: number;
+  money_added: number;
+  money_subtracted: number;
+  final_total: number;
   created_at: string;
 }
 
@@ -51,7 +54,7 @@ export function WorkerCheckinStatus() {
       // Fetch check-ins for the selected date
       const { data: checkinsData, error: checkinsError } = await supabase
         .from("worker_checkins")
-        .select("worker_id, response, created_at")
+        .select("worker_id, starting_cash, money_added, money_subtracted, final_total, created_at")
         .eq("checkin_date", formattedDate);
 
       if (checkinsError) throw checkinsError;
@@ -74,18 +77,16 @@ export function WorkerCheckinStatus() {
     if (!worker.checkin) {
       return <Clock className="w-4 h-4 text-gray-400" />;
     }
-    return worker.checkin.response === 'yes' 
-      ? <CheckCircle className="w-4 h-4 text-green-500" />
-      : <XCircle className="w-4 h-4 text-red-500" />;
+    return <CheckCircle className="w-4 h-4 text-green-500" />;
   };
 
   const getStatusBadge = (worker: WorkerWithCheckin) => {
     if (!worker.checkin) {
-      return <Badge variant="secondary">Not Checked In</Badge>;
+      return <Badge variant="secondary">No Report</Badge>;
     }
-    return worker.checkin.response === 'yes' 
-      ? <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Yes</Badge>
-      : <Badge className="bg-red-100 text-red-800 hover:bg-red-100">No</Badge>;
+    return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+      ${worker.checkin.final_total.toFixed(2)}
+    </Badge>;
   };
 
   const getCheckinTime = (worker: WorkerWithCheckin) => {
@@ -95,21 +96,21 @@ export function WorkerCheckinStatus() {
 
   const todayStats = {
     total: workers.length,
-    checkedIn: workers.filter(w => w.checkin).length,
-    yesResponses: workers.filter(w => w.checkin?.response === 'yes').length,
-    noResponses: workers.filter(w => w.checkin?.response === 'no').length
+    reported: workers.filter(w => w.checkin).length,
+    totalCash: workers.reduce((sum, w) => sum + (w.checkin?.final_total || 0), 0),
+    totalStarting: workers.reduce((sum, w) => sum + (w.checkin?.starting_cash || 0), 0)
   };
 
   return (
     <Card>
       <CardHeader>
         <div className="flex justify-between items-center">
-          <div>
-            <CardTitle>Worker Check-in Status</CardTitle>
-            <CardDescription>
-              Track daily worker check-ins and responses
-            </CardDescription>
-          </div>
+        <div>
+          <CardTitle>Worker Cash Reports</CardTitle>
+          <CardDescription>
+            Track daily worker cash reports and totals
+          </CardDescription>
+        </div>
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className={cn("w-[240px] pl-3 text-left font-normal")}>
@@ -136,16 +137,16 @@ export function WorkerCheckinStatus() {
             <div className="text-sm text-blue-600">Total Workers</div>
           </div>
           <div className="text-center p-3 bg-gray-50 rounded-lg">
-            <div className="text-2xl font-bold text-gray-600">{todayStats.checkedIn}</div>
-            <div className="text-sm text-gray-600">Checked In</div>
+            <div className="text-2xl font-bold text-gray-600">{todayStats.reported}</div>
+            <div className="text-sm text-gray-600">Reported</div>
           </div>
           <div className="text-center p-3 bg-green-50 rounded-lg">
-            <div className="text-2xl font-bold text-green-600">{todayStats.yesResponses}</div>
-            <div className="text-sm text-green-600">Yes Responses</div>
+            <div className="text-2xl font-bold text-green-600">${todayStats.totalCash.toFixed(2)}</div>
+            <div className="text-sm text-green-600">Total Final Cash</div>
           </div>
-          <div className="text-center p-3 bg-red-50 rounded-lg">
-            <div className="text-2xl font-bold text-red-600">{todayStats.noResponses}</div>
-            <div className="text-sm text-red-600">No Responses</div>
+          <div className="text-center p-3 bg-purple-50 rounded-lg">
+            <div className="text-2xl font-bold text-purple-600">${todayStats.totalStarting.toFixed(2)}</div>
+            <div className="text-sm text-purple-600">Total Starting Cash</div>
           </div>
         </div>
       </CardHeader>
@@ -165,7 +166,14 @@ export function WorkerCheckinStatus() {
                     <div className="font-medium">{worker.name}</div>
                     {getCheckinTime(worker) && (
                       <div className="text-sm text-gray-500">
-                        Checked in at {getCheckinTime(worker)}
+                        Reported at {getCheckinTime(worker)}
+                      </div>
+                    )}
+                    {worker.checkin && (
+                      <div className="text-xs text-gray-400">
+                        Start: ${worker.checkin.starting_cash.toFixed(2)} | 
+                        Added: ${worker.checkin.money_added.toFixed(2)} | 
+                        Subtracted: ${worker.checkin.money_subtracted.toFixed(2)}
                       </div>
                     )}
                   </div>

@@ -3,10 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, DollarSign } from "lucide-react";
 
 interface Worker {
   id: string;
@@ -17,7 +17,9 @@ interface Worker {
 export function WorkerCheckin() {
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [selectedWorkerId, setSelectedWorkerId] = useState<string>("");
-  const [response, setResponse] = useState<string>("");
+  const [startingCash, setStartingCash] = useState<string>("");
+  const [moneyAdded, setMoneyAdded] = useState<string>("");
+  const [moneySubtracted, setMoneySubtracted] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
@@ -42,10 +44,15 @@ export function WorkerCheckin() {
   };
 
   const handleSubmit = async () => {
-    if (!selectedWorkerId || !response) {
-      toast.error("Please select a worker and provide a response");
+    if (!selectedWorkerId || !startingCash) {
+      toast.error("Please select a worker and enter starting cash amount");
       return;
     }
+
+    const startingAmount = parseFloat(startingCash) || 0;
+    const addedAmount = parseFloat(moneyAdded) || 0;
+    const subtractedAmount = parseFloat(moneySubtracted) || 0;
+    const finalTotal = startingAmount + addedAmount - subtractedAmount;
 
     setIsSubmitting(true);
     try {
@@ -54,18 +61,21 @@ export function WorkerCheckin() {
         .upsert({
           worker_id: selectedWorkerId,
           checkin_date: new Date().toISOString().split('T')[0],
-          response: response
+          starting_cash: startingAmount,
+          money_added: addedAmount,
+          money_subtracted: subtractedAmount,
+          final_total: finalTotal
         }, {
           onConflict: 'worker_id,checkin_date'
         });
 
       if (error) throw error;
 
-      toast.success("Check-in submitted successfully!");
+      toast.success("Cash report submitted successfully!");
       setSubmitted(true);
     } catch (error) {
-      console.error("Error submitting check-in:", error);
-      toast.error("Failed to submit check-in");
+      console.error("Error submitting cash report:", error);
+      toast.error("Failed to submit cash report");
     } finally {
       setIsSubmitting(false);
     }
@@ -73,7 +83,9 @@ export function WorkerCheckin() {
 
   const resetForm = () => {
     setSelectedWorkerId("");
-    setResponse("");
+    setStartingCash("");
+    setMoneyAdded("");
+    setMoneySubtracted("");
     setSubmitted(false);
   };
 
@@ -83,16 +95,16 @@ export function WorkerCheckin() {
         <Card>
           <CardHeader className="text-center">
             <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-              <CheckCircle className="w-8 h-8 text-green-600" />
+              <DollarSign className="w-8 h-8 text-green-600" />
             </div>
-            <CardTitle className="text-2xl">Check-in Complete!</CardTitle>
+            <CardTitle className="text-2xl">Cash Report Complete!</CardTitle>
             <CardDescription>
-              Your response has been recorded for today.
+              Your cash report has been recorded for today.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button onClick={resetForm} className="w-full">
-              Submit Another Check-in
+              Submit Another Cash Report
             </Button>
           </CardContent>
         </Card>
@@ -104,9 +116,9 @@ export function WorkerCheckin() {
     <div className="container mx-auto py-8 px-4 max-w-md">
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl text-center">Worker Check-in</CardTitle>
+          <CardTitle className="text-2xl text-center">Worker Cash Report</CardTitle>
           <CardDescription className="text-center">
-            Please select your name and provide your response for today.
+            Please select your name and report your daily cash amounts.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -126,31 +138,60 @@ export function WorkerCheckin() {
             </Select>
           </div>
 
-          <div className="space-y-3">
-            <Label>Your Response</Label>
-            <RadioGroup value={response} onValueChange={setResponse}>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="yes" id="yes" />
-                <Label htmlFor="yes" className="text-lg font-medium text-green-600">
-                  Yes
-                </Label>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="starting-cash">Starting Cash Amount *</Label>
+              <Input
+                id="starting-cash"
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={startingCash}
+                onChange={(e) => setStartingCash(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="money-added">Money Added</Label>
+              <Input
+                id="money-added"
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={moneyAdded}
+                onChange={(e) => setMoneyAdded(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="money-subtracted">Money Subtracted</Label>
+              <Input
+                id="money-subtracted"
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={moneySubtracted}
+                onChange={(e) => setMoneySubtracted(e.target.value)}
+              />
+            </div>
+
+            {startingCash && (
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <Label className="text-sm font-medium">Final Total</Label>
+                <div className="text-2xl font-bold text-green-600">
+                  ${((parseFloat(startingCash) || 0) + (parseFloat(moneyAdded) || 0) - (parseFloat(moneySubtracted) || 0)).toFixed(2)}
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="no" id="no" />
-                <Label htmlFor="no" className="text-lg font-medium text-red-600">
-                  No
-                </Label>
-              </div>
-            </RadioGroup>
+            )}
           </div>
 
           <Button 
             onClick={handleSubmit} 
             className="w-full" 
             size="lg"
-            disabled={isSubmitting || !selectedWorkerId || !response}
+            disabled={isSubmitting || !selectedWorkerId || !startingCash}
           >
-            {isSubmitting ? "Submitting..." : "Submit Check-in"}
+            {isSubmitting ? "Submitting..." : "Submit Cash Report"}
           </Button>
         </CardContent>
       </Card>

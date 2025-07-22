@@ -683,24 +683,33 @@ export type Database = {
         Row: {
           checkin_date: string
           created_at: string
+          final_total: number
           id: string
-          response: string
+          money_added: number
+          money_subtracted: number
+          starting_cash: number
           updated_at: string
           worker_id: string
         }
         Insert: {
           checkin_date?: string
           created_at?: string
+          final_total?: number
           id?: string
-          response: string
+          money_added?: number
+          money_subtracted?: number
+          starting_cash?: number
           updated_at?: string
           worker_id: string
         }
         Update: {
           checkin_date?: string
           created_at?: string
+          final_total?: number
           id?: string
-          response?: string
+          money_added?: number
+          money_subtracted?: number
+          starting_cash?: number
           updated_at?: string
           worker_id?: string
         }
