@@ -36,22 +36,32 @@ export function ZipcodeProximityChecker({ className = "" }: ZipcodeProximityChec
 
   const geocodeAddress = async (address: string): Promise<{ lat: number; lng: number } | null> => {
     try {
-      const { data } = await supabase.functions.invoke('google-places', {
+      const { data, error } = await supabase.functions.invoke('google-places', {
         body: { query: address }
       });
 
+      if (error) {
+        console.error('Error calling google-places function:', error);
+        return null;
+      }
+
       if (data?.suggestions && data.suggestions.length > 0) {
+        // For zipcode searches, the google-places function should already provide coordinates
+        // Let's use the place_id to get detailed information including coordinates
         const firstResult = data.suggestions[0];
-        // Use Google Places API to get coordinates
-        const googleApiKey = 'AIzaSyBvOkuAiS08_FKBtgfCaZE-9fL3BHM8mY4'; // This should come from environment
-        const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(firstResult.formatted_address)}&key=${googleApiKey}`;
         
-        const response = await fetch(geocodeUrl);
-        const geocodeData = await response.json();
-        
-        if (geocodeData.results && geocodeData.results.length > 0) {
-          const location = geocodeData.results[0].geometry.location;
-          return { lat: location.lat, lng: location.lng };
+        // Create a geocoding edge function call instead of direct API call
+        const { data: geocodeData, error: geocodeError } = await supabase.functions.invoke('geocode-address', {
+          body: { placeId: firstResult.place_id, address: firstResult.formatted_address }
+        });
+
+        if (geocodeError) {
+          console.error('Error geocoding:', geocodeError);
+          return null;
+        }
+
+        if (geocodeData?.coordinates) {
+          return geocodeData.coordinates;
         }
       }
       return null;
