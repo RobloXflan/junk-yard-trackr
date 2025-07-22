@@ -172,8 +172,8 @@ export function WorkerCheckinStatus() {
                     {worker.checkin && (
                       <div className="text-xs text-gray-400">
                         Start: ${worker.checkin.starting_cash.toFixed(2)} | 
-                        Added: ${worker.checkin.money_added.toFixed(2)} | 
-                        Subtracted: ${worker.checkin.money_subtracted.toFixed(2)}
+                        Gave Company: ${worker.checkin.money_subtracted.toFixed(2)} | 
+                        Company Gave: ${worker.checkin.money_added.toFixed(2)}
                       </div>
                     )}
                   </div>
