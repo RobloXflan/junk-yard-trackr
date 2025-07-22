@@ -49,29 +49,7 @@ export class DocumentVisionService {
     try {
       console.log('📄 Converting document to image:', file.name);
       
-      if (file.type === 'application/pdf') {
-        // For PDFs, use the existing PDF processing service to get first page
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const response = await fetch('/functions/v1/pdf-operations', {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!response.ok) {
-          throw new Error('PDF processing failed');
-        }
-
-        const result = await response.json();
-        
-        // Return the first page full image URL or thumbnail
-        if (result.pages && result.pages.length > 0) {
-          return result.pages[0].full_page_url || result.pages[0].thumbnail_url;
-        }
-        
-        throw new Error('No pages found in PDF');
-      } else if (file.type.startsWith('image/')) {
+      if (file.type.startsWith('image/')) {
         // For images, convert to base64
         return new Promise((resolve, reject) => {
           const reader = new FileReader();
@@ -79,8 +57,11 @@ export class DocumentVisionService {
           reader.onerror = () => reject(new Error('Failed to read image file'));
           reader.readAsDataURL(file);
         });
+      } else if (file.type === 'application/pdf') {
+        // For now, ask users to upload images instead of PDFs for AI extraction
+        throw new Error('Please upload an image file (JPG, PNG) instead of PDF for AI extraction. You can screenshot or scan the document as an image.');
       } else {
-        throw new Error('Unsupported file type. Please upload a PDF or image file.');
+        throw new Error('Please upload an image file (JPG, PNG, etc.) for AI extraction.');
       }
     } catch (error) {
       console.error('❌ Document to image conversion failed:', error);
