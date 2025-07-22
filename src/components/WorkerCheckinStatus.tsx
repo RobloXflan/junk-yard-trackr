@@ -172,8 +172,9 @@ export function WorkerCheckinStatus() {
                     {worker.checkin && (
                       <div className="text-xs text-gray-400">
                         Start: ${worker.checkin.starting_cash.toFixed(2)} | 
-                        Gave Company: ${worker.checkin.money_subtracted.toFixed(2)} | 
-                        Company Gave: ${worker.checkin.money_added.toFixed(2)}
+                        {worker.checkin.money_subtracted > 0 && `Gave Company: $${worker.checkin.money_subtracted.toFixed(2)} (${worker.checkin.starting_cash.toFixed(2)} - ${worker.checkin.money_subtracted.toFixed(2)} = ${worker.checkin.final_total.toFixed(2)}) | `}
+                        {worker.checkin.money_added > 0 && `Company Gave: $${worker.checkin.money_added.toFixed(2)} (${worker.checkin.starting_cash.toFixed(2)} + ${worker.checkin.money_added.toFixed(2)} = ${worker.checkin.final_total.toFixed(2)}) | `}
+                        Final: ${worker.checkin.final_total.toFixed(2)}
                       </div>
                     )}
                   </div>
