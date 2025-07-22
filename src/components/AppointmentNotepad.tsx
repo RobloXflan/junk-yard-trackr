@@ -447,10 +447,11 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="title">Title</SelectItem>
-                <SelectItem value="reg">Registration</SelectItem>
-                <SelectItem value="name">Name</SelectItem>
-                <SelectItem value="license">License</SelectItem>
-                <SelectItem value="junkslip">Junk Slip</SelectItem>
+                <SelectItem value="salvage-title">Salvage Title</SelectItem>
+                <SelectItem value="out-of-state-title">Out of State Title</SelectItem>
+                <SelectItem value="registered-owner">Registered Owner</SelectItem>
+                <SelectItem value="liensale">Liensale</SelectItem>
+                <SelectItem value="junkslip">Junkslip</SelectItem>
                 <SelectItem value="no-paperwork">No Paperwork</SelectItem>
                 <SelectItem value="other">Other</SelectItem>
               </SelectContent>
