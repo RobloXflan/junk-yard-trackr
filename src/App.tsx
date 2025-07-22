@@ -24,6 +24,7 @@ import TelegramDebug from "@/pages/TelegramDebug";
 import { Menu } from "lucide-react";
 import { useState } from "react";
 import { Print } from "@/pages/Print";
+import { Workers } from "@/pages/Workers";
 
 const queryClient = new QueryClient();
 
@@ -67,6 +68,8 @@ const App = () => {
         return <Quotes />;
       case 'appointments':
         return <Appointments />;
+      case 'workers':
+        return <Workers />;
       case 'print':
         return <Print />;
       case 'business-purchases':

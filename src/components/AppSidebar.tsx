@@ -1,4 +1,5 @@
-import { Car, BarChart3, Upload, Clock, Settings, CheckCircle, FileText, TrendingUp, ShoppingCart, ScanLine, Calendar, Printer } from "lucide-react";
+
+import { Car, BarChart3, Upload, Clock, Settings, CheckCircle, FileText, TrendingUp, ShoppingCart, ScanLine, Calendar, Printer, Users } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -48,6 +49,11 @@ const mainMenuItems = [
     title: "Appointments",
     page: "appointments",
     icon: Calendar,
+  },
+  {
+    title: "Workers",
+    page: "workers",
+    icon: Users,
   },
   {
     title: "Print",
