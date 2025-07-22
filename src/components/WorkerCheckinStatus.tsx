@@ -84,8 +84,20 @@ export function WorkerCheckinStatus() {
     if (!worker.checkin) {
       return <Badge variant="secondary">No Report</Badge>;
     }
+    
+    const { starting_cash, money_added, money_subtracted, final_total } = worker.checkin;
+    let mathDisplay = `$${starting_cash.toFixed(2)}`;
+    
+    if (money_added > 0) {
+      mathDisplay += ` + $${money_added.toFixed(2)} = $${final_total.toFixed(2)}`;
+    } else if (money_subtracted > 0) {
+      mathDisplay += ` - $${money_subtracted.toFixed(2)} = $${final_total.toFixed(2)}`;
+    } else {
+      mathDisplay = `$${final_total.toFixed(2)}`;
+    }
+    
     return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-      ${worker.checkin.final_total.toFixed(2)}
+      {mathDisplay}
     </Badge>;
   };
 
