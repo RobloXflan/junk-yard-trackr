@@ -461,23 +461,8 @@ export const SmartReceiptUpload = () => {
 
   return (
     <div className="space-y-6">
-      {/* Tax Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-2 border-primary/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-primary" />
-              Total Tax Deductions
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">
-              {formatCurrency(taxData.totalAmount)}
-            </div>
-            <p className="text-sm text-muted-foreground">Business expenses tracked</p>
-          </CardContent>
-        </Card>
-        
+      {/* Only show Receipt Count card - hide Total Tax Deductions and Large Expenses */}
+      <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -488,21 +473,6 @@ export const SmartReceiptUpload = () => {
           <CardContent>
             <div className="text-2xl font-bold">{taxData.totalReceipts}</div>
             <p className="text-sm text-muted-foreground">Tax receipts saved</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4" />
-              Large Expenses
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {savedPurchases.filter(p => p.purchase_price >= 2500).length}
-            </div>
-            <p className="text-sm text-muted-foreground">$2,500+ expenses</p>
           </CardContent>
         </Card>
       </div>
@@ -871,174 +841,6 @@ export const SmartReceiptUpload = () => {
           ))}
         </div>
       )}
-
-      {/* Tax Records by Date */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Receipt className="w-5 h-5" />
-            Tax Records by Date
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-4 items-center">
-            <Input
-              type="date"
-              placeholder="Filter by date (yyyy-mm-dd)"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="max-w-xs"
-            />
-            {selectedDate && (
-              <Button 
-                variant="outline" 
-                onClick={() => setSelectedDate("")}
-                size="sm"
-              >
-                Clear Filter
-              </Button>
-            )}
-          </div>
-
-          {filteredDates.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {selectedDate ? "No tax records found for the selected date." : "No tax records saved yet."}
-            </div>
-          ) : (
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {filteredDates.map((date) => {
-                const dayData = taxData.dailyBreakdown[date];
-                const isExpanded = expandedDates.has(date);
-                
-                return (
-                  <Collapsible key={date}>
-                    <CollapsibleTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-between p-4 h-auto"
-                        onClick={() => toggleDateExpansion(date)}
-                      >
-                        <div className="flex items-center gap-3">
-                          <Badge variant="outline" className="font-mono">
-                            {date}
-                          </Badge>
-                          <span className="font-medium">
-                            {formatDate(date)}
-                          </span>
-                          <span className="text-muted-foreground">
-                            ({dayData.purchases.length} receipt{dayData.purchases.length !== 1 ? 's' : ''})
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-lg">
-                            {formatCurrency(dayData.total)}
-                          </span>
-                          {isExpanded ? (
-                            <ChevronUp className="h-4 w-4" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4" />
-                          )}
-                        </div>
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="px-4 pb-4">
-                      <div className="space-y-2 border-l-2 border-muted pl-4 ml-2">
-                         {dayData.purchases.map((purchase) => (
-                           <div key={purchase.id} className="space-y-3">
-                             <div className="flex justify-between items-start p-3 bg-muted/30 rounded">
-                               <div className="text-sm space-y-1">
-                                 <div className="font-medium">{purchase.item_name}</div>
-                                 <div className="text-muted-foreground">
-                                   {purchase.vendor_store} • {purchase.category}
-                                 </div>
-                                 {purchase.notes_purpose && (
-                                   <div className="text-xs text-muted-foreground">
-                                     Purpose: {purchase.notes_purpose}
-                                   </div>
-                                 )}
-                               </div>
-                               <div className="text-right">
-                                 <div className="font-medium">
-                                   {formatCurrency(purchase.purchase_price)}
-                                 </div>
-                                 <div className="text-xs text-muted-foreground">
-                                   {purchase.payment_method}
-                                 </div>
-                                 <div className="flex gap-1 mt-1">
-                                   {purchase.receipt_url && (
-                                     <a href={purchase.receipt_url} target="_blank" rel="noopener noreferrer">
-                                       <Button variant="outline" size="sm">
-                                         <Receipt className="w-3 h-3" />
-                                       </Button>
-                                     </a>
-                                   )}
-                                   <Button 
-                                     variant="outline" 
-                                     size="sm"
-                                     onClick={() => startDateCorrection(purchase)}
-                                   >
-                                     <CalendarIcon className="w-3 h-3" />
-                                   </Button>
-                                 </div>
-                               </div>
-                             </div>
-                             
-                             {editingDateFor === purchase.id && (
-                               <div className="p-4 bg-muted/50 rounded-lg border">
-                                 <div className="space-y-3">
-                                   <div className="text-sm font-medium">Correct Date</div>
-                                   <Popover>
-                                     <PopoverTrigger asChild>
-                                       <Button
-                                         variant="outline"
-                                         className={cn(
-                                           "w-full justify-start text-left font-normal",
-                                           !newDate && "text-muted-foreground"
-                                         )}
-                                       >
-                                         <CalendarIcon className="mr-2 h-4 w-4" />
-                                         {newDate ? format(newDate, "yyyy-MM-dd") : "Pick a date"}
-                                       </Button>
-                                     </PopoverTrigger>
-                                     <PopoverContent className="w-auto p-0">
-                                       <Calendar
-                                         mode="single"
-                                         selected={newDate}
-                                         onSelect={setNewDate}
-                                         initialFocus
-                                         className="pointer-events-auto"
-                                       />
-                                     </PopoverContent>
-                                   </Popover>
-                                   <div className="flex gap-2">
-                                     <Button 
-                                       size="sm" 
-                                       onClick={() => saveDateCorrection(purchase.id)}
-                                     >
-                                       Save
-                                     </Button>
-                                     <Button 
-                                       size="sm" 
-                                       variant="outline" 
-                                       onClick={cancelDateCorrection}
-                                     >
-                                       Cancel
-                                     </Button>
-                                   </div>
-                                 </div>
-                               </div>
-                             )}
-                           </div>
-                         ))}
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {receipts.length === 0 && taxData.totalReceipts === 0 && (
         <Card>
