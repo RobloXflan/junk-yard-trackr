@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { MapPin, Navigation, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { ProximityMap } from "./ProximityMap";
 
 interface PendingAppointment {
   id: string;
@@ -228,6 +229,12 @@ export function ZipcodeProximityChecker({ className = "" }: ZipcodeProximityChec
                 No recent pending appointments found with valid addresses
               </div>
             )}
+
+            {/* Map Component */}
+            <ProximityMap 
+              zipcodeCoordinates={zipcodeCoordinates}
+              nearbyAppointments={nearbyAppointments}
+            />
           </div>
         )}
       </CardContent>
