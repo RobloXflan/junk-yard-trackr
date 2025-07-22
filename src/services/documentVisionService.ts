@@ -54,7 +54,7 @@ export class DocumentVisionService {
         const formData = new FormData();
         formData.append('file', file);
 
-        const response = await fetch('/functions/v1/process-pdf', {
+        const response = await fetch('/functions/v1/pdf-operations', {
           method: 'POST',
           body: formData,
         });
