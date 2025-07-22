@@ -25,6 +25,7 @@ import { Menu } from "lucide-react";
 import { useState } from "react";
 import { Print } from "@/pages/Print";
 import { Workers } from "@/pages/Workers";
+import { WorkerCheckin } from "@/pages/WorkerCheckin";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +39,7 @@ const App = () => {
   // Check if we're on special routes
   const isPublicInventory = window.location.pathname === "/public-inventory";
   const isWorkerCash = window.location.pathname === "/worker-cash";
+  const isWorkerCheckin = window.location.pathname === "/worker-checkin";
 
   const handleAuthentication = (type: UserType, user?: string) => {
     setUserType(type);
@@ -111,6 +113,18 @@ const App = () => {
           <Toaster />
           <Sonner />
           <WorkerCashEntry />
+        </TooltipProvider>
+      </QueryClientProvider>
+    );
+  }
+
+  if (isWorkerCheckin) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <WorkerCheckin />
         </TooltipProvider>
       </QueryClientProvider>
     );

@@ -679,6 +679,41 @@ export type Database = {
         }
         Relationships: []
       }
+      worker_checkins: {
+        Row: {
+          checkin_date: string
+          created_at: string
+          id: string
+          response: string
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          checkin_date?: string
+          created_at?: string
+          id?: string
+          response: string
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          checkin_date?: string
+          created_at?: string
+          id?: string
+          response?: string
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_checkins_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workers: {
         Row: {
           created_at: string

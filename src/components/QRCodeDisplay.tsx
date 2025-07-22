@@ -4,7 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Printer, Download } from "lucide-react";
 
 export function QRCodeDisplay() {
-  const workerCashUrl = `${window.location.origin}/worker-cash`;
+  const workerCheckinUrl = `${window.location.origin}/worker-checkin`;
 
   const handlePrint = () => {
     const printWindow = window.open('', '_blank');
@@ -98,14 +98,14 @@ export function QRCodeDisplay() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Worker Cash Report QR Code</CardTitle>
+        <CardTitle>Worker Check-in QR Code</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex justify-center">
           <div className="p-4 bg-white rounded-lg border">
             <QRCodeSVG
               id="qr-code-svg"
-              value={workerCashUrl}
+              value={workerCheckinUrl}
               size={200}
               level="M"
               includeMargin={true}
@@ -115,10 +115,10 @@ export function QRCodeDisplay() {
         
         <div className="text-center space-y-2">
           <p className="text-sm text-muted-foreground">
-            Workers can scan this QR code to submit their daily cash reports
+            Workers can scan this QR code to submit their daily check-in
           </p>
           <p className="text-xs text-muted-foreground font-mono">
-            {workerCashUrl}
+            {workerCheckinUrl}
           </p>
         </div>
 
@@ -137,9 +137,9 @@ export function QRCodeDisplay() {
           <h4 className="font-medium text-sm mb-2">Instructions for Workers:</h4>
           <ol className="text-xs text-muted-foreground space-y-1">
             <li>1. Scan QR code with phone camera</li>
-            <li>2. Select your name (Angel, Chino, or Dante)</li>
-            <li>3. Enter money reported and given/received</li>
-            <li>4. Submit your report</li>
+            <li>2. Select your name from the list</li>
+            <li>3. Choose Yes or No for your response</li>
+            <li>4. Submit your check-in</li>
           </ol>
         </div>
       </CardContent>
