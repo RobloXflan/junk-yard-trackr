@@ -12,6 +12,8 @@ import { VehicleDetails } from "./forms/VehicleDetails";
 import { PurchaseInfo } from "./forms/PurchaseInfo";
 import { DocumentStatus } from "./forms/DocumentStatus";
 import { DestinationSelector } from "./forms/DestinationSelector";
+import { AIDataExtraction } from "./forms/AIDataExtraction";
+import { ExtractedVehicleData } from "@/services/documentVisionService";
 
 export function VehicleIntakeForm() {
   const { addVehicle } = useVehicleStore();
@@ -42,6 +44,38 @@ export function VehicleIntakeForm() {
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleAIDataExtracted = (extractedData: ExtractedVehicleData) => {
+    console.log('AI extracted data received:', extractedData);
+    
+    // Auto-fill the form with extracted data (only if confidence > 0)
+    const updates: Partial<typeof formData> = {};
+    
+    if (extractedData.vehicleId && extractedData.confidence.vehicleId > 0) {
+      updates.vehicleId = extractedData.vehicleId;
+    }
+    if (extractedData.year && extractedData.confidence.year > 0) {
+      updates.year = extractedData.year;
+    }
+    if (extractedData.make && extractedData.confidence.make > 0) {
+      updates.make = extractedData.make;
+    }
+    if (extractedData.model && extractedData.confidence.model > 0) {
+      updates.model = extractedData.model;
+    }
+    if (extractedData.licensePlate && extractedData.confidence.licensePlate > 0) {
+      updates.licensePlate = extractedData.licensePlate;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      setFormData(prev => ({ ...prev, ...updates }));
+      
+      toast({
+        title: "Form Auto-Filled",
+        description: `Updated ${Object.keys(updates).length} field(s) with AI-extracted data.`,
+      });
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -146,6 +180,13 @@ export function VehicleIntakeForm() {
               uploadedDocuments={uploadedDocuments}
               onDocumentsChange={setUploadedDocuments}
             />
+
+            {uploadedDocuments.length > 0 && (
+              <AIDataExtraction
+                uploadedDocuments={uploadedDocuments}
+                onDataExtracted={handleAIDataExtracted}
+              />
+            )}
 
             <VehicleDetails 
               formData={formData}
