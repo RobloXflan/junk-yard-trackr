@@ -14,8 +14,11 @@ interface DocumentStatusProps {
 export function DocumentStatus({ formData, onInputChange }: DocumentStatusProps) {
   const paperworkOptions = [
     { value: "title", label: "Title" },
+    { value: "salvage-title", label: "Salvage Title" },
+    { value: "out-of-state-title", label: "Out of State Title" },
     { value: "registered-owner", label: "Registered Owner" },
-    { value: "lien-sale", label: "Lien Sale" },
+    { value: "liensale", label: "Liensale" },
+    { value: "junkslip", label: "Junkslip" },
     { value: "no-paperwork", label: "No Paperwork" },
     { value: "other", label: "Other" }
   ];
