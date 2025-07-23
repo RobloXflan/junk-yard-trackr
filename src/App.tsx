@@ -28,6 +28,7 @@ import { Workers } from "@/pages/Workers";
 import { WorkerCheckin } from "@/pages/WorkerCheckin";
 import { DriverTracking } from "@/pages/DriverTracking";
 import { FleetTracking } from "@/pages/FleetTracking";
+import { MobileDriverTracking } from "@/components/MobileDriverTracking";
 
 const queryClient = new QueryClient();
 
@@ -141,7 +142,7 @@ const App = () => {
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <DriverTracking />
+          <MobileDriverTracking />
         </TooltipProvider>
       </QueryClientProvider>
     );
