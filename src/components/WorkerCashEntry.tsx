@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,9 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { DollarSign, Check, CalendarIcon, Minus, Plus } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { DollarSign, Check, CalendarIcon, Minus, Plus, MapPin, Truck, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface WorkerCashEntry {
   worker_id: string;
@@ -20,6 +23,15 @@ interface WorkerCashEntry {
   total_cash: number;
   source: 'worker' | 'admin';
   entry_date: string;
+}
+
+interface Truck {
+  id: string;
+  truck_number: string;
+  license_plate: string;
+  make: string;
+  model: string;
+  status: string;
 }
 
 const workers = [
@@ -36,11 +48,157 @@ export function WorkerCashEntry() {
   const [activeTab, setActiveTab] = useState<'dado' | 'recibido'>('dado');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState("");
+  
+  // GPS Tracking state
+  const [enableGpsTracking, setEnableGpsTracking] = useState(false);
+  const [trucks, setTrucks] = useState<Truck[]>([]);
+  const [selectedTruckId, setSelectedTruckId] = useState<string>("");
+  const [trackingDuration, setTrackingDuration] = useState("480"); // 8 hours default
+  const [isTracking, setIsTracking] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState<number>(0);
+  const [locationInterval, setLocationInterval] = useState<NodeJS.Timeout | null>(null);
+  const [trackingSessionId, setTrackingSessionId] = useState<string>("");
 
   const dateKey = format(selectedDate, 'yyyy-MM-dd');
   
   console.log('Worker form - selected date:', selectedDate);
   console.log('Worker form - dateKey:', dateKey);
+
+  useEffect(() => {
+    fetchTrucks();
+  }, []);
+
+  useEffect(() => {
+    if (isTracking && timeRemaining > 0) {
+      const timer = setTimeout(() => {
+        setTimeRemaining(prev => prev - 1000);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (isTracking && timeRemaining <= 0) {
+      handleStopTracking();
+    }
+  }, [isTracking, timeRemaining]);
+
+  useEffect(() => {
+    if (isTracking) {
+      const interval = setInterval(updateLocation, 30000); // Update every 30 seconds
+      setLocationInterval(interval);
+      return () => clearInterval(interval);
+    } else if (locationInterval) {
+      clearInterval(locationInterval);
+      setLocationInterval(null);
+    }
+  }, [isTracking]);
+
+  const fetchTrucks = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("trucks")
+        .select("*")
+        .eq("status", "available")
+        .order("truck_number");
+
+      if (error) throw error;
+      setTrucks(data || []);
+    } catch (error) {
+      console.error("Error fetching trucks:", error);
+      toast.error("Failed to load trucks");
+    }
+  };
+
+  const updateLocation = async () => {
+    if (!navigator.geolocation || !selectedTruckId) return;
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          await supabase.from("truck_locations").insert({
+            truck_id: selectedTruckId,
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy,
+          });
+        } catch (error) {
+          console.error("Error updating location:", error);
+        }
+      },
+      (error) => console.error("Geolocation error:", error)
+    );
+  };
+
+  const handleStartTracking = async () => {
+    if (!selectedTruckId || !enableGpsTracking) return;
+
+    try {
+      const { data: sessionData, error } = await supabase
+        .from("truck_tracking_sessions")
+        .insert({
+          truck_id: selectedTruckId,
+          driver_id: selectedWorker,
+          planned_duration_minutes: parseInt(trackingDuration),
+          status: "active"
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      await supabase
+        .from("trucks")
+        .update({ status: "in_use", current_driver_id: selectedWorker })
+        .eq("id", selectedTruckId);
+
+      setTrackingSessionId(sessionData.id);
+      setIsTracking(true);
+      setTimeRemaining(parseInt(trackingDuration) * 60 * 1000);
+      updateLocation();
+      toast.success("GPS tracking started!");
+    } catch (error) {
+      console.error("Error starting tracking:", error);
+      toast.error("Failed to start GPS tracking");
+    }
+  };
+
+  const handleStopTracking = async () => {
+    if (!trackingSessionId || !selectedTruckId) return;
+
+    try {
+      const actualDurationMinutes = Math.round((parseInt(trackingDuration) * 60 * 1000 - timeRemaining) / 60000);
+
+      await supabase
+        .from("truck_tracking_sessions")
+        .update({
+          session_end: new Date().toISOString(),
+          actual_duration_minutes: actualDurationMinutes,
+          status: "completed"
+        })
+        .eq("id", trackingSessionId);
+
+      await supabase
+        .from("trucks")
+        .update({ status: "available", current_driver_id: null })
+        .eq("id", selectedTruckId);
+
+      setIsTracking(false);
+      setTimeRemaining(0);
+      setTrackingSessionId("");
+      if (locationInterval) {
+        clearInterval(locationInterval);
+        setLocationInterval(null);
+      }
+      toast.success("GPS tracking stopped!");
+    } catch (error) {
+      console.error("Error stopping tracking:", error);
+      toast.error("Failed to stop GPS tracking");
+    }
+  };
+
+  const formatTime = (ms: number) => {
+    const hours = Math.floor(ms / (1000 * 60 * 60));
+    const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((ms % (1000 * 60)) / 1000);
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
 
   const handleSubmit = () => {
     // Reset error
@@ -289,6 +447,115 @@ export function WorkerCashEntry() {
               </div>
             </div>
           )}
+
+          {/* GPS Tracking Section */}
+          <div className="space-y-4 border-t pt-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <MapPin className="w-5 h-5 text-blue-600" />
+                <Label htmlFor="gps-tracking" className="text-base font-medium">
+                  Activar Rastreo GPS
+                </Label>
+              </div>
+              <Switch
+                id="gps-tracking"
+                checked={enableGpsTracking}
+                onCheckedChange={setEnableGpsTracking}
+                disabled={isTracking}
+              />
+            </div>
+
+            {enableGpsTracking && (
+              <div className="space-y-4 p-4 bg-blue-50 rounded-md border border-blue-200">
+                {!isTracking ? (
+                  <>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Seleccionar Camión</Label>
+                      <Select value={selectedTruckId} onValueChange={setSelectedTruckId}>
+                        <SelectTrigger className="h-10">
+                          <SelectValue placeholder="Elige un camión..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {trucks.map((truck) => (
+                            <SelectItem key={truck.id} value={truck.id}>
+                              <div className="flex items-center space-x-2">
+                                <Truck className="w-4 h-4" />
+                                <span>
+                                  #{truck.truck_number} {truck.make} {truck.model}
+                                  {truck.license_plate && ` (${truck.license_plate})`}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Duración (minutos)</Label>
+                      <Select value={trackingDuration} onValueChange={setTrackingDuration}>
+                        <SelectTrigger className="h-10">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="60">1 hora</SelectItem>
+                          <SelectItem value="120">2 horas</SelectItem>
+                          <SelectItem value="240">4 horas</SelectItem>
+                          <SelectItem value="480">8 horas</SelectItem>
+                          <SelectItem value="600">10 horas</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <Button
+                      onClick={handleStartTracking}
+                      disabled={!selectedTruckId || !selectedWorker}
+                      className="w-full"
+                      variant="outline"
+                    >
+                      <MapPin className="w-4 h-4 mr-2" />
+                      Iniciar Rastreo GPS
+                    </Button>
+                  </>
+                ) : (
+                  <div className="text-center space-y-3">
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-sm font-medium text-green-700">GPS Activo</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-center space-x-2">
+                      <Clock className="w-4 h-4 text-blue-600" />
+                      <span className="text-lg font-mono">{formatTime(timeRemaining)}</span>
+                    </div>
+                    
+                    <div className="text-xs text-muted-foreground">
+                      Camión: {trucks.find(t => t.id === selectedTruckId)?.truck_number}
+                    </div>
+
+                    <div className="flex space-x-2">
+                      <Button
+                        onClick={() => setTimeRemaining(prev => prev + 60 * 60 * 1000)}
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                      >
+                        +1 Hora
+                      </Button>
+                      <Button
+                        onClick={handleStopTracking}
+                        variant="destructive"
+                        size="sm"
+                        className="flex-1"
+                      >
+                        Parar GPS
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           <Button 
             onClick={handleSubmit} 
