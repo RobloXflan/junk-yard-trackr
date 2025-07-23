@@ -26,6 +26,8 @@ import { useState } from "react";
 import { Print } from "@/pages/Print";
 import { Workers } from "@/pages/Workers";
 import { WorkerCheckin } from "@/pages/WorkerCheckin";
+import { DriverTracking } from "@/pages/DriverTracking";
+import { FleetTracking } from "@/pages/FleetTracking";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +42,7 @@ const App = () => {
   const isPublicInventory = window.location.pathname === "/public-inventory";
   const isWorkerCash = window.location.pathname === "/worker-cash";
   const isWorkerCheckin = window.location.pathname === "/worker-checkin";
+  const isDriverTracking = window.location.pathname === "/driver-tracking";
 
   const handleAuthentication = (type: UserType, user?: string) => {
     setUserType(type);
@@ -72,6 +75,8 @@ const App = () => {
         return <Appointments />;
       case 'workers':
         return <Workers />;
+      case 'fleet-tracking':
+        return <FleetTracking />;
       case 'print':
         return <Print />;
       case 'business-purchases':
@@ -125,6 +130,18 @@ const App = () => {
           <Toaster />
           <Sonner />
           <WorkerCheckin />
+        </TooltipProvider>
+      </QueryClientProvider>
+    );
+  }
+
+  if (isDriverTracking) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <DriverTracking />
         </TooltipProvider>
       </QueryClientProvider>
     );

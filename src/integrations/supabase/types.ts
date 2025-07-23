@@ -580,6 +580,193 @@ export type Database = {
         }
         Relationships: []
       }
+      truck_assignments: {
+        Row: {
+          appointment_id: string
+          assigned_at: string
+          created_at: string
+          id: string
+          status: string | null
+          truck_id: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_id: string
+          assigned_at?: string
+          created_at?: string
+          id?: string
+          status?: string | null
+          truck_id: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string
+          assigned_at?: string
+          created_at?: string
+          id?: string
+          status?: string | null
+          truck_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "truck_assignments_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointment_notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "truck_assignments_truck_id_fkey"
+            columns: ["truck_id"]
+            isOneToOne: false
+            referencedRelation: "trucks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      truck_locations: {
+        Row: {
+          accuracy: number | null
+          battery_level: number | null
+          created_at: string
+          id: string
+          latitude: number
+          longitude: number
+          truck_id: string
+        }
+        Insert: {
+          accuracy?: number | null
+          battery_level?: number | null
+          created_at?: string
+          id?: string
+          latitude: number
+          longitude: number
+          truck_id: string
+        }
+        Update: {
+          accuracy?: number | null
+          battery_level?: number | null
+          created_at?: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          truck_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "truck_locations_truck_id_fkey"
+            columns: ["truck_id"]
+            isOneToOne: false
+            referencedRelation: "trucks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      truck_tracking_sessions: {
+        Row: {
+          actual_duration_minutes: number | null
+          auto_stopped: boolean | null
+          created_at: string
+          driver_id: string
+          id: string
+          planned_duration_minutes: number
+          session_end: string | null
+          session_start: string
+          status: string | null
+          truck_id: string
+          updated_at: string
+        }
+        Insert: {
+          actual_duration_minutes?: number | null
+          auto_stopped?: boolean | null
+          created_at?: string
+          driver_id: string
+          id?: string
+          planned_duration_minutes: number
+          session_end?: string | null
+          session_start?: string
+          status?: string | null
+          truck_id: string
+          updated_at?: string
+        }
+        Update: {
+          actual_duration_minutes?: number | null
+          auto_stopped?: boolean | null
+          created_at?: string
+          driver_id?: string
+          id?: string
+          planned_duration_minutes?: number
+          session_end?: string | null
+          session_start?: string
+          status?: string | null
+          truck_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "truck_tracking_sessions_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "truck_tracking_sessions_truck_id_fkey"
+            columns: ["truck_id"]
+            isOneToOne: false
+            referencedRelation: "trucks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trucks: {
+        Row: {
+          created_at: string
+          current_driver_id: string | null
+          id: string
+          license_plate: string | null
+          make: string | null
+          model: string | null
+          status: string | null
+          truck_number: string
+          updated_at: string
+          year: number | null
+        }
+        Insert: {
+          created_at?: string
+          current_driver_id?: string | null
+          id?: string
+          license_plate?: string | null
+          make?: string | null
+          model?: string | null
+          status?: string | null
+          truck_number: string
+          updated_at?: string
+          year?: number | null
+        }
+        Update: {
+          created_at?: string
+          current_driver_id?: string | null
+          id?: string
+          license_plate?: string | null
+          make?: string | null
+          model?: string | null
+          status?: string | null
+          truck_number?: string
+          updated_at?: string
+          year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trucks_current_driver_id_fkey"
+            columns: ["current_driver_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vehicles: {
         Row: {
           bill_of_sale: boolean | null
