@@ -84,7 +84,7 @@ export function TruckManagement() {
     const truckData = {
       ...formData,
       year: formData.year ? parseInt(formData.year) : null,
-      current_driver_id: formData.current_driver_id || null
+      current_driver_id: formData.current_driver_id === "unassigned" ? null : formData.current_driver_id || null
     };
 
     if (editingTruck) {
@@ -124,7 +124,7 @@ export function TruckManagement() {
       model: "",
       year: "",
       status: "available",
-      current_driver_id: ""
+      current_driver_id: "unassigned"
     });
   };
 
@@ -137,7 +137,7 @@ export function TruckManagement() {
       model: truck.model || "",
       year: truck.year?.toString() || "",
       status: truck.status,
-      current_driver_id: truck.current_driver_id || ""
+      current_driver_id: truck.current_driver_id || "unassigned"
     });
     setIsDialogOpen(true);
   };
@@ -244,7 +244,7 @@ export function TruckManagement() {
                       <SelectValue placeholder="Select driver (optional)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No driver assigned</SelectItem>
+                      <SelectItem value="unassigned">No driver assigned</SelectItem>
                       {workers.map((worker) => (
                         <SelectItem key={worker.id} value={worker.id}>
                           {worker.name}
