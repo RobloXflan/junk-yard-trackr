@@ -177,10 +177,31 @@ export function WorkerCheckin() {
             </div>
 
             {startingCash && (
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <Label className="text-sm font-medium">Final Total</Label>
-                <div className="text-2xl font-bold text-green-600">
-                  ${((parseFloat(startingCash) || 0) + (parseFloat(moneyAdded) || 0) - (parseFloat(moneySubtracted) || 0)).toFixed(2)}
+              <div className="p-4 bg-muted rounded-lg border">
+                <Label className="text-sm font-medium mb-2 block">Cash Calculation</Label>
+                <div className="space-y-2">
+                  <div className="text-sm text-muted-foreground">
+                    Starting: ${(parseFloat(startingCash) || 0).toFixed(2)}
+                    {moneyAdded && parseFloat(moneyAdded) > 0 && (
+                      <> + Added: ${(parseFloat(moneyAdded) || 0).toFixed(2)}</>
+                    )}
+                    {moneySubtracted && parseFloat(moneySubtracted) > 0 && (
+                      <> - Subtracted: ${(parseFloat(moneySubtracted) || 0).toFixed(2)}</>
+                    )}
+                  </div>
+                  <div className="text-lg">
+                    ${(parseFloat(startingCash) || 0).toFixed(2)}
+                    {moneyAdded && parseFloat(moneyAdded) > 0 && (
+                      <> + ${(parseFloat(moneyAdded) || 0).toFixed(2)}</>
+                    )}
+                    {moneySubtracted && parseFloat(moneySubtracted) > 0 && (
+                      <> - ${(parseFloat(moneySubtracted) || 0).toFixed(2)}</>
+                    )}
+                    {" = "}
+                    <span className="font-bold text-primary">
+                      ${((parseFloat(startingCash) || 0) + (parseFloat(moneyAdded) || 0) - (parseFloat(moneySubtracted) || 0)).toFixed(2)}
+                    </span>
+                  </div>
                 </div>
               </div>
             )}
