@@ -37,6 +37,29 @@ export function WorkerCheckinStatus() {
     fetchWorkersAndCheckins();
   }, [selectedDate]);
 
+  // Set up real-time subscription for worker_checkins table
+  useEffect(() => {
+    const channel = supabase
+      .channel('worker-checkins-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'worker_checkins'
+        },
+        () => {
+          // Refresh data when any change occurs to worker_checkins
+          fetchWorkersAndCheckins();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedDate]);
+
   const fetchWorkersAndCheckins = async () => {
     setLoading(true);
     try {
