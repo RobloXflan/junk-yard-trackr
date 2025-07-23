@@ -81,7 +81,7 @@ export function WorkerCashEntry() {
 
   useEffect(() => {
     if (isTracking) {
-      const interval = setInterval(updateLocation, 30000); // Update every 30 seconds
+      const interval = setInterval(updateLocation, 300000); // Update every 5 minutes
       setLocationInterval(interval);
       return () => clearInterval(interval);
     } else if (locationInterval) {

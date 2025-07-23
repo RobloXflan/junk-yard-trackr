@@ -63,7 +63,7 @@ export function DriverTracking() {
   useEffect(() => {
     let locationInterval: NodeJS.Timeout;
     if (isTracking && selectedTruckId) {
-      locationInterval = setInterval(updateLocation, 30000);
+      locationInterval = setInterval(updateLocation, 300000); // Update every 5 minutes
       updateLocation(); // Initial update
     }
     return () => clearInterval(locationInterval);

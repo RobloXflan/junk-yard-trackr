@@ -59,7 +59,7 @@ export function WorkerCheckin() {
 
   useEffect(() => {
     if (isTracking) {
-      const interval = setInterval(updateLocation, 30000);
+      const interval = setInterval(updateLocation, 300000); // Update every 5 minutes
       return () => clearInterval(interval);
     }
   }, [isTracking, selectedTruckId]);
