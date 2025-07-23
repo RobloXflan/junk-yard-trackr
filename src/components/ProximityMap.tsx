@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -21,12 +22,26 @@ interface PendingAppointment {
   distance?: number;
 }
 
+interface ActiveWorker {
+  id: string;
+  truck_number: string;
+  driver_name: string;
+  coordinates: {
+    lat: number;
+    lng: number;
+  };
+  distance: number;
+  last_update: string;
+  battery_level?: number;
+}
+
 interface ProximityMapProps {
   zipcodeCoordinates: { lat: number; lng: number } | null;
   nearbyAppointments: PendingAppointment[];
+  activeWorkers?: ActiveWorker[];
 }
 
-export function ProximityMap({ zipcodeCoordinates, nearbyAppointments }: ProximityMapProps) {
+export function ProximityMap({ zipcodeCoordinates, nearbyAppointments, activeWorkers = [] }: ProximityMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [mapboxToken, setMapboxToken] = useState("");
@@ -40,7 +55,7 @@ export function ProximityMap({ zipcodeCoordinates, nearbyAppointments }: Proximi
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/light-v11',
-      center: zipcodeCoordinates ? [zipcodeCoordinates.lng, zipcodeCoordinates.lat] : [-118.2437, 34.0522], // Default to LA
+      center: zipcodeCoordinates ? [zipcodeCoordinates.lng, zipcodeCoordinates.lat] : [-118.2437, 34.0522],
       zoom: 10,
     });
 
@@ -55,16 +70,34 @@ export function ProximityMap({ zipcodeCoordinates, nearbyAppointments }: Proximi
     const existingMarkers = document.querySelectorAll('.mapboxgl-marker');
     existingMarkers.forEach(marker => marker.remove());
 
-    // Add zipcode marker (blue)
+    // Add zipcode marker (green)
     if (zipcodeCoordinates) {
-      const zipcodeMarker = new mapboxgl.Marker({ color: '#3b82f6' })
+      const zipcodeMarker = new mapboxgl.Marker({ color: '#10b981' })
         .setLngLat([zipcodeCoordinates.lng, zipcodeCoordinates.lat])
         .setPopup(new mapboxgl.Popup().setHTML('<div><strong>Searched Zipcode</strong></div>'))
         .addTo(map.current);
     }
 
+    // Add worker markers (blue)
+    activeWorkers.forEach((worker) => {
+      const marker = new mapboxgl.Marker({ color: '#3b82f6' })
+        .setLngLat([worker.coordinates.lng, worker.coordinates.lat])
+        .setPopup(
+          new mapboxgl.Popup().setHTML(`
+            <div class="p-2">
+              <strong>🚛 Truck #${worker.truck_number}</strong><br>
+              <strong>👤 ${worker.driver_name}</strong><br>
+              <small>📍 ${worker.distance} miles away</small><br>
+              ${worker.battery_level ? `<small>🔋 ${worker.battery_level}%</small><br>` : ''}
+              <small>⏱️ ${new Date(worker.last_update).toLocaleTimeString()}</small>
+            </div>
+          `)
+        )
+        .addTo(map.current);
+    });
+
     // Add appointment markers (red)
-    nearbyAppointments.forEach((appointment, index) => {
+    nearbyAppointments.forEach((appointment) => {
       if (appointment.coordinates) {
         const marker = new mapboxgl.Marker({ color: '#ef4444' })
           .setLngLat([appointment.coordinates.lng, appointment.coordinates.lat])
@@ -83,20 +116,26 @@ export function ProximityMap({ zipcodeCoordinates, nearbyAppointments }: Proximi
     });
 
     // Fit map to show all markers if we have coordinates
-    if (zipcodeCoordinates && nearbyAppointments.length > 0) {
+    if (zipcodeCoordinates && (nearbyAppointments.length > 0 || activeWorkers.length > 0)) {
       const bounds = new mapboxgl.LngLatBounds();
       bounds.extend([zipcodeCoordinates.lng, zipcodeCoordinates.lat]);
       
+      // Include appointment coordinates
       nearbyAppointments.forEach(appointment => {
         if (appointment.coordinates) {
           bounds.extend([appointment.coordinates.lng, appointment.coordinates.lat]);
         }
       });
 
+      // Include worker coordinates
+      activeWorkers.forEach(worker => {
+        bounds.extend([worker.coordinates.lng, worker.coordinates.lat]);
+      });
+
       map.current.fitBounds(bounds, { padding: 50 });
     }
 
-  }, [zipcodeCoordinates, nearbyAppointments, mapInitialized]);
+  }, [zipcodeCoordinates, nearbyAppointments, activeWorkers, mapInitialized]);
 
   // Clean up on unmount
   useEffect(() => {
@@ -148,12 +187,16 @@ export function ProximityMap({ zipcodeCoordinates, nearbyAppointments }: Proximi
         {mapInitialized && (
           <div className="text-sm text-muted-foreground space-y-1">
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
               <span>Your searched zipcode</span>
             </div>
             <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+              <span>Active workers ({activeWorkers.length})</span>
+            </div>
+            <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-              <span>Pending appointments</span>
+              <span>Pending appointments ({nearbyAppointments.length})</span>
             </div>
           </div>
         )}

@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Navigation, Clock } from "lucide-react";
+import { MapPin, Navigation, Clock, Truck, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ProximityMap } from "./ProximityMap";
@@ -24,6 +24,19 @@ interface PendingAppointment {
   distance?: number;
 }
 
+interface ActiveWorker {
+  id: string;
+  truck_number: string;
+  driver_name: string;
+  coordinates: {
+    lat: number;
+    lng: number;
+  };
+  distance: number;
+  last_update: string;
+  battery_level?: number;
+}
+
 interface ZipcodeProximityCheckerProps {
   className?: string;
 }
@@ -33,11 +46,11 @@ export function ZipcodeProximityChecker({ className = "" }: ZipcodeProximityChec
   const [loading, setLoading] = useState(false);
   const [zipcodeCoordinates, setZipcodeCoordinates] = useState<{ lat: number; lng: number } | null>(null);
   const [nearbyAppointments, setNearbyAppointments] = useState<PendingAppointment[]>([]);
+  const [activeWorkers, setActiveWorkers] = useState<ActiveWorker[]>([]);
   const { toast } = useToast();
 
   const geocodeAddress = async (address: string): Promise<{ lat: number; lng: number } | null> => {
     try {
-      // Use the existing google-places function to get coordinates directly
       const { data, error } = await supabase.functions.invoke('google-places', {
         body: { 
           query: address,
@@ -73,6 +86,76 @@ export function ZipcodeProximityChecker({ className = "" }: ZipcodeProximityChec
     return R * c;
   };
 
+  const fetchActiveWorkers = async (zipcodeCoords: { lat: number; lng: number }) => {
+    try {
+      // First get active tracking sessions with truck and driver info
+      const { data: sessions, error: sessionsError } = await supabase
+        .from('truck_tracking_sessions')
+        .select(`
+          id,
+          truck_id,
+          driver_id,
+          status,
+          trucks!inner(
+            truck_number,
+            status
+          ),
+          workers!inner(
+            name
+          )
+        `)
+        .eq('status', 'active');
+
+      if (sessionsError) {
+        console.error('Error fetching active sessions:', sessionsError);
+        return [];
+      }
+
+      // For each active session, get the latest location
+      const workersWithLocations: ActiveWorker[] = [];
+      
+      for (const session of sessions || []) {
+        const { data: locationData } = await supabase
+          .from('truck_locations')
+          .select('latitude, longitude, battery_level, created_at')
+          .eq('truck_id', session.truck_id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (locationData) {
+          const distance = calculateDistance(
+            zipcodeCoords.lat,
+            zipcodeCoords.lng,
+            Number(locationData.latitude),
+            Number(locationData.longitude)
+          );
+
+          workersWithLocations.push({
+            id: session.truck_id,
+            truck_number: session.trucks.truck_number,
+            driver_name: session.workers.name,
+            coordinates: {
+              lat: Number(locationData.latitude),
+              lng: Number(locationData.longitude)
+            },
+            distance: Math.round(distance * 10) / 10,
+            last_update: locationData.created_at,
+            battery_level: locationData.battery_level
+          });
+        }
+      }
+
+      // Sort by distance (closest first)
+      workersWithLocations.sort((a, b) => a.distance - b.distance);
+      return workersWithLocations;
+
+    } catch (error) {
+      console.error('Error fetching active workers:', error);
+      return [];
+    }
+  };
+
   const checkZipcode = async () => {
     if (!zipcode.trim()) {
       toast({
@@ -96,6 +179,10 @@ export function ZipcodeProximityChecker({ className = "" }: ZipcodeProximityChec
         return;
       }
       setZipcodeCoordinates(zipcodeCoords);
+
+      // Fetch active workers and their distances
+      const workers = await fetchActiveWorkers(zipcodeCoords);
+      setActiveWorkers(workers);
 
       // Fetch last 4 pending appointments
       const { data: appointments, error } = await supabase
@@ -123,7 +210,7 @@ export function ZipcodeProximityChecker({ className = "" }: ZipcodeProximityChec
           appointmentsWithDistances.push({
             ...appointment,
             coordinates: coords,
-            distance: Math.round(distance * 10) / 10 // Round to 1 decimal place
+            distance: Math.round(distance * 10) / 10
           });
         }
       }
@@ -134,7 +221,7 @@ export function ZipcodeProximityChecker({ className = "" }: ZipcodeProximityChec
 
       toast({
         title: "Success",
-        description: `Found ${appointmentsWithDistances.length} nearby appointments`
+        description: `Found ${appointmentsWithDistances.length} appointments and ${workers.length} active workers nearby`
       });
 
     } catch (error) {
@@ -183,12 +270,49 @@ export function ZipcodeProximityChecker({ className = "" }: ZipcodeProximityChec
 
         {/* Results */}
         {zipcodeCoordinates && (
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <MapPin className="w-4 h-4" />
               Location: {zipcode} ({zipcodeCoordinates.lat.toFixed(4)}, {zipcodeCoordinates.lng.toFixed(4)})
             </div>
 
+            {/* Active Workers Section */}
+            {activeWorkers.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="font-medium flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  Active Workers (by distance)
+                </h4>
+                {activeWorkers.map((worker) => (
+                  <div 
+                    key={worker.id}
+                    className="p-3 border rounded-lg bg-blue-50 border-blue-200 space-y-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Truck className="w-4 h-4 text-blue-600" />
+                        <span className="font-medium">Truck #{worker.truck_number}</span>
+                        <Badge variant="outline" className="bg-blue-100 text-blue-800">
+                          {worker.driver_name}
+                        </Badge>
+                      </div>
+                      <Badge className={getDistanceColor(worker.distance)}>
+                        {worker.distance} miles
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <span>📍 GPS: {worker.coordinates.lat.toFixed(4)}, {worker.coordinates.lng.toFixed(4)}</span>
+                      {worker.battery_level && (
+                        <span>🔋 {worker.battery_level}%</span>
+                      )}
+                      <span>⏱️ {new Date(worker.last_update).toLocaleTimeString()}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Appointments Section */}
             {nearbyAppointments.length > 0 && (
               <div className="space-y-2">
                 <h4 className="font-medium flex items-center gap-2">
@@ -224,9 +348,10 @@ export function ZipcodeProximityChecker({ className = "" }: ZipcodeProximityChec
               </div>
             )}
 
-            {nearbyAppointments.length === 0 && (
+            {/* No Results Messages */}
+            {activeWorkers.length === 0 && nearbyAppointments.length === 0 && (
               <div className="text-center py-4 text-muted-foreground">
-                No recent pending appointments found with valid addresses
+                No active workers or recent appointments found
               </div>
             )}
 
@@ -234,6 +359,7 @@ export function ZipcodeProximityChecker({ className = "" }: ZipcodeProximityChec
             <ProximityMap 
               zipcodeCoordinates={zipcodeCoordinates}
               nearbyAppointments={nearbyAppointments}
+              activeWorkers={activeWorkers}
             />
           </div>
         )}
