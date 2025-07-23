@@ -273,6 +273,43 @@ export function FleetTracking() {
     fetchActiveSessions();
   };
 
+  const cancelSession = async (sessionId: string) => {
+    const session = activeSessions.find(s => s.id === sessionId);
+    if (!session) return;
+
+    const sessionStart = new Date(session.session_start);
+    const actualDuration = Math.floor((Date.now() - sessionStart.getTime()) / (1000 * 60));
+
+    const { error: sessionError } = await supabase
+      .from('truck_tracking_sessions')
+      .update({ 
+        status: 'completed',
+        session_end: new Date().toISOString(),
+        actual_duration_minutes: actualDuration
+      })
+      .eq('id', sessionId);
+
+    if (sessionError) {
+      toast.error('Failed to cancel session');
+      return;
+    }
+
+    // Update truck status back to available
+    const { error: truckError } = await supabase
+      .from('trucks')
+      .update({ status: 'available', current_driver_id: null })
+      .eq('id', session.truck_id);
+
+    if (truckError) {
+      toast.error('Failed to update truck status');
+      return;
+    }
+
+    toast.success('Session cancelled successfully');
+    fetchActiveSessions();
+    fetchFleetStats();
+  };
+
   // Convert active sessions to map format
   const truckLocations = activeSessions
     .filter(session => session.latest_location)
@@ -385,6 +422,13 @@ export function FleetTracking() {
                         onClick={() => extendSession(session.id, 60)}
                       >
                         +1hr
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => cancelSession(session.id)}
+                      >
+                        Cancel
                       </Button>
                     </div>
                   </div>
