@@ -86,18 +86,19 @@ export function WorkerCheckinStatus() {
     }
     
     const { starting_cash, money_added, money_subtracted, final_total } = worker.checkin;
-    let mathDisplay = `$${starting_cash.toFixed(2)}`;
+    let equation = `$${starting_cash.toFixed(2)}`;
     
     if (money_added > 0) {
-      mathDisplay += ` + $${money_added.toFixed(2)} = `;
-    } else if (money_subtracted > 0) {
-      mathDisplay += ` - $${money_subtracted.toFixed(2)} = `;
-    } else {
-      mathDisplay = ``;
+      equation += ` + $${money_added.toFixed(2)}`;
     }
+    if (money_subtracted > 0) {
+      equation += ` - $${money_subtracted.toFixed(2)}`;
+    }
+    equation += ` = `;
     
-    return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-      {mathDisplay}<span className="font-bold text-green-700">${final_total.toFixed(2)}</span>
+    return <Badge className="bg-green-100 text-green-800 hover:bg-green-100 text-sm px-3 py-1">
+      <span className="mr-1">{equation}</span>
+      <span className="font-bold text-green-700">${final_total.toFixed(2)}</span>
     </Badge>;
   };
 
