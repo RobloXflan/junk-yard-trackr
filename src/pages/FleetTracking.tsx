@@ -1,12 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { TruckManagement } from "@/components/TruckManagement";
-import { ProximityMap } from "@/components/ProximityMap";
 import { toast } from "sonner";
 import { Truck, MapPin, Clock, Users, Activity } from "lucide-react";
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
 
 interface ActiveSession {
   id: string;
@@ -39,12 +40,16 @@ export function FleetTracking() {
     available_trucks: 0,
     in_maintenance: 0
   });
-  const [mapboxToken, setMapboxToken] = useState("");
-  const [showMap, setShowMap] = useState(false);
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const map = useRef<mapboxgl.Map | null>(null);
+  
+  // Mapbox token
+  const MAPBOX_TOKEN = "pk.eyJ1IjoiMTQyNmRhbnRlIiwiYSI6ImNtZGY4b2Z6dDBhdHcyaXEwM29sY3UwOXQifQ.20FciL4TNEtXMCY4MyKgDA";
 
   useEffect(() => {
     fetchActiveSessions();
     fetchFleetStats();
+    initializeMap();
     
     // Set up real-time subscriptions
     const trackingSubscription = supabase
@@ -66,8 +71,18 @@ export function FleetTracking() {
 
     return () => {
       supabase.removeChannel(trackingSubscription);
+      if (map.current) {
+        map.current.remove();
+      }
     };
   }, []);
+
+  useEffect(() => {
+    // Update map markers when active sessions change
+    if (map.current && activeSessions.length > 0) {
+      updateMapMarkers();
+    }
+  }, [activeSessions]);
 
   const fetchActiveSessions = async () => {
     const { data, error } = await supabase
@@ -163,6 +178,81 @@ export function FleetTracking() {
     return "destructive";
   };
 
+  const initializeMap = () => {
+    if (!mapContainer.current) return;
+
+    mapboxgl.accessToken = MAPBOX_TOKEN;
+    
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: 'mapbox://styles/mapbox/streets-v12',
+      center: [-118.2437, 34.0522], // Los Angeles center
+      zoom: 10
+    });
+
+    // Add navigation controls
+    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+  };
+
+  const updateMapMarkers = () => {
+    if (!map.current) return;
+
+    // Clear existing markers
+    const existingMarkers = document.querySelectorAll('.truck-marker');
+    existingMarkers.forEach(marker => marker.remove());
+
+    // Add markers for each truck
+    truckLocations.forEach((truck) => {
+      // Create custom marker element
+      const markerElement = document.createElement('div');
+      markerElement.className = 'truck-marker';
+      markerElement.style.cssText = `
+        width: 30px;
+        height: 30px;
+        background-color: #22c55e;
+        border: 2px solid white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: bold;
+        color: white;
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      `;
+      markerElement.textContent = truck.truck_number;
+
+      // Create popup content
+      const popupContent = `
+        <div style="padding: 8px;">
+          <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: bold;">Truck #${truck.truck_number}</h3>
+          <p style="margin: 0 0 4px 0; font-size: 12px;">Driver: ${truck.driver_name}</p>
+          <p style="margin: 0 0 4px 0; font-size: 12px;">Battery: ${truck.battery_level}%</p>
+          <p style="margin: 0; font-size: 12px;">Time Remaining: ${Math.floor(truck.time_remaining / 60000)} min</p>
+        </div>
+      `;
+
+      // Create popup
+      const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(popupContent);
+
+      // Add marker to map
+      new mapboxgl.Marker(markerElement)
+        .setLngLat([truck.coordinates.lng, truck.coordinates.lat])
+        .setPopup(popup)
+        .addTo(map.current!);
+    });
+
+    // Fit map to show all markers if there are any
+    if (truckLocations.length > 0) {
+      const bounds = new mapboxgl.LngLatBounds();
+      truckLocations.forEach(truck => {
+        bounds.extend([truck.coordinates.lng, truck.coordinates.lat]);
+      });
+      map.current.fitBounds(bounds, { padding: 50 });
+    }
+  };
+
   const extendSession = async (sessionId: string, additionalMinutes: number) => {
     const session = activeSessions.find(s => s.id === sessionId);
     if (!session) return;
@@ -181,14 +271,6 @@ export function FleetTracking() {
 
     toast.success(`Session extended by ${additionalMinutes} minutes`);
     fetchActiveSessions();
-  };
-
-  const handleMapboxToken = () => {
-    if (mapboxToken.trim()) {
-      setShowMap(true);
-    } else {
-      toast.error('Please enter a valid Mapbox token');
-    }
   };
 
   // Convert active sessions to map format
@@ -313,57 +395,22 @@ export function FleetTracking() {
         </CardContent>
       </Card>
 
-      {/* Map Integration */}
-      {!showMap ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Fleet Map</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-2">
-              <input
-                type="password"
-                placeholder="Enter Mapbox public token"
-                value={mapboxToken}
-                onChange={(e) => setMapboxToken(e.target.value)}
-                className="flex-1 px-3 py-2 border rounded"
-              />
-              <Button onClick={handleMapboxToken}>
-                Show Map
-              </Button>
-            </div>
-            <p className="text-sm text-muted-foreground mt-2">
-              Get your Mapbox token from{" "}
-              <a href="https://mapbox.com/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                mapbox.com
-              </a>
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Fleet Map - Active Trucks</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div style={{ height: '400px' }}>
-              {/* You can integrate your existing map component here with truck locations */}
-              <div className="bg-muted rounded-lg h-full flex items-center justify-center">
-                <p className="text-muted-foreground">
-                  Map integration with {truckLocations.length} active trucks
-                </p>
-              </div>
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {truckLocations.map((truck) => (
-                <Badge key={truck.id} variant="outline">
-                  Truck #{truck.truck_number} - {truck.driver_name}
-                </Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Fleet Map */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Fleet Map - Live Truck Locations</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div ref={mapContainer} style={{ height: '400px' }} className="rounded-lg border" />
+          <div className="mt-4 flex flex-wrap gap-2">
+            {truckLocations.map((truck) => (
+              <Badge key={truck.id} variant="outline">
+                Truck #{truck.truck_number} - {truck.driver_name}
+              </Badge>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Truck Management */}
       <TruckManagement />
