@@ -147,14 +147,16 @@ export function WorkerManagement() {
     try {
       const { error } = await supabase
         .from('worker_checkins')
-        .insert([{
+        .upsert([{
           worker_id: selectedWorker.id,
           checkin_date: new Date().toISOString().split('T')[0],
           starting_cash: startingCash,
           money_added: moneyAdded,
           money_subtracted: moneySubtracted,
           final_total: finalTotal
-        }]);
+        }], {
+          onConflict: 'worker_id,checkin_date'
+        });
 
       if (error) throw error;
 
