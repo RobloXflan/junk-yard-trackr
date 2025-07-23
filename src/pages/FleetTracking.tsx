@@ -404,11 +404,16 @@ export function FleetTracking() {
                       </div>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span>Started: {new Date(session.session_start).toLocaleTimeString()}</span>
-                        {session.latest_location && (
+                        {session.latest_location ? (
                           <>
-                            <span>Battery: {session.latest_location.battery_level}%</span>
+                            <span>Battery: {session.latest_location.battery_level || 'N/A'}%</span>
                             <span>Last update: {new Date(session.latest_location.created_at).toLocaleTimeString()}</span>
+                            <span className="text-orange-500">
+                              ({Math.floor((Date.now() - new Date(session.latest_location.created_at).getTime()) / (1000 * 60))} min ago)
+                            </span>
                           </>
+                        ) : (
+                          <span className="text-red-500">No location data</span>
                         )}
                       </div>
                     </div>
