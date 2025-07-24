@@ -22,10 +22,16 @@ export const SiteAuth = ({ onAuthenticated }: SiteAuthProps) => {
   const [rememberMe, setRememberMe] = useState(false);
   const { toast } = useToast();
 
-  // Define user credentials
+  // Define user credentials from environment variables
   const validUsers = {
-    "America Main": { password: "Americas12", type: "admin" as const },
-    "ChocoXflan": { password: "view123", type: "viewer" as const },
+    [import.meta.env.VITE_ADMIN_USERNAME || "America Main"]: { 
+      password: import.meta.env.VITE_ADMIN_PASSWORD || "Americas12", 
+      type: "admin" as const 
+    },
+    [import.meta.env.VITE_VIEWER_USERNAME || "ChocoXflan"]: { 
+      password: import.meta.env.VITE_VIEWER_PASSWORD || "view123", 
+      type: "viewer" as const 
+    },
   };
 
   const handleSubmit = (e: React.FormEvent) => {

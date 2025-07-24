@@ -43,8 +43,8 @@ export function FleetTracking() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   
-  // Mapbox token
-  const MAPBOX_TOKEN = "pk.eyJ1IjoiMTQyNmRhbnRlIiwiYSI6ImNtZGY4b2Z6dDBhdHcyaXEwM29sY3UwOXQifQ.20FciL4TNEtXMCY4MyKgDA";
+  // Mapbox token from environment variables
+  const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || "pk.eyJ1IjoiMTQyNmRhbnRlIiwiYSI6ImNtZGY4b2Z6dDBhdHcyaXEwM29sY3UwOXQifQ.20FciL4TNEtXMCY4MyKgDA";
 
   useEffect(() => {
     fetchActiveSessions();
