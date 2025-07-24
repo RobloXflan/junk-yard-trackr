@@ -502,7 +502,7 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
                     <TableHead>Purchase Date</TableHead>
                     <TableHead>Purchase Price</TableHead>
                     <TableHead>Sale Price</TableHead>
-                    <TableHead>Sold To</TableHead>
+                    <TableHead>Sold/Sent to</TableHead>
                     <TableHead>Paperwork</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
@@ -539,6 +539,20 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
                             <div>{vehicle.buyerFirstName} {vehicle.buyerLastName}</div>
                             {vehicle.saleDate && (
                               <div className="text-muted-foreground">{vehicle.saleDate}</div>
+                            )}
+                          </div>
+                        ) : vehicle.status === 'sa-recycling' ? (
+                          <div className="text-sm">
+                            <div>SA Recycling</div>
+                            {vehicle.saRecyclingDate && (
+                              <div className="text-muted-foreground">{vehicle.saRecyclingDate}</div>
+                            )}
+                          </div>
+                        ) : vehicle.status === 'pick-your-part' ? (
+                          <div className="text-sm">
+                            <div>Pick Your Part</div>
+                            {vehicle.pickYourPartDate && (
+                              <div className="text-muted-foreground">{vehicle.pickYourPartDate}</div>
                             )}
                           </div>
                         ) : '-'}

@@ -331,7 +331,7 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
                   <TableHead>Purchase Price</TableHead>
                   <TableHead>Sale Price</TableHead>
                   <TableHead>Buyer</TableHead>
-                  <TableHead>Sold To</TableHead>
+                  <TableHead>Sold/Sent to</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -370,6 +370,20 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
                           <div>{vehicle.buyerFirstName} {vehicle.buyerLastName}</div>
                           {vehicle.saleDate && (
                             <div className="text-muted-foreground">{vehicle.saleDate}</div>
+                          )}
+                        </div>
+                      ) : vehicle.status === 'sa-recycling' ? (
+                        <div className="text-sm">
+                          <div>SA Recycling</div>
+                          {vehicle.saRecyclingDate && (
+                            <div className="text-muted-foreground">{vehicle.saRecyclingDate}</div>
+                          )}
+                        </div>
+                      ) : vehicle.status === 'pick-your-part' ? (
+                        <div className="text-sm">
+                          <div>Pick Your Part</div>
+                          {vehicle.pickYourPartDate && (
+                            <div className="text-muted-foreground">{vehicle.pickYourPartDate}</div>
                           )}
                         </div>
                       ) : '-'}
