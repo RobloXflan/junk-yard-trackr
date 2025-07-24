@@ -127,6 +127,8 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
           status,
           is_released,
           car_images,
+          sa_recycling_date,
+          pick_your_part_date,
           created_at,
           updated_at
         `)
@@ -163,6 +165,8 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
         status: (vehicle.status as Vehicle['status']) || 'yard',
         isReleased: Boolean(vehicle.is_released),
         carImages: deserializeCarImages(vehicle.car_images),
+        saRecyclingDate: vehicle.sa_recycling_date || undefined,
+        pickYourPartDate: vehicle.pick_your_part_date || undefined,
         createdAt: vehicle.created_at,
         documents: []
       }));
