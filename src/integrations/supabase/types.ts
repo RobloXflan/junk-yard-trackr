@@ -789,8 +789,10 @@ export type Database = {
           notes: string | null
           paperwork: string | null
           paperwork_other: string | null
+          pick_your_part_date: string | null
           purchase_date: string | null
           purchase_price: string | null
+          sa_recycling_date: string | null
           sale_date: string | null
           sale_price: string | null
           seller_name: string | null
@@ -821,8 +823,10 @@ export type Database = {
           notes?: string | null
           paperwork?: string | null
           paperwork_other?: string | null
+          pick_your_part_date?: string | null
           purchase_date?: string | null
           purchase_price?: string | null
+          sa_recycling_date?: string | null
           sale_date?: string | null
           sale_price?: string | null
           seller_name?: string | null
@@ -853,8 +857,10 @@ export type Database = {
           notes?: string | null
           paperwork?: string | null
           paperwork_other?: string | null
+          pick_your_part_date?: string | null
           purchase_date?: string | null
           purchase_price?: string | null
+          sa_recycling_date?: string | null
           sale_date?: string | null
           sale_price?: string | null
           seller_name?: string | null

@@ -38,6 +38,8 @@ export interface Vehicle {
   buyerZip?: string;
   saleDate?: string;
   salePrice?: string;
+  saRecyclingDate?: string;
+  pickYourPartDate?: string;
   notes?: string;
   paperwork?: string;
   paperworkOther?: string;
@@ -184,6 +186,8 @@ class VehicleStore {
           buyerZip: vehicle.buyer_zip || undefined,
           saleDate: vehicle.sale_date || undefined,
           salePrice: vehicle.sale_price || undefined,
+          saRecyclingDate: vehicle.sa_recycling_date || undefined,
+          pickYourPartDate: vehicle.pick_your_part_date || undefined,
           notes: vehicle.notes || undefined,
           paperwork: vehicle.paperwork || undefined,
           paperworkOther: vehicle.paperwork_other || undefined,
@@ -332,6 +336,29 @@ class VehicleStore {
         updateData.buyer_name = null;
         updateData.sale_price = null;
         updateData.sale_date = null;
+      }
+
+      // Handle recycling status dates
+      if (newStatus === 'sa-recycling') {
+        // Only set the date if it's not already set (first time changing to this status)
+        const currentVehicle = this.vehicles.find(v => v.id === vehicleId);
+        if (!currentVehicle?.saRecyclingDate) {
+          updateData.sa_recycling_date = new Date().toISOString();
+        }
+        // Clear pick your part date when switching to SA recycling
+        updateData.pick_your_part_date = null;
+      } else if (newStatus === 'pick-your-part') {
+        // Only set the date if it's not already set (first time changing to this status)
+        const currentVehicle = this.vehicles.find(v => v.id === vehicleId);
+        if (!currentVehicle?.pickYourPartDate) {
+          updateData.pick_your_part_date = new Date().toISOString();
+        }
+        // Clear SA recycling date when switching to pick your part
+        updateData.sa_recycling_date = null;
+      } else {
+        // Clear both recycling dates if status changes to yard or sold
+        updateData.sa_recycling_date = null;
+        updateData.pick_your_part_date = null;
       }
 
       console.log('Sending update to Supabase for vehicle ID:', vehicleId, updateData);

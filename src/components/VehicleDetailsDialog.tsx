@@ -592,6 +592,28 @@ export function VehicleDetailsDialog({
                   </div>
                 </>
               )}
+
+              {/* SA Recycling Date - Only shown for SA Recycling vehicles */}
+              {localVehicle.status === 'sa-recycling' && localVehicle.saRecyclingDate && (
+                <div className="space-y-2">
+                  <Label className="text-foreground font-medium">Date Sent to SA Recycling</Label>
+                  <div className="p-2 border rounded-md bg-muted/20 flex items-center">
+                    <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
+                    {new Date(localVehicle.saRecyclingDate).toLocaleDateString()}
+                  </div>
+                </div>
+              )}
+
+              {/* Pick Your Part Date - Only shown for Pick Your Part vehicles */}
+              {localVehicle.status === 'pick-your-part' && localVehicle.pickYourPartDate && (
+                <div className="space-y-2">
+                  <Label className="text-foreground font-medium">Date Sent to Pick Your Part</Label>
+                  <div className="p-2 border rounded-md bg-muted/20 flex items-center">
+                    <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
+                    {new Date(localVehicle.pickYourPartDate).toLocaleDateString()}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Notes */}
