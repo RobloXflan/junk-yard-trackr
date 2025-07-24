@@ -291,15 +291,17 @@ class VehicleStore {
     }
   }
 
-  async updateVehicleStatus(vehicleId: string, newStatus: Vehicle['status'], soldData?: {
-    buyerFirstName: string;
-    buyerLastName: string;
-    salePrice: string;
-    saleDate: string;
+  async updateVehicleStatus(vehicleId: string, newStatus: Vehicle['status'], additionalData?: {
+    buyerFirstName?: string;
+    buyerLastName?: string;
+    salePrice?: string;
+    saleDate?: string;
     buyerAddress?: string;
     buyerCity?: string;
     buyerState?: string;
     buyerZip?: string;
+    saRecyclingDate?: string;
+    pickYourPartDate?: string;
   }) {
     if (this.updateInProgress.has(vehicleId)) {
       console.log('Update already in progress for vehicle:', vehicleId);
@@ -309,7 +311,7 @@ class VehicleStore {
     this.updateInProgress.add(vehicleId);
 
     try {
-      console.log('Updating vehicle status for ID:', vehicleId, 'to status:', newStatus, 'with data:', soldData);
+      console.log('Updating vehicle status for ID:', vehicleId, 'to status:', newStatus, 'with data:', additionalData);
       
       const updateData: any = {
         status: newStatus,
@@ -317,18 +319,18 @@ class VehicleStore {
       };
 
       // When marking as sold, set isReleased to false and add buyer data
-      if (newStatus === 'sold' && soldData) {
+      if (newStatus === 'sold' && additionalData) {
         updateData.is_released = false; // Always start in Pending Releases
-        updateData.buyer_first_name = soldData.buyerFirstName;
-        updateData.buyer_last_name = soldData.buyerLastName;
-        updateData.buyer_name = `${soldData.buyerFirstName} ${soldData.buyerLastName}`;
-        updateData.sale_price = soldData.salePrice;
-        updateData.sale_date = soldData.saleDate;
+        updateData.buyer_first_name = additionalData.buyerFirstName;
+        updateData.buyer_last_name = additionalData.buyerLastName;
+        updateData.buyer_name = `${additionalData.buyerFirstName} ${additionalData.buyerLastName}`;
+        updateData.sale_price = additionalData.salePrice;
+        updateData.sale_date = additionalData.saleDate;
         
-        if (soldData.buyerAddress) updateData.buyer_address = soldData.buyerAddress;
-        if (soldData.buyerCity) updateData.buyer_city = soldData.buyerCity;
-        if (soldData.buyerState) updateData.buyer_state = soldData.buyerState;
-        if (soldData.buyerZip) updateData.buyer_zip = soldData.buyerZip;
+        if (additionalData.buyerAddress) updateData.buyer_address = additionalData.buyerAddress;
+        if (additionalData.buyerCity) updateData.buyer_city = additionalData.buyerCity;
+        if (additionalData.buyerState) updateData.buyer_state = additionalData.buyerState;
+        if (additionalData.buyerZip) updateData.buyer_zip = additionalData.buyerZip;
       } else if (newStatus !== 'sold') {
         // Clear sold data if status is not sold
         updateData.buyer_first_name = null;
@@ -345,18 +347,28 @@ class VehicleStore {
 
       // Handle recycling status dates
       if (newStatus === 'sa-recycling') {
-        // Only set the date if it's not already set (first time changing to this status)
-        const currentVehicle = this.vehicles.find(v => v.id === vehicleId);
-        if (!currentVehicle?.saRecyclingDate) {
-          updateData.sa_recycling_date = new Date().toISOString();
+        // Use the provided date or current date if none provided
+        if (additionalData?.saRecyclingDate) {
+          updateData.sa_recycling_date = additionalData.saRecyclingDate;
+        } else {
+          // Only set current date if no date already exists
+          const currentVehicle = this.vehicles.find(v => v.id === vehicleId);
+          if (!currentVehicle?.saRecyclingDate) {
+            updateData.sa_recycling_date = new Date().toISOString().split('T')[0];
+          }
         }
         // Clear pick your part date when switching to SA recycling
         updateData.pick_your_part_date = null;
       } else if (newStatus === 'pick-your-part') {
-        // Only set the date if it's not already set (first time changing to this status)
-        const currentVehicle = this.vehicles.find(v => v.id === vehicleId);
-        if (!currentVehicle?.pickYourPartDate) {
-          updateData.pick_your_part_date = new Date().toISOString();
+        // Use the provided date or current date if none provided
+        if (additionalData?.pickYourPartDate) {
+          updateData.pick_your_part_date = additionalData.pickYourPartDate;
+        } else {
+          // Only set current date if no date already exists
+          const currentVehicle = this.vehicles.find(v => v.id === vehicleId);
+          if (!currentVehicle?.pickYourPartDate) {
+            updateData.pick_your_part_date = new Date().toISOString().split('T')[0];
+          }
         }
         // Clear SA recycling date when switching to pick your part
         updateData.sa_recycling_date = null;
@@ -606,15 +618,21 @@ export function useVehicleStore() {
         setIsLoading(false);
       }
     },
-    updateVehicleStatus: async (vehicleId: string, newStatus: Vehicle['status'], soldData?: {
-      buyerFirstName: string;
-      buyerLastName: string;
-      salePrice: string;
-      saleDate: string;
+    updateVehicleStatus: async (vehicleId: string, newStatus: Vehicle['status'], additionalData?: {
+      buyerFirstName?: string;
+      buyerLastName?: string;
+      salePrice?: string;
+      saleDate?: string;
+      buyerAddress?: string;
+      buyerCity?: string;
+      buyerState?: string;
+      buyerZip?: string;
+      saRecyclingDate?: string;
+      pickYourPartDate?: string;
     }) => {
       setIsLoading(true);
       try {
-        await vehicleStore.updateVehicleStatus(vehicleId, newStatus, soldData);
+        await vehicleStore.updateVehicleStatus(vehicleId, newStatus, additionalData);
       } catch (error) {
         console.error('Error updating vehicle status:', error);
         throw error;
