@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +22,7 @@ export const SiteAuth = ({ onAuthenticated }: SiteAuthProps) => {
   const { toast } = useToast();
 
   // Define user credentials from environment variables
-  const validUsers = {
+  const validUsers: Record<string, { password: string; type: 'admin' | 'viewer' }> = {
     [import.meta.env.VITE_ADMIN_USERNAME || "America Main"]: { 
       password: import.meta.env.VITE_ADMIN_PASSWORD || "Americas12", 
       type: "admin" as const 
@@ -40,7 +39,7 @@ export const SiteAuth = ({ onAuthenticated }: SiteAuthProps) => {
 
     // Simulate a brief loading state for better UX
     setTimeout(() => {
-      const user = validUsers[credentials.username as keyof typeof validUsers];
+      const user = validUsers[credentials.username];
       
       if (user && user.password === credentials.password) {
         // Save login state if remember me is checked
