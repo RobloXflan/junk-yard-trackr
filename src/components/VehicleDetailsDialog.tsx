@@ -607,71 +607,96 @@ export function VehicleDetailsDialog({
                 )}
               </div>
 
-              {localVehicle.status === 'sold' && (
+              {/* Sold/Sent to Section - Unified display for sold and recycling statuses */}
+              {(localVehicle.status === 'sold' || localVehicle.status === 'sa-recycling' || localVehicle.status === 'pick-your-part') && (
                 <>
-                  <div className="space-y-2">
-                    <Label htmlFor="buyerName" className="text-foreground font-medium">Buyer Name</Label>
-                    <div className="p-2 border rounded-md bg-muted/20">
-                      {localVehicle.buyerName || 'N/A'}
-                    </div>
+                  <div className="col-span-full">
+                    <Label className="text-foreground font-medium text-lg">Sold/Sent to</Label>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="buyerAddress" className="text-foreground font-medium">Buyer Address</Label>
-                    <div className="p-2 border rounded-md bg-muted/20">
-                      {localVehicle.buyerAddress ? (
-                        <div>
-                          <div>{localVehicle.buyerAddress}</div>
-                          {(localVehicle.buyerCity || localVehicle.buyerState || localVehicle.buyerZip) && (
-                            <div className="text-sm text-muted-foreground">
-                              {localVehicle.buyerCity && localVehicle.buyerCity}
-                              {localVehicle.buyerCity && localVehicle.buyerState && ', '}
-                              {localVehicle.buyerState && localVehicle.buyerState}
-                              {localVehicle.buyerZip && ` ${localVehicle.buyerZip}`}
-                            </div>
-                          )}
+                  {localVehicle.status === 'sold' && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="buyerName" className="text-foreground font-medium">Buyer Name</Label>
+                        <div className="p-2 border rounded-md bg-muted/20">
+                          {localVehicle.buyerName || 'N/A'}
                         </div>
-                      ) : 'N/A'}
-                    </div>
-                  </div>
+                      </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="saleDate" className="text-foreground font-medium">Sale Date</Label>
-                    <div className="p-2 border rounded-md bg-muted/20 flex items-center">
-                      <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
-                      {formatDate(localVehicle.saleDate)}
-                    </div>
-                  </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="buyerAddress" className="text-foreground font-medium">Buyer Address</Label>
+                        <div className="p-2 border rounded-md bg-muted/20">
+                          {localVehicle.buyerAddress ? (
+                            <div>
+                              <div>{localVehicle.buyerAddress}</div>
+                              {(localVehicle.buyerCity || localVehicle.buyerState || localVehicle.buyerZip) && (
+                                <div className="text-sm text-muted-foreground">
+                                  {localVehicle.buyerCity && localVehicle.buyerCity}
+                                  {localVehicle.buyerCity && localVehicle.buyerState && ', '}
+                                  {localVehicle.buyerState && localVehicle.buyerState}
+                                  {localVehicle.buyerZip && ` ${localVehicle.buyerZip}`}
+                                </div>
+                              )}
+                            </div>
+                          ) : 'N/A'}
+                        </div>
+                      </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="salePrice" className="text-foreground font-medium">Sale Price</Label>
-                    <div className="p-2 border rounded-md bg-muted/20">
-                      {localVehicle.salePrice ? `$${localVehicle.salePrice}` : 'N/A'}
-                    </div>
-                  </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="saleDate" className="text-foreground font-medium">Sale Date</Label>
+                        <div className="p-2 border rounded-md bg-muted/20 flex items-center">
+                          <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
+                          {formatDate(localVehicle.saleDate)}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="salePrice" className="text-foreground font-medium">Sale Price</Label>
+                        <div className="p-2 border rounded-md bg-muted/20">
+                          {localVehicle.salePrice ? `$${localVehicle.salePrice}` : 'N/A'}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {localVehicle.status === 'sa-recycling' && (
+                    <>
+                      <div className="space-y-2">
+                        <Label className="text-foreground font-medium">Destination</Label>
+                        <div className="p-2 border rounded-md bg-muted/20">
+                          SA Recycling
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-foreground font-medium">Date Sent</Label>
+                        <div className="p-2 border rounded-md bg-muted/20 flex items-center">
+                          <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
+                          {localVehicle.saRecyclingDate ? formatDate(localVehicle.saRecyclingDate) : 'N/A'}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {localVehicle.status === 'pick-your-part' && (
+                    <>
+                      <div className="space-y-2">
+                        <Label className="text-foreground font-medium">Destination</Label>
+                        <div className="p-2 border rounded-md bg-muted/20">
+                          Pick Your Part
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-foreground font-medium">Date Sent</Label>
+                        <div className="p-2 border rounded-md bg-muted/20 flex items-center">
+                          <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
+                          {localVehicle.pickYourPartDate ? formatDate(localVehicle.pickYourPartDate) : 'N/A'}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </>
-              )}
-
-              {/* SA Recycling Date - Only shown for SA Recycling vehicles */}
-              {localVehicle.status === 'sa-recycling' && localVehicle.saRecyclingDate && (
-                <div className="space-y-2">
-                  <Label className="text-foreground font-medium">Date Sent to SA Recycling</Label>
-                  <div className="p-2 border rounded-md bg-muted/20 flex items-center">
-                    <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
-                    {new Date(localVehicle.saRecyclingDate).toLocaleDateString()}
-                  </div>
-                </div>
-              )}
-
-              {/* Pick Your Part Date - Only shown for Pick Your Part vehicles */}
-              {localVehicle.status === 'pick-your-part' && localVehicle.pickYourPartDate && (
-                <div className="space-y-2">
-                  <Label className="text-foreground font-medium">Date Sent to Pick Your Part</Label>
-                  <div className="p-2 border rounded-md bg-muted/20 flex items-center">
-                    <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
-                    {new Date(localVehicle.pickYourPartDate).toLocaleDateString()}
-                  </div>
-                </div>
               )}
             </div>
 
