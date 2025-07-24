@@ -15,6 +15,7 @@ import { DocumentUpload, UploadedDocument } from "./forms/DocumentUpload";
 import { useVehicleStore } from "@/hooks/useVehicleStore";
 import { Buyer } from "@/hooks/useBuyers";
 import { supabase } from "@/integrations/supabase/client";
+import { RecyclingDateDialog } from "./forms/RecyclingDateDialog";
 
 // Define a type for stored documents (JSON-serializable)
 interface StoredDocument {
@@ -51,6 +52,8 @@ export function VehicleDetailsDialog({
   const [selectedStatus, setSelectedStatus] = useState<Vehicle['status']>(vehicle?.status || 'yard');
   const [showBuyerSelector, setShowBuyerSelector] = useState(false);
   const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
+  const [recyclingDialogOpen, setRecyclingDialogOpen] = useState(false);
+  const [recyclingType, setRecyclingType] = useState<"sa-recycling" | "pick-your-part" | null>(null);
 
   useEffect(() => {
     setLocalVehicle(vehicle);
@@ -67,6 +70,12 @@ export function VehicleDetailsDialog({
   const handleStatusChange = async (newStatus: Vehicle['status']) => {
     if (newStatus === 'sold') {
       setShowBuyerSelector(true);
+      return;
+    }
+
+    if (newStatus === 'sa-recycling' || newStatus === 'pick-your-part') {
+      setRecyclingType(newStatus);
+      setRecyclingDialogOpen(true);
       return;
     }
 
@@ -111,6 +120,56 @@ export function VehicleDetailsDialog({
       toast({
         title: "Error",
         description: "Failed to update vehicle status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRecyclingConfirm = async (date: string) => {
+    if (!recyclingType) return;
+
+    try {
+      console.log(`Updating vehicle to ${recyclingType} status with date:`, date);
+      
+      const dateData = {
+        [recyclingType === "sa-recycling" ? "saRecyclingDate" : "pickYourPartDate"]: date
+      };
+      
+      const updatedVehicle = {
+        ...localVehicle,
+        status: recyclingType,
+        ...dateData
+      };
+      
+      setLocalVehicle(updatedVehicle);
+      setSelectedStatus(recyclingType);
+      setRecyclingDialogOpen(false);
+
+      const updateFunction = onStatusUpdate || fallbackUpdateStatus;
+      await updateFunction(vehicle.id, recyclingType, dateData);
+      
+      if (refreshVehicles) {
+        await refreshVehicles();
+      }
+      if (fallbackRefresh) {
+        await fallbackRefresh();
+      }
+
+      toast({
+        title: "Status Updated",
+        description: `Vehicle sent to ${recyclingType === 'sa-recycling' ? 'SA Recycling' : 'Pick Your Part'} on ${date}`,
+      });
+
+    } catch (error) {
+      console.error(`Failed to update vehicle to ${recyclingType}:`, error);
+      
+      setLocalVehicle(vehicle);
+      setSelectedStatus(vehicle.status);
+      setRecyclingDialogOpen(false);
+      
+      toast({
+        title: "Error",
+        description: `Failed to update vehicle status to ${recyclingType}`,
         variant: "destructive",
       });
     }
@@ -715,6 +774,18 @@ export function VehicleDetailsDialog({
         open={showBuyerSelector}
         onOpenChange={(open) => setShowBuyerSelector(open)}
         onSelectBuyer={handleBuyerSelected}
+      />
+
+      <RecyclingDateDialog
+        open={recyclingDialogOpen}
+        onOpenChange={setRecyclingDialogOpen}
+        onConfirm={handleRecyclingConfirm}
+        title={recyclingType === "sa-recycling" ? "SA Recycling Date" : "Pick Your Part Date"}
+        initialDate={
+          recyclingType === "sa-recycling" 
+            ? localVehicle.saRecyclingDate || new Date().toISOString().split('T')[0]
+            : localVehicle.pickYourPartDate || new Date().toISOString().split('T')[0]
+        }
       />
     </>
   );
