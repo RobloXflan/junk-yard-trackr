@@ -409,6 +409,23 @@ export function VehicleDetailsDialog({
               </Select>
             </div>
 
+            {/* SA Recycling Documents Button */}
+            {selectedStatus === 'sa-recycling' && (
+              <div className="flex justify-center">
+                <Button 
+                  variant="outline" 
+                  className="flex items-center gap-2"
+                  onClick={() => {
+                    const documentsSection = document.getElementById('documents-section');
+                    documentsSection?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                >
+                  <FileText className="w-4 h-4" />
+                  Documents
+                </Button>
+              </div>
+            )}
+
             {/* Vehicle Details */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -596,7 +613,7 @@ export function VehicleDetailsDialog({
             </div>
 
             {/* Documents Section - Enhanced with Upload Capability */}
-            <div className="space-y-4">
+            <div id="documents-section" className="space-y-4">
               <Label className="text-foreground font-medium flex items-center">
                 <FileText className="w-4 h-4 mr-2" />
                 Documents
