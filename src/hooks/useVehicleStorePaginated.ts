@@ -276,17 +276,21 @@ export function useVehicleStorePaginated(isViewOnly: boolean = false, username: 
     }
   };
 
-  const updateVehicleStatus = async (vehicleId: string, newStatus: Vehicle['status'], soldData?: {
-    buyerFirstName: string;
-    buyerLastName: string;
-    salePrice: string;
-    saleDate: string;
+  const updateVehicleStatus = async (vehicleId: string, newStatus: Vehicle['status'], additionalData?: {
+    // For sold status
+    buyerFirstName?: string;
+    buyerLastName?: string;
+    salePrice?: string;
+    saleDate?: string;
     buyerAddress?: string;
     buyerCity?: string;
     buyerState?: string;
     buyerZip?: string;
+    // For recycling status
+    saRecyclingDate?: string;
+    pickYourPartDate?: string;
   }) => {
-    console.log('updateVehicleStatus called with:', { vehicleId, newStatus, soldData });
+    console.log('updateVehicleStatus called with:', { vehicleId, newStatus, additionalData });
     
     // Optimistic update
     setVehicles(prevVehicles => {
@@ -294,18 +298,26 @@ export function useVehicleStorePaginated(isViewOnly: boolean = false, username: 
         if (vehicle.id === vehicleId) {
           const updatedVehicle = { ...vehicle, status: newStatus };
           
-          if (newStatus === 'sold' && soldData) {
+          if (newStatus === 'sold' && additionalData) {
             // When sold, automatically go to Pending Releases (isReleased = false)
             updatedVehicle.isReleased = false;
-            updatedVehicle.buyerFirstName = soldData.buyerFirstName;
-            updatedVehicle.buyerLastName = soldData.buyerLastName;
-            updatedVehicle.buyerName = `${soldData.buyerFirstName} ${soldData.buyerLastName}`;
-            updatedVehicle.salePrice = soldData.salePrice;
-            updatedVehicle.saleDate = soldData.saleDate;
-            updatedVehicle.buyerAddress = soldData.buyerAddress;
-            updatedVehicle.buyerCity = soldData.buyerCity;
-            updatedVehicle.buyerState = soldData.buyerState;
-            updatedVehicle.buyerZip = soldData.buyerZip;
+            updatedVehicle.buyerFirstName = additionalData.buyerFirstName;
+            updatedVehicle.buyerLastName = additionalData.buyerLastName;
+            updatedVehicle.buyerName = `${additionalData.buyerFirstName} ${additionalData.buyerLastName}`;
+            updatedVehicle.salePrice = additionalData.salePrice;
+            updatedVehicle.saleDate = additionalData.saleDate;
+            updatedVehicle.buyerAddress = additionalData.buyerAddress;
+            updatedVehicle.buyerCity = additionalData.buyerCity;
+            updatedVehicle.buyerState = additionalData.buyerState;
+            updatedVehicle.buyerZip = additionalData.buyerZip;
+          } else if (newStatus === 'sa-recycling' && additionalData?.saRecyclingDate) {
+            // Update SA recycling date
+            updatedVehicle.saRecyclingDate = additionalData.saRecyclingDate;
+            updatedVehicle.pickYourPartDate = undefined;
+          } else if (newStatus === 'pick-your-part' && additionalData?.pickYourPartDate) {
+            // Update Pick Your Part date
+            updatedVehicle.pickYourPartDate = additionalData.pickYourPartDate;
+            updatedVehicle.saRecyclingDate = undefined;
           } else if (newStatus !== 'sold') {
             // Clear sold data if status is not sold
             updatedVehicle.buyerFirstName = undefined;
@@ -332,19 +344,57 @@ export function useVehicleStorePaginated(isViewOnly: boolean = false, username: 
         updated_at: new Date().toISOString()
       };
 
-      if (newStatus === 'sold' && soldData) {
+      if (newStatus === 'sold' && additionalData) {
         // When sold, automatically set to Pending Releases
         updateData.is_released = false;
-        updateData.buyer_first_name = soldData.buyerFirstName;
-        updateData.buyer_last_name = soldData.buyerLastName;
-        updateData.buyer_name = `${soldData.buyerFirstName} ${soldData.buyerLastName}`;
-        updateData.sale_price = soldData.salePrice;
-        updateData.sale_date = soldData.saleDate;
+        updateData.buyer_first_name = additionalData.buyerFirstName;
+        updateData.buyer_last_name = additionalData.buyerLastName;
+        updateData.buyer_name = `${additionalData.buyerFirstName} ${additionalData.buyerLastName}`;
+        updateData.sale_price = additionalData.salePrice;
+        updateData.sale_date = additionalData.saleDate;
         
-        if (soldData.buyerAddress) updateData.buyer_address = soldData.buyerAddress;
-        if (soldData.buyerCity) updateData.buyer_city = soldData.buyerCity;
-        if (soldData.buyerState) updateData.buyer_state = soldData.buyerState;
-        if (soldData.buyerZip) updateData.buyer_zip = soldData.buyerZip;
+        if (additionalData.buyerAddress) updateData.buyer_address = additionalData.buyerAddress;
+        if (additionalData.buyerCity) updateData.buyer_city = additionalData.buyerCity;
+        if (additionalData.buyerState) updateData.buyer_state = additionalData.buyerState;
+        if (additionalData.buyerZip) updateData.buyer_zip = additionalData.buyerZip;
+      } else if (newStatus === 'sa-recycling') {
+        // Use provided date or current date if none provided
+        if (additionalData?.saRecyclingDate) {
+          updateData.sa_recycling_date = additionalData.saRecyclingDate;
+        } else {
+          updateData.sa_recycling_date = new Date().toISOString();
+        }
+        // Clear pick your part date and sold data
+        updateData.pick_your_part_date = null;
+        updateData.buyer_first_name = null;
+        updateData.buyer_last_name = null;
+        updateData.buyer_name = null;
+        updateData.sale_price = null;
+        updateData.sale_date = null;
+        updateData.buyer_address = null;
+        updateData.buyer_city = null;
+        updateData.buyer_state = null;
+        updateData.buyer_zip = null;
+        updateData.is_released = false;
+      } else if (newStatus === 'pick-your-part') {
+        // Use provided date or current date if none provided
+        if (additionalData?.pickYourPartDate) {
+          updateData.pick_your_part_date = additionalData.pickYourPartDate;
+        } else {
+          updateData.pick_your_part_date = new Date().toISOString();
+        }
+        // Clear SA recycling date and sold data
+        updateData.sa_recycling_date = null;
+        updateData.buyer_first_name = null;
+        updateData.buyer_last_name = null;
+        updateData.buyer_name = null;
+        updateData.sale_price = null;
+        updateData.sale_date = null;
+        updateData.buyer_address = null;
+        updateData.buyer_city = null;
+        updateData.buyer_state = null;
+        updateData.buyer_zip = null;
+        updateData.is_released = false;
       } else if (newStatus !== 'sold') {
         updateData.buyer_first_name = null;
         updateData.buyer_last_name = null;
@@ -356,6 +406,9 @@ export function useVehicleStorePaginated(isViewOnly: boolean = false, username: 
         updateData.buyer_state = null;
         updateData.buyer_zip = null;
         updateData.is_released = false;
+        // Clear recycling dates when switching to non-recycling status
+        updateData.sa_recycling_date = null;
+        updateData.pick_your_part_date = null;
       }
 
       console.log('Updating database with:', updateData);

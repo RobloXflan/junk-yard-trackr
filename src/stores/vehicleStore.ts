@@ -299,11 +299,15 @@ class VehicleStore {
     }
   }
 
-  async updateVehicleStatus(vehicleId: string, newStatus: Vehicle['status'], soldData?: {
-    buyerFirstName: string;
-    buyerLastName: string;
-    salePrice: string;
-    saleDate: string;
+  async updateVehicleStatus(vehicleId: string, newStatus: Vehicle['status'], additionalData?: {
+    // For sold status
+    buyerFirstName?: string;
+    buyerLastName?: string;
+    salePrice?: string;
+    saleDate?: string;
+    // For recycling status
+    saRecyclingDate?: string;
+    pickYourPartDate?: string;
   }) {
     // Prevent concurrent updates to the same vehicle
     if (this.updateInProgress.has(vehicleId)) {
@@ -314,7 +318,7 @@ class VehicleStore {
     this.updateInProgress.add(vehicleId);
 
     try {
-      console.log('Updating vehicle status for ID:', vehicleId, 'to status:', newStatus, 'with data:', soldData);
+      console.log('Updating vehicle status for ID:', vehicleId, 'to status:', newStatus, 'with data:', additionalData);
       
       // Create the update object with only the specific fields for this vehicle
       const updateData: any = {
@@ -323,12 +327,12 @@ class VehicleStore {
       };
 
       // Handle sold status specifically
-      if (newStatus === 'sold' && soldData) {
-        updateData.buyer_first_name = soldData.buyerFirstName;
-        updateData.buyer_last_name = soldData.buyerLastName;
-        updateData.buyer_name = `${soldData.buyerFirstName} ${soldData.buyerLastName}`;
-        updateData.sale_price = soldData.salePrice;
-        updateData.sale_date = soldData.saleDate;
+      if (newStatus === 'sold' && additionalData) {
+        updateData.buyer_first_name = additionalData.buyerFirstName;
+        updateData.buyer_last_name = additionalData.buyerLastName;
+        updateData.buyer_name = `${additionalData.buyerFirstName} ${additionalData.buyerLastName}`;
+        updateData.sale_price = additionalData.salePrice;
+        updateData.sale_date = additionalData.saleDate;
       } else if (newStatus !== 'sold') {
         // Clear sold data if status is not sold
         updateData.buyer_first_name = null;
@@ -340,18 +344,28 @@ class VehicleStore {
 
       // Handle recycling status dates
       if (newStatus === 'sa-recycling') {
-        // Only set the date if it's not already set (first time changing to this status)
-        const currentVehicle = this.vehicles.find(v => v.id === vehicleId);
-        if (!currentVehicle?.saRecyclingDate) {
-          updateData.sa_recycling_date = new Date().toISOString();
+        // Use provided date or current date if none provided
+        if (additionalData?.saRecyclingDate) {
+          updateData.sa_recycling_date = additionalData.saRecyclingDate;
+        } else {
+          // Only set the date if it's not already set (first time changing to this status)
+          const currentVehicle = this.vehicles.find(v => v.id === vehicleId);
+          if (!currentVehicle?.saRecyclingDate) {
+            updateData.sa_recycling_date = new Date().toISOString();
+          }
         }
         // Clear pick your part date when switching to SA recycling
         updateData.pick_your_part_date = null;
       } else if (newStatus === 'pick-your-part') {
-        // Only set the date if it's not already set (first time changing to this status)
-        const currentVehicle = this.vehicles.find(v => v.id === vehicleId);
-        if (!currentVehicle?.pickYourPartDate) {
-          updateData.pick_your_part_date = new Date().toISOString();
+        // Use provided date or current date if none provided
+        if (additionalData?.pickYourPartDate) {
+          updateData.pick_your_part_date = additionalData.pickYourPartDate;
+        } else {
+          // Only set the date if it's not already set (first time changing to this status)
+          const currentVehicle = this.vehicles.find(v => v.id === vehicleId);
+          if (!currentVehicle?.pickYourPartDate) {
+            updateData.pick_your_part_date = new Date().toISOString();
+          }
         }
         // Clear SA recycling date when switching to pick your part
         updateData.sa_recycling_date = null;

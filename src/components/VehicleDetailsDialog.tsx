@@ -134,10 +134,15 @@ export function VehicleDetailsDialog({
     try {
       console.log(`Updating vehicle to ${recyclingType} status with date:`, date);
       
+      // Convert the date to ISO string format for the database
+      const isoDate = new Date(date).toISOString();
+      
       // Use the correct camelCase keys that the vehicle store expects
       const dateData = {
-        [recyclingType === "sa-recycling" ? "saRecyclingDate" : "pickYourPartDate"]: date
+        [recyclingType === "sa-recycling" ? "saRecyclingDate" : "pickYourPartDate"]: isoDate
       };
+      
+      console.log('Passing recycling date data:', dateData);
       
       const updatedVehicle = {
         ...localVehicle,
