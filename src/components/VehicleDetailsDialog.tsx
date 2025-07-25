@@ -56,6 +56,9 @@ export function VehicleDetailsDialog({
   const [recyclingType, setRecyclingType] = useState<"sa-recycling" | "pick-your-part" | null>(null);
 
   useEffect(() => {
+    console.log('VehicleDetailsDialog: Vehicle prop changed:', vehicle);
+    console.log('VehicleDetailsDialog: SA Recycling Date:', vehicle?.saRecyclingDate);
+    console.log('VehicleDetailsDialog: Pick Your Part Date:', vehicle?.pickYourPartDate);
     setLocalVehicle(vehicle);
     setEditedVehicle(vehicle);
     setSelectedStatus(vehicle?.status || 'yard');
