@@ -131,6 +131,7 @@ export function VehicleDetailsDialog({
     try {
       console.log(`Updating vehicle to ${recyclingType} status with date:`, date);
       
+      // Use the correct camelCase keys that the vehicle store expects
       const dateData = {
         [recyclingType === "sa-recycling" ? "saRecyclingDate" : "pickYourPartDate"]: date
       };
