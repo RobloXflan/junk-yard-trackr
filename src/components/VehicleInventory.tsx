@@ -390,11 +390,15 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
                       ) : '-'}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={
-                        vehicle.status === 'sold' ? 'default' :
-                        vehicle.status === 'yard' ? 'secondary' :
-                        'outline'
-                      }>
+                      <Badge 
+                        variant="outline"
+                        className={`border-2 ${
+                          vehicle.status === 'sa-recycling' ? 'border-purple-500' :
+                          vehicle.status === 'pick-your-part' ? 'border-orange-500' :
+                          vehicle.status === 'sold' ? 'border-blue-500' :
+                          'border-muted'
+                        }`}
+                      >
                         {vehicle.status === 'yard' ? 'In Yard' : 
                          vehicle.status === 'sold' ? 'Sold' :
                          vehicle.status === 'pick-your-part' ? 'Pick Your Part' :
