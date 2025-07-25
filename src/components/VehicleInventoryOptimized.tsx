@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search, Filter, Car, Plus, Edit, RefreshCw, ChevronDown } from "lucide-react";
+import { formatDate } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -549,14 +550,14 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
                           <div className="text-sm">
                             <div>SA Recycling</div>
                             {vehicle.saRecyclingDate && (
-                              <div className="text-muted-foreground">{vehicle.saRecyclingDate}</div>
+                              <div className="text-muted-foreground">{formatDate(vehicle.saRecyclingDate)}</div>
                             )}
                           </div>
                         ) : vehicle.status === 'pick-your-part' ? (
                           <div className="text-sm">
                             <div>Pick Your Part</div>
                             {vehicle.pickYourPartDate && (
-                              <div className="text-muted-foreground">{vehicle.pickYourPartDate}</div>
+                              <div className="text-muted-foreground">{formatDate(vehicle.pickYourPartDate)}</div>
                             )}
                           </div>
                         ) : '-'}

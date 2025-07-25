@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search, Filter, Car, Plus, Edit, RefreshCw } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { formatDate } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -376,14 +377,14 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
                         <div className="text-sm">
                           <div>SA Recycling</div>
                           {vehicle.saRecyclingDate && (
-                            <div className="text-muted-foreground">{vehicle.saRecyclingDate}</div>
+                            <div className="text-muted-foreground">{formatDate(vehicle.saRecyclingDate)}</div>
                           )}
                         </div>
                       ) : vehicle.status === 'pick-your-part' ? (
                         <div className="text-sm">
                           <div>Pick Your Part</div>
                           {vehicle.pickYourPartDate && (
-                            <div className="text-muted-foreground">{vehicle.pickYourPartDate}</div>
+                            <div className="text-muted-foreground">{formatDate(vehicle.pickYourPartDate)}</div>
                           )}
                         </div>
                       ) : '-'}

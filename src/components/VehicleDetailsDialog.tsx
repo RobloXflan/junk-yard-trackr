@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, Edit, Save, X, FileText, Upload } from "lucide-react";
+import { formatDate } from "@/lib/utils";
 import { Vehicle } from "@/stores/vehicleStore";
 import { BuyerSelector } from "./forms/BuyerSelector";
 import { toast } from "@/hooks/use-toast";
@@ -414,18 +415,6 @@ export function VehicleDetailsDialog({
     }
   };
 
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'N/A';
-    
-    // Extract date part from ISO string or date string
-    const date = new Date(dateString);
-    
-    // Check if the date is valid
-    if (isNaN(date.getTime())) return 'N/A';
-    
-    // Return just the date part in YYYY-MM-DD format
-    return date.toISOString().split('T')[0];
-  };
 
   return (
     <>
