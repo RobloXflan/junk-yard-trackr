@@ -416,11 +416,15 @@ export function VehicleDetailsDialog({
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
-    // Handle YYYY-MM-DD format without timezone conversion
-    if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      return dateString; // Return as-is for YYYY-MM-DD format
-    }
-    return new Date(dateString).toLocaleDateString();
+    
+    // Extract date part from ISO string or date string
+    const date = new Date(dateString);
+    
+    // Check if the date is valid
+    if (isNaN(date.getTime())) return 'N/A';
+    
+    // Return just the date part in YYYY-MM-DD format
+    return date.toISOString().split('T')[0];
   };
 
   return (
