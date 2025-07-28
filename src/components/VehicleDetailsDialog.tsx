@@ -479,6 +479,22 @@ export function VehicleDetailsDialog({
                   variant="outline" 
                   className="flex items-center gap-2"
                   onClick={() => {
+                    // Store vehicle data for Documents page pre-filling
+                    localStorage.setItem('documents-vehicle-data', JSON.stringify({
+                      vehicleId: localVehicle.vehicleId,
+                      year: localVehicle.year,
+                      make: localVehicle.make,
+                      model: localVehicle.model,
+                      licensePlate: localVehicle.licensePlate,
+                      sellerName: localVehicle.sellerName,
+                      buyerFirstName: localVehicle.buyerFirstName,
+                      buyerLastName: localVehicle.buyerLastName,
+                      buyerAddress: localVehicle.buyerAddress,
+                      salePrice: localVehicle.salePrice,
+                      saleDate: localVehicle.saleDate,
+                      id: localVehicle.id
+                    }));
+                    
                     if (onNavigate) {
                       onNavigate('documents');
                     }
