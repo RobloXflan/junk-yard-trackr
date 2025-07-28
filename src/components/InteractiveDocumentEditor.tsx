@@ -95,68 +95,94 @@ export function InteractiveDocumentEditor() {
     }
   };
 
+  // Image optimization function
+  const optimizeImage = async (file: File): Promise<File> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = document.createElement('img');
+      
+      img.onload = () => {
+        // Calculate optimal dimensions (max 1920px width/height)
+        const maxDimension = 1920;
+        let { width, height } = img;
+        
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = (height * maxDimension) / width;
+            width = maxDimension;
+          } else {
+            width = (width * maxDimension) / height;
+            height = maxDimension;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw and compress
+        ctx?.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            const optimizedFile = new File([blob!], file.name, {
+              type: 'image/jpeg',
+              lastModified: Date.now(),
+            });
+            resolve(optimizedFile);
+          },
+          'image/jpeg',
+          0.85 // 85% quality for good balance
+        );
+      };
+      
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file type - accept images and PDFs
-    if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
-      toast.error('Please upload an image file (JPG, PNG, etc.) or a PDF');
+    // Validate file type - support only optimized image formats
+    const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    
+    if (!validImageTypes.includes(file.type)) {
+      toast.error('Please select a PNG, JPEG, or WebP image file for best results');
+      return;
+    }
+
+    // Validate file size (5MB limit for better performance)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast.error('Image size must be less than 5MB. Please compress your image and try again.');
       return;
     }
 
     setIsUploading(true);
-
+    
     try {
-      let publicUrl: string;
+      // Optimize image before upload
+      const optimizedFile = await optimizeImage(file);
       
-      if (file.type === 'application/pdf') {
-        // Handle PDF upload and conversion
-        const fileName = `${Date.now()}-${file.name}`;
-        
-        // Upload PDF to storage
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('documents')
-          .upload(`pdfs/${fileName}`, file, {
-            cacheControl: '3600',
-            upsert: false
-          });
-
-        if (uploadError) throw uploadError;
-
-        // Convert PDF to image using the edge function
-        const { data: convertData, error: convertError } = await supabase.functions.invoke('pdf-operations', {
-          body: {
-            action: 'convert_to_image',
-            pdfUrl: supabase.storage.from('documents').getPublicUrl(`pdfs/${fileName}`).data.publicUrl,
-            pageNumber: 1 // Convert first page only
-          }
+      // Generate unique filename
+      const fileExt = optimizedFile.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const fileName = `document-${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      
+      // Upload to Supabase storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(`templates/${fileName}`, optimizedFile, {
+          cacheControl: '3600',
+          upsert: false
         });
 
-        if (convertError) throw convertError;
-        
-        if (!convertData?.imageUrl) {
-          throw new Error('Failed to convert PDF to image');
-        }
+      if (uploadError) throw uploadError;
 
-        publicUrl = convertData.imageUrl;
-      } else {
-        // Handle regular image upload
-        const fileName = `${Date.now()}-${file.name}`;
-        const { data, error } = await supabase.storage
-          .from('documents')
-          .upload(`templates/${fileName}`, file, {
-            cacheControl: '3600',
-            upsert: false
-          });
-
-        if (error) throw error;
-
-        publicUrl = supabase.storage
-          .from('documents')
-          .getPublicUrl(`templates/${fileName}`)
-          .data.publicUrl;
-      }
+      // Get public URL
+      const publicUrl = supabase.storage
+        .from('documents')
+        .getPublicUrl(`templates/${fileName}`)
+        .data.publicUrl;
 
       // Update current document
       setCurrentDocumentUrl(publicUrl);
@@ -164,10 +190,10 @@ export function InteractiveDocumentEditor() {
       // Reload uploaded documents
       await loadUploadedDocuments();
       
-      toast.success(`${file.type === 'application/pdf' ? 'PDF converted and uploaded' : 'Document uploaded'} successfully!`);
+      toast.success('Document uploaded and optimized successfully!');
     } catch (error) {
-      console.error('Error uploading file:', error);
-      toast.error(`Failed to upload ${file.type === 'application/pdf' ? 'PDF' : 'document'}`);
+      console.error('Upload error:', error);
+      toast.error('Failed to upload document. Please try a different image.');
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
@@ -321,7 +347,7 @@ export function InteractiveDocumentEditor() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Interactive Document Editor</h1>
           <p className="text-muted-foreground">
-            Add and position text fields on your document template
+            Add and position text fields on your document template. Upload PNG, JPEG, or WebP images for best results.
           </p>
         </div>
         <div className="flex gap-2">
@@ -332,13 +358,13 @@ export function InteractiveDocumentEditor() {
             disabled={isUploading}
           >
             <Upload className="h-4 w-4" />
-            {isUploading ? 'Processing...' : 'Upload Document/PDF'}
+            {isUploading ? 'Optimizing...' : 'Upload Image'}
           </Button>
           <input
             ref={fileInputRef}
             type="file"
             onChange={handleFileUpload}
-            accept="image/*,.pdf"
+            accept="image/png,image/jpeg,image/jpg,image/webp"
             className="hidden"
           />
           <Button onClick={addTextField} className="flex items-center gap-2">
@@ -424,6 +450,20 @@ export function InteractiveDocumentEditor() {
         {/* Properties Panel */}
         <div className="col-span-1">
           <Card className="p-4">
+            <h3 className="font-semibold mb-4">File Format Guide</h3>
+            <div className="text-sm space-y-2 text-muted-foreground">
+              <p><strong>Recommended formats:</strong></p>
+              <ul className="list-disc list-inside space-y-1">
+                <li>PNG - Best for text documents</li>
+                <li>JPEG - Good for photos/scanned docs</li>
+                <li>WebP - Modern, efficient format</li>
+              </ul>
+              <p className="mt-3"><strong>Need to convert a PDF?</strong></p>
+              <p>Use online tools like pdf2png.com or your PDF viewer's export function to save as PNG.</p>
+            </div>
+          </Card>
+
+          <Card className="p-4 mt-4">
             <h3 className="font-semibold mb-4">Template Properties</h3>
             <div className="space-y-4">
               <div>
