@@ -99,29 +99,64 @@ export function InteractiveDocumentEditor() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please upload an image file (JPG, PNG, etc.)');
+    // Validate file type - accept images and PDFs
+    if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
+      toast.error('Please upload an image file (JPG, PNG, etc.) or a PDF');
       return;
     }
 
     setIsUploading(true);
 
     try {
-      const fileName = `${Date.now()}-${file.name}`;
-      const { data, error } = await supabase.storage
-        .from('documents')
-        .upload(`templates/${fileName}`, file, {
-          cacheControl: '3600',
-          upsert: false
+      let publicUrl: string;
+      
+      if (file.type === 'application/pdf') {
+        // Handle PDF upload and conversion
+        const fileName = `${Date.now()}-${file.name}`;
+        
+        // Upload PDF to storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('documents')
+          .upload(`pdfs/${fileName}`, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) throw uploadError;
+
+        // Convert PDF to image using the edge function
+        const { data: convertData, error: convertError } = await supabase.functions.invoke('pdf-operations', {
+          body: {
+            action: 'convert_to_image',
+            pdfUrl: supabase.storage.from('documents').getPublicUrl(`pdfs/${fileName}`).data.publicUrl,
+            pageNumber: 1 // Convert first page only
+          }
         });
 
-      if (error) throw error;
+        if (convertError) throw convertError;
+        
+        if (!convertData?.imageUrl) {
+          throw new Error('Failed to convert PDF to image');
+        }
 
-      const publicUrl = supabase.storage
-        .from('documents')
-        .getPublicUrl(`templates/${fileName}`)
-        .data.publicUrl;
+        publicUrl = convertData.imageUrl;
+      } else {
+        // Handle regular image upload
+        const fileName = `${Date.now()}-${file.name}`;
+        const { data, error } = await supabase.storage
+          .from('documents')
+          .upload(`templates/${fileName}`, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (error) throw error;
+
+        publicUrl = supabase.storage
+          .from('documents')
+          .getPublicUrl(`templates/${fileName}`)
+          .data.publicUrl;
+      }
 
       // Update current document
       setCurrentDocumentUrl(publicUrl);
@@ -129,10 +164,10 @@ export function InteractiveDocumentEditor() {
       // Reload uploaded documents
       await loadUploadedDocuments();
       
-      toast.success('Document uploaded successfully!');
+      toast.success(`${file.type === 'application/pdf' ? 'PDF converted and uploaded' : 'Document uploaded'} successfully!`);
     } catch (error) {
       console.error('Error uploading file:', error);
-      toast.error('Failed to upload document');
+      toast.error(`Failed to upload ${file.type === 'application/pdf' ? 'PDF' : 'document'}`);
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
@@ -297,13 +332,13 @@ export function InteractiveDocumentEditor() {
             disabled={isUploading}
           >
             <Upload className="h-4 w-4" />
-            {isUploading ? 'Uploading...' : 'Upload Document'}
+            {isUploading ? 'Processing...' : 'Upload Document/PDF'}
           </Button>
           <input
             ref={fileInputRef}
             type="file"
             onChange={handleFileUpload}
-            accept="image/*"
+            accept="image/*,.pdf"
             className="hidden"
           />
           <Button onClick={addTextField} className="flex items-center gap-2">
