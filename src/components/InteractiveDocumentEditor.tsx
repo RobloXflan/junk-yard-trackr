@@ -231,19 +231,57 @@ export function InteractiveDocumentEditor() {
   };
 
   const saveTemplate = () => {
-    const template: DocumentTemplate = {
-      id: Date.now().toString(),
-      name: templateName,
-      imageUrl: currentDocumentUrl,
-      fields,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
+    console.log('Attempting to save template...');
+    console.log('Template name:', templateName);
+    console.log('Current document URL:', currentDocumentUrl);
+    console.log('Fields to save:', fields);
+    
+    // Validation checks
+    if (!templateName.trim()) {
+      toast.error('Please enter a template name before saving.');
+      console.log('Save failed: No template name');
+      return;
+    }
 
-    const updatedTemplates = [...templates, template];
-    setTemplates(updatedTemplates);
-    localStorage.setItem('interactive-document-templates', JSON.stringify(updatedTemplates));
-    toast.success('Template saved successfully!');
+    if (!currentDocumentUrl) {
+      toast.error('Please upload a document image before saving the template.');
+      console.log('Save failed: No document image');
+      return;
+    }
+
+    if (fields.length === 0) {
+      toast.error('Please add at least one text field before saving the template.');
+      console.log('Save failed: No fields added');
+      return;
+    }
+
+    try {
+      const template: DocumentTemplate = {
+        id: Date.now().toString(),
+        name: templateName.trim(),
+        imageUrl: currentDocumentUrl,
+        fields: [...fields], // Create a copy of the fields array
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      console.log('Template to save:', template);
+
+      const updatedTemplates = [...templates, template];
+      setTemplates(updatedTemplates);
+      localStorage.setItem('interactive-document-templates', JSON.stringify(updatedTemplates));
+      
+      console.log('Template saved successfully to localStorage');
+      console.log('Updated templates list:', updatedTemplates);
+      
+      toast.success(`Template "${templateName}" saved successfully with ${fields.length} fields!`);
+      
+      // Reset the template name for next save
+      setTemplateName('');
+    } catch (error) {
+      console.error('Error saving template:', error);
+      toast.error('Failed to save template. Please try again.');
+    }
   };
 
   const addTextField = () => {
