@@ -295,18 +295,24 @@ export function InteractiveDocumentEditor() {
     e.stopPropagation();
     setSelectedField(fieldId);
     
+    console.log('Mouse down:', action, 'for field:', fieldId);
+    
     if (action === 'drag') {
       setIsDragging(true);
-    } else {
+    } else if (action === 'resize') {
       setIsResizing(true);
+      console.log('Starting resize');
     }
     
     const rect = canvasRef.current?.getBoundingClientRect();
     if (rect) {
-      setDragStart({
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top
-      });
+      const field = fields.find(f => f.id === fieldId);
+      if (field) {
+        setDragStart({
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top
+        });
+      }
     }
   };
 
@@ -330,9 +336,13 @@ export function InteractiveDocumentEditor() {
         y: Math.max(0, Math.min(canvasSize.height - selectedFieldData.height, selectedFieldData.y + deltaY))
       });
     } else if (isResizing) {
+      console.log('Resizing with delta:', deltaX, deltaY);
+      const newWidth = Math.max(50, selectedFieldData.width + deltaX);
+      const newHeight = Math.max(20, selectedFieldData.height + deltaY);
+      console.log('New dimensions:', newWidth, newHeight);
       updateField(selectedField, {
-        width: Math.max(50, selectedFieldData.width + deltaX),
-        height: Math.max(20, selectedFieldData.height + deltaY)
+        width: newWidth,
+        height: newHeight
       });
     }
 
@@ -653,9 +663,14 @@ export function InteractiveDocumentEditor() {
                     {selectedField === field.id && (
                       <>
                         <div
-                          className="absolute -top-2 -right-2 w-4 h-4 bg-primary border-2 border-white rounded-full cursor-se-resize"
-                          onMouseDown={(e) => handleMouseDown(e, field.id, 'resize')}
-                        />
+                          className="absolute -top-2 -right-2 w-6 h-6 bg-primary border-2 border-white rounded-full cursor-se-resize flex items-center justify-center"
+                          onMouseDown={(e) => {
+                            console.log('Resize handle clicked');
+                            handleMouseDown(e, field.id, 'resize');
+                          }}
+                        >
+                          <div className="w-2 h-2 bg-white rounded-full"></div>
+                        </div>
                         {fieldTypeInfo && (
                           <div className="absolute -top-6 -left-2 flex items-center gap-1 px-2 py-1 bg-primary text-primary-foreground text-xs rounded">
                             <fieldTypeInfo.icon className="h-3 w-3" />
