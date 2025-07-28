@@ -105,7 +105,7 @@ export function InteractiveDocumentEditor() {
             templateFields = templateFields.map(field => {
               const updatedField = { ...field };
               
-              switch (field.id) {
+              switch (field.fieldType) {
                 case 'vin':
                   updatedField.content = vehicleData.vehicleId || '';
                   break;
