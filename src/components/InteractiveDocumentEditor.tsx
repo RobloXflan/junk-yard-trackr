@@ -534,98 +534,85 @@ export function InteractiveDocumentEditor() {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    // Convert image to data URL so it can be accessed in the print window
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const img = document.createElement('img');
-    
-    img.onload = () => {
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx?.drawImage(img, 0, 0);
-      const dataUrl = canvas.toDataURL('image/png');
-
-      const printContent = `
-        <html>
-          <head>
-            <title>Print Document</title>
-            <style>
-              * { box-sizing: border-box; }
-              body { 
-                margin: 0; 
-                padding: 0; 
-                font-family: Arial, sans-serif; 
-                background: white;
-              }
+    const printContent = `
+      <html>
+        <head>
+          <title>Print Document</title>
+          <style>
+            * { box-sizing: border-box; }
+            body { 
+              margin: 0; 
+              padding: 0; 
+              font-family: Arial, sans-serif; 
+              background: white;
+            }
+            .document-container { 
+              position: relative; 
+              width: 8.5in; 
+              height: 11in; 
+              margin: 0 auto;
+              border: 1px solid #ccc;
+              background: white;
+            }
+            .document-bg { 
+              width: 100%; 
+              height: 100%; 
+              object-fit: fill;
+              position: absolute;
+              top: 0;
+              left: 0;
+            }
+            .text-field { 
+              position: absolute; 
+              background: transparent; 
+              border: none; 
+              font-family: Arial, sans-serif;
+              color: black;
+              font-weight: bold;
+              z-index: 10;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              text-align: center;
+            }
+            @media print { 
+              body { margin: 0; padding: 0; }
               .document-container { 
-                position: relative; 
-                width: 816px; 
-                height: 1056px; 
-                margin: 0 auto;
-                page-break-inside: avoid;
+                width: 8.5in; 
+                height: 11in;
+                border: none;
+                margin: 0;
               }
-              .document-bg { 
-                width: 100%; 
-                height: 100%; 
-                object-fit: contain;
-                display: block;
+              .document-bg {
+                width: 100%;
+                height: 100%;
               }
-              .text-field { 
-                position: absolute; 
-                background: transparent; 
-                border: none; 
-                font-family: Arial, sans-serif;
-                color: black;
-                overflow: hidden;
-                text-align: center;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-weight: bold;
+              .text-field {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
               }
-              @media print { 
-                body { margin: 0; padding: 0; }
-                .document-container { 
-                  width: 8.5in; 
-                  height: 11in;
-                  page-break-inside: avoid;
-                }
-                .document-bg {
-                  width: 100%;
-                  height: 100%;
-                }
-                .text-field {
-                  print-color-adjust: exact;
-                  -webkit-print-color-adjust: exact;
-                }
-              }
-            </style>
-          </head>
-          <body>
-            <div class="document-container">
-              <img src="${dataUrl}" alt="Document" class="document-bg" />
-              ${fields.map(field => `
-                <div class="text-field" style="
-                  left: ${field.x}px;
-                  top: ${field.y}px;
-                  width: ${field.width}px;
-                  height: ${field.height}px;
-                  font-size: ${field.fontSize}px;
-                ">${field.content}</div>
-              `).join('')}
-            </div>
-          </body>
-        </html>
-      `;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="document-container">
+            <img src="${currentDocumentUrl}" alt="Document" class="document-bg" onload="window.print()" />
+            ${fields.map(field => `
+              <div class="text-field" style="
+                left: ${field.x}px;
+                top: ${field.y}px;
+                width: ${field.width}px;
+                height: ${field.height}px;
+                font-size: ${field.fontSize}px;
+              ">${field.content || ''}</div>
+            `).join('')}
+          </div>
+        </body>
+      </html>
+    `;
 
-      printWindow.document.write(printContent);
-      printWindow.document.close();
-      printWindow.focus();
-      setTimeout(() => printWindow.print(), 500);
-    };
-
-    img.crossOrigin = 'anonymous';
-    img.src = currentDocumentUrl;
+    printWindow.document.write(printContent);
+    printWindow.document.close();
   };
 
   return (
