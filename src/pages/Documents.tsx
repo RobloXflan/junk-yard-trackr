@@ -1,4 +1,4 @@
-import { CustomDocumentEditor } from "@/components/CustomDocumentEditor";
+import { InteractiveDocumentEditor } from "@/components/InteractiveDocumentEditor";
 
 export function Documents() {
   return (
@@ -12,7 +12,7 @@ export function Documents() {
         </div>
       </div>
 
-      <CustomDocumentEditor />
+      <InteractiveDocumentEditor />
     </div>
   );
 }
