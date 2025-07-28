@@ -20,6 +20,132 @@ interface DocumentTemplate {
 
 const defaultTemplates = [
   {
+    id: "dmv-bill-of-sale",
+    name: "DMV Bill of Sale",
+    content: `
+      <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; font-size: 12px;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h2 style="margin: 0; font-size: 16px;">BILL OF SALE</h2>
+          <p style="margin: 5px 0; font-size: 10px;">A Public Service Agency</p>
+        </div>
+
+        <div style="border: 1px solid #000; margin-bottom: 15px;">
+          <div style="background-color: #f0f0f0; padding: 5px; text-align: center; font-weight: bold; border-bottom: 1px solid #000;">
+            VEHICLE/VESSEL DESCRIPTION
+          </div>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="border-right: 1px solid #000; padding: 5px; width: 25%; font-size: 10px;">IDENTIFICATION NUMBER</td>
+              <td style="border-right: 1px solid #000; padding: 5px; width: 15%; font-size: 10px;">YEAR</td>
+              <td style="border-right: 1px solid #000; padding: 5px; width: 15%; font-size: 10px;">MODEL</td>
+              <td style="border-right: 1px solid #000; padding: 5px; width: 15%; font-size: 10px;">MAKE</td>
+              <td style="border-right: 1px solid #000; padding: 5px; width: 15%; font-size: 10px;">LICENSE PLATE #</td>
+              <td style="padding: 5px; width: 15%; font-size: 10px;">MOTORCYCLE ENGINE #</td>
+            </tr>
+            <tr>
+              <td style="border-right: 1px solid #000; border-top: 1px solid #000; padding: 10px; height: 30px;">{{vin_number}}</td>
+              <td style="border-right: 1px solid #000; border-top: 1px solid #000; padding: 10px;">{{vehicle_year}}</td>
+              <td style="border-right: 1px solid #000; border-top: 1px solid #000; padding: 10px;">{{vehicle_model}}</td>
+              <td style="border-right: 1px solid #000; border-top: 1px solid #000; padding: 10px;">{{vehicle_make}}</td>
+              <td style="border-right: 1px solid #000; border-top: 1px solid #000; padding: 10px;">{{license_plate}}</td>
+              <td style="border-top: 1px solid #000; padding: 10px;">{{motorcycle_engine}}</td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+          <p style="margin: 5px 0;">
+            <span style="font-weight: bold;">{{seller_company}}</span> sell, transfer, and deliver the above vehicle/vessel
+          </p>
+          <p style="margin: 5px 0;">
+            to <span style="font-weight: bold;">{{buyer_company}}</span> on {{sale_date}} for the amount of <span style="border: 1px solid #000; padding: 2px;">$<span style="font-weight: bold;">{{selling_price}}</span></span>
+          </p>
+          <p style="margin: 10px 0; font-size: 10px;">
+            If this was a gift, indicate relationship: <span style="margin-left: 20px;">(e.g., parent, spouse, friend, etc.)</span> {{gift_relationship}} <span style="border: 1px solid #000; padding: 2px; margin-left: 10px;">$<span style="font-weight: bold;">{{gift_value}}</span></span>
+          </p>
+          <p style="margin: 5px 0; font-size: 10px; text-align: right;">(GIFT VALUE)</p>
+        </div>
+
+        <div style="border: 1px solid #000; margin-bottom: 15px;">
+          <div style="background-color: #f0f0f0; padding: 5px; text-align: center; font-weight: bold; border-bottom: 1px solid #000;">
+            SELLER
+          </div>
+          <p style="margin: 5px; font-size: 10px; font-style: italic;">
+            I certify (or declare) under penalty of perjury under the laws of the State of California that the foregoing is true and correct.
+          </p>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="border-right: 1px solid #000; padding: 5px; width: 33%; font-size: 10px;">PRINT NAME</td>
+              <td style="border-right: 1px solid #000; padding: 5px; width: 33%; font-size: 10px;">SIGNATURE</td>
+              <td style="border-right: 1px solid #000; padding: 5px; width: 17%; font-size: 10px;">DATE</td>
+              <td style="padding: 5px; width: 17%; font-size: 10px;">TEL. (D) OR DEALER #</td>
+            </tr>
+            <tr>
+              <td style="border-right: 1px solid #000; border-top: 1px solid #000; padding: 10px; height: 30px;">{{seller_name}}</td>
+              <td style="border-right: 1px solid #000; border-top: 1px solid #000; padding: 10px;">X</td>
+              <td style="border-right: 1px solid #000; border-top: 1px solid #000; padding: 10px;">{{seller_date}}</td>
+              <td style="border-top: 1px solid #000; padding: 10px;">{{seller_phone}}</td>
+            </tr>
+            <tr>
+              <td style="border-right: 1px solid #000; border-top: 1px solid #000; padding: 5px; font-size: 10px;">MAILING ADDRESS</td>
+              <td style="border-right: 1px solid #000; border-top: 1px solid #000; padding: 5px; font-size: 10px;">CITY</td>
+              <td style="border-right: 1px solid #000; border-top: 1px solid #000; padding: 5px; font-size: 10px;">STATE</td>
+              <td style="border-top: 1px solid #000; padding: 5px; font-size: 10px;">ZIP</td>
+            </tr>
+            <tr>
+              <td style="border-right: 1px solid #000; border-top: 1px solid #000; padding: 10px; height: 30px;">{{seller_address}}</td>
+              <td style="border-right: 1px solid #000; border-top: 1px solid #000; padding: 10px;">{{seller_city}}</td>
+              <td style="border-right: 1px solid #000; border-top: 1px solid #000; padding: 10px;">{{seller_state}}</td>
+              <td style="border-top: 1px solid #000; padding: 10px;">{{seller_zip}}</td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="border: 1px solid #000; margin-bottom: 15px;">
+          <div style="background-color: #f0f0f0; padding: 5px; text-align: center; font-weight: bold; border-bottom: 1px solid #000;">
+            BUYER
+          </div>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="border-bottom: 1px solid #000; padding: 5px; font-size: 10px;">PRINT NAME</td>
+            </tr>
+            <tr>
+              <td style="border-bottom: 1px solid #000; padding: 10px; height: 30px;">{{buyer_name}}</td>
+            </tr>
+            <tr>
+              <td style="border-bottom: 1px solid #000; padding: 5px; font-size: 10px;">PRINT NAME</td>
+            </tr>
+            <tr>
+              <td style="border-bottom: 1px solid #000; padding: 10px; height: 30px;">{{buyer_name_2}}</td>
+            </tr>
+            <tr>
+              <td style="padding: 5px;">
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tr>
+                    <td style="border-right: 1px solid #000; padding: 5px; width: 40%; font-size: 10px;">MAILING ADDRESS</td>
+                    <td style="border-right: 1px solid #000; padding: 5px; width: 30%; font-size: 10px;">CITY</td>
+                    <td style="border-right: 1px solid #000; padding: 5px; width: 15%; font-size: 10px;">STATE</td>
+                    <td style="padding: 5px; width: 15%; font-size: 10px;">ZIP</td>
+                  </tr>
+                  <tr>
+                    <td style="border-right: 1px solid #000; border-top: 1px solid #000; padding: 10px; height: 30px;">{{buyer_address}}</td>
+                    <td style="border-right: 1px solid #000; border-top: 1px solid #000; padding: 10px;">{{buyer_city}}</td>
+                    <td style="border-right: 1px solid #000; border-top: 1px solid #000; padding: 10px;">{{buyer_state}}</td>
+                    <td style="border-top: 1px solid #000; padding: 10px;">{{buyer_zip}}</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="text-align: center; margin-top: 20px;">
+          <p style="font-size: 10px; font-weight: bold;">CUT ON LINE AND SAVE FOR YOUR RECORDS</p>
+        </div>
+      </div>
+    `
+  },
+  {
     id: "invoice",
     name: "Invoice Template",
     content: `
