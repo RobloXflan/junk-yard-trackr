@@ -220,7 +220,14 @@ export function CustomDocumentEditor() {
   const loadTemplates = () => {
     const saved = localStorage.getItem("document-templates");
     if (saved) {
-      setTemplates(JSON.parse(saved));
+      const parsedTemplates = JSON.parse(saved);
+      // Convert date strings back to Date objects
+      const templatesWithDates = parsedTemplates.map((t: any) => ({
+        ...t,
+        createdAt: new Date(t.createdAt),
+        updatedAt: new Date(t.updatedAt)
+      }));
+      setTemplates(templatesWithDates);
     } else {
       const initialTemplates = defaultTemplates.map(t => ({
         ...t,
