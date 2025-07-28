@@ -1,7 +1,6 @@
 
 import { QRCodeDisplay } from "@/components/QRCodeDisplay";
 import { PrintDocumentManager } from "@/components/PrintDocumentManager";
-import { CustomDocumentEditor } from "@/components/CustomDocumentEditor";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function Print() {
@@ -12,18 +11,13 @@ export function Print() {
       </div>
       
       <Tabs defaultValue="documents" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="documents">Document Manager</TabsTrigger>
-          <TabsTrigger value="custom">Custom Documents</TabsTrigger>
           <TabsTrigger value="qr">QR Codes</TabsTrigger>
         </TabsList>
         
         <TabsContent value="documents" className="space-y-6">
           <PrintDocumentManager />
-        </TabsContent>
-        
-        <TabsContent value="custom" className="space-y-6">
-          <CustomDocumentEditor />
         </TabsContent>
         
         <TabsContent value="qr" className="space-y-6">

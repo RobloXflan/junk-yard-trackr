@@ -1,3 +1,5 @@
+import { CustomDocumentEditor } from "@/components/CustomDocumentEditor";
+
 export function Documents() {
   return (
     <div className="space-y-6 animate-fade-in">
@@ -10,14 +12,7 @@ export function Documents() {
         </div>
       </div>
 
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center space-y-4">
-          <h2 className="text-2xl font-semibold text-muted-foreground">Coming Soon</h2>
-          <p className="text-muted-foreground">
-            Document management features are currently under development.
-          </p>
-        </div>
-      </div>
+      <CustomDocumentEditor />
     </div>
   );
 }
