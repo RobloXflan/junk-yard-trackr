@@ -539,13 +539,54 @@ export function InteractiveDocumentEditor() {
         <head>
           <title>Print Document</title>
           <style>
-            body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
-            .document-container { position: relative; width: 816px; height: 1056px; margin: 0 auto; }
-            .document-bg { width: 100%; height: 100%; object-fit: contain; }
-            .text-field { position: absolute; background: transparent; border: none; font-family: Arial, sans-serif; }
+            * { box-sizing: border-box; }
+            body { 
+              margin: 0; 
+              padding: 0; 
+              font-family: Arial, sans-serif; 
+              background: white;
+            }
+            .document-container { 
+              position: relative; 
+              width: 816px; 
+              height: 1056px; 
+              margin: 0 auto;
+              page-break-inside: avoid;
+            }
+            .document-bg { 
+              width: 100%; 
+              height: 100%; 
+              object-fit: contain;
+              display: block;
+            }
+            .text-field { 
+              position: absolute; 
+              background: transparent; 
+              border: none; 
+              font-family: Arial, sans-serif;
+              color: black;
+              overflow: hidden;
+              text-align: center;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-weight: bold;
+            }
             @media print { 
               body { margin: 0; padding: 0; }
-              .document-container { width: 100%; height: 100vh; }
+              .document-container { 
+                width: 8.5in; 
+                height: 11in;
+                page-break-inside: avoid;
+              }
+              .document-bg {
+                width: 100%;
+                height: 100%;
+              }
+              .text-field {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+              }
             }
           </style>
         </head>
@@ -559,7 +600,6 @@ export function InteractiveDocumentEditor() {
                 width: ${field.width}px;
                 height: ${field.height}px;
                 font-size: ${field.fontSize}px;
-                line-height: ${field.height}px;
               ">${field.content}</div>
             `).join('')}
           </div>
