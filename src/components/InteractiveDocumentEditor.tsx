@@ -3,8 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { Trash2, Plus, Move, Type, Save, Printer } from 'lucide-react';
+import { Trash2, Plus, Move, Type, Save, Printer, Upload, Image } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import dmvFormImage from '@/assets/dmv-bill-of-sale.png';
 
 interface TextField {
@@ -27,6 +28,13 @@ interface DocumentTemplate {
   updatedAt: Date;
 }
 
+interface UploadedDocument {
+  id: string;
+  name: string;
+  url: string;
+  uploadedAt: Date;
+}
+
 export function InteractiveDocumentEditor() {
   const [fields, setFields] = useState<TextField[]>([]);
   const [selectedField, setSelectedField] = useState<string | null>(null);
@@ -35,11 +43,16 @@ export function InteractiveDocumentEditor() {
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [templateName, setTemplateName] = useState('DMV Bill of Sale');
   const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
+  const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
+  const [currentDocumentUrl, setCurrentDocumentUrl] = useState(dmvFormImage);
+  const [isUploading, setIsUploading] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 816, height: 1056 });
 
   useEffect(() => {
     loadTemplates();
+    loadUploadedDocuments();
   }, []);
 
   const loadTemplates = () => {
@@ -55,11 +68,84 @@ export function InteractiveDocumentEditor() {
     }
   };
 
+  const loadUploadedDocuments = async () => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .list('templates/', {
+          limit: 100,
+          sortBy: { column: 'created_at', order: 'desc' }
+        });
+
+      if (error) {
+        console.error('Error loading documents:', error);
+        return;
+      }
+
+      const documents: UploadedDocument[] = data.map(file => ({
+        id: file.id,
+        name: file.name,
+        url: supabase.storage.from('documents').getPublicUrl(`templates/${file.name}`).data.publicUrl,
+        uploadedAt: new Date(file.created_at)
+      }));
+
+      setUploadedDocuments(documents);
+    } catch (error) {
+      console.error('Error loading uploaded documents:', error);
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file (JPG, PNG, etc.)');
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      const fileName = `${Date.now()}-${file.name}`;
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .upload(`templates/${fileName}`, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) throw error;
+
+      const publicUrl = supabase.storage
+        .from('documents')
+        .getPublicUrl(`templates/${fileName}`)
+        .data.publicUrl;
+
+      // Update current document
+      setCurrentDocumentUrl(publicUrl);
+      
+      // Reload uploaded documents
+      await loadUploadedDocuments();
+      
+      toast.success('Document uploaded successfully!');
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      toast.error('Failed to upload document');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   const saveTemplate = () => {
     const template: DocumentTemplate = {
       id: Date.now().toString(),
       name: templateName,
-      imageUrl: dmvFormImage,
+      imageUrl: currentDocumentUrl,
       fields,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -172,7 +258,7 @@ export function InteractiveDocumentEditor() {
         </head>
         <body>
           <div class="document-container">
-            <img src="${dmvFormImage}" alt="Document" class="document-bg" />
+            <img src="${currentDocumentUrl}" alt="Document" class="document-bg" />
             ${fields.map(field => `
               <div class="text-field" style="
                 left: ${field.x}px;
@@ -204,6 +290,22 @@ export function InteractiveDocumentEditor() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button 
+            onClick={() => fileInputRef.current?.click()} 
+            variant="outline" 
+            className="flex items-center gap-2"
+            disabled={isUploading}
+          >
+            <Upload className="h-4 w-4" />
+            {isUploading ? 'Uploading...' : 'Upload Document'}
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            onChange={handleFileUpload}
+            accept="image/*"
+            className="hidden"
+          />
           <Button onClick={addTextField} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
             Add Text Field
@@ -232,7 +334,7 @@ export function InteractiveDocumentEditor() {
               onMouseLeave={handleMouseUp}
             >
               <img
-                src={dmvFormImage}
+                src={currentDocumentUrl}
                 alt="Document Template"
                 className="absolute inset-0 w-full h-full object-contain pointer-events-none"
                 draggable={false}
@@ -363,6 +465,7 @@ export function InteractiveDocumentEditor() {
                     onClick={() => {
                       setFields(template.fields);
                       setTemplateName(template.name);
+                      setCurrentDocumentUrl(template.imageUrl);
                       toast.success(`Loaded template: ${template.name}`);
                     }}
                   >
@@ -370,6 +473,30 @@ export function InteractiveDocumentEditor() {
                     <span className="text-xs text-muted-foreground">
                       {template.fields.length} fields
                     </span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {uploadedDocuments.length > 0 && (
+            <Card className="p-4 mt-4">
+              <h3 className="font-semibold mb-4">Uploaded Documents</h3>
+              <div className="space-y-2">
+                {uploadedDocuments.map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="flex justify-between items-center p-2 border rounded hover:bg-muted cursor-pointer"
+                    onClick={() => {
+                      setCurrentDocumentUrl(doc.url);
+                      setFields([]); // Clear fields when switching documents
+                      toast.success(`Switched to: ${doc.name}`);
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Image className="h-4 w-4" />
+                      <span className="text-sm truncate">{doc.name}</span>
+                    </div>
                   </div>
                 ))}
               </div>
