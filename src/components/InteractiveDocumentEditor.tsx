@@ -81,42 +81,29 @@ export function InteractiveDocumentEditor() {
   useEffect(() => {
     loadTemplates();
     loadUploadedDocuments();
-    loadDefaultDMVTemplate();
+    loadSavedDMVTemplate();
   }, []);
 
-  const loadDefaultDMVTemplate = () => {
-    // Load DMV Bill of Sale as default template with predefined fields
-    const defaultFields: TextField[] = [
-      // Vehicle Information Section
-      { id: 'vin', x: 150, y: 180, width: 300, height: 25, content: '', label: 'VIN', fontSize: 12, fieldType: 'vin' },
-      { id: 'year', x: 80, y: 220, width: 80, height: 25, content: '', label: 'Year', fontSize: 12, fieldType: 'year' },
-      { id: 'make', x: 180, y: 220, width: 120, height: 25, content: '', label: 'Make', fontSize: 12, fieldType: 'make' },
-      { id: 'model', x: 320, y: 220, width: 150, height: 25, content: '', label: 'Model', fontSize: 12, fieldType: 'model' },
-      { id: 'license_plate', x: 150, y: 260, width: 150, height: 25, content: '', label: 'License Plate', fontSize: 12, fieldType: 'license_plate' },
-      { id: 'mileage', x: 350, y: 260, width: 100, height: 25, content: '', label: 'Mileage', fontSize: 12, fieldType: 'mileage' },
+  const loadSavedDMVTemplate = () => {
+    const saved = localStorage.getItem('interactive-document-templates');
+    if (saved) {
+      const parsedTemplates = JSON.parse(saved);
+      const dmvTemplate = parsedTemplates.find((t: any) => t.name === 'DMV Bill of Sale');
       
-      // Seller Information
-      { id: 'seller_name', x: 150, y: 340, width: 200, height: 25, content: '', label: 'Seller Name', fontSize: 12, fieldType: 'seller_name' },
-      { id: 'seller_address', x: 150, y: 380, width: 250, height: 40, content: '', label: 'Seller Address', fontSize: 12, fieldType: 'address' },
-      { id: 'seller_phone', x: 150, y: 430, width: 150, height: 25, content: '', label: 'Seller Phone', fontSize: 12, fieldType: 'phone' },
-      
-      // Buyer Information  
-      { id: 'buyer_name', x: 150, y: 510, width: 200, height: 25, content: '', label: 'Buyer Name', fontSize: 12, fieldType: 'buyer_name' },
-      { id: 'buyer_address', x: 150, y: 550, width: 250, height: 40, content: '', label: 'Buyer Address', fontSize: 12, fieldType: 'address' },
-      { id: 'buyer_phone', x: 150, y: 600, width: 150, height: 25, content: '', label: 'Buyer Phone', fontSize: 12, fieldType: 'phone' },
-      
-      // Sale Information
-      { id: 'sale_price', x: 150, y: 680, width: 120, height: 25, content: '', label: 'Sale Price', fontSize: 12, fieldType: 'price' },
-      { id: 'sale_date', x: 320, y: 680, width: 120, height: 25, content: '', label: 'Sale Date', fontSize: 12, fieldType: 'date' },
-      
-      // Signatures
-      { id: 'seller_signature', x: 150, y: 780, width: 200, height: 50, content: '', label: 'Seller Signature', fontSize: 12, fieldType: 'signature' },
-      { id: 'buyer_signature', x: 150, y: 850, width: 200, height: 50, content: '', label: 'Buyer Signature', fontSize: 12, fieldType: 'signature' }
-    ];
+      if (dmvTemplate) {
+        console.log('Loading saved DMV template:', dmvTemplate);
+        setFields(dmvTemplate.fields || []);
+        setCurrentDocumentUrl(dmvTemplate.imageUrl);
+        setTemplateName('DMV Bill of Sale');
+        console.log('Loaded saved DMV Bill of Sale template with', dmvTemplate.fields?.length || 0, 'fields');
+        return;
+      }
+    }
     
-    setFields(defaultFields);
+    // Fallback: if no saved template found, keep current document URL but no fields
     setCurrentDocumentUrl(dmvFormImage);
-    console.log('Loaded default DMV Bill of Sale template with', defaultFields.length, 'fields');
+    setFields([]);
+    console.log('No saved DMV template found, starting with empty form');
   };
 
   const loadTemplates = () => {
