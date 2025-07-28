@@ -657,6 +657,7 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
         onClose={handleCloseDialog}
         onStatusUpdate={handleStatusUpdate}
         refreshVehicles={refreshVehicles}
+        onNavigate={onNavigate}
       />
     </div>
   );

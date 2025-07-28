@@ -431,6 +431,7 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
         onClose={handleCloseDialog}
         onStatusUpdate={handleStatusUpdate}
         refreshVehicles={refreshVehicles}
+        onNavigate={onNavigate}
       />
     </div>
   );

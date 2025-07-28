@@ -35,6 +35,7 @@ interface VehicleDetailsDialogProps {
   onStatusUpdate?: (vehicleId: string, newStatus: Vehicle['status'], soldData?: any) => Promise<void>;
   onVehicleUpdate?: (vehicleId: string, updateData: Partial<Vehicle>) => Promise<void>;
   refreshVehicles?: () => Promise<void>;
+  onNavigate?: (page: string) => void;
 }
 
 export function VehicleDetailsDialog({ 
@@ -43,7 +44,8 @@ export function VehicleDetailsDialog({
   onClose, 
   onStatusUpdate,
   onVehicleUpdate,
-  refreshVehicles
+  refreshVehicles,
+  onNavigate 
 }: VehicleDetailsDialogProps) {
   const { updateVehicleStatus: fallbackUpdateStatus, updateVehicleDetails: fallbackUpdateDetails, refreshVehicles: fallbackRefresh } = useVehicleStore();
   
@@ -477,8 +479,9 @@ export function VehicleDetailsDialog({
                   variant="outline" 
                   className="flex items-center gap-2"
                   onClick={() => {
-                    const documentsSection = document.getElementById('documents-section');
-                    documentsSection?.scrollIntoView({ behavior: 'smooth' });
+                    if (onNavigate) {
+                      onNavigate('documents');
+                    }
                   }}
                 >
                   <FileText className="w-4 h-4" />

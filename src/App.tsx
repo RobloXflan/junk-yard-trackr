@@ -29,6 +29,7 @@ import { WorkerCheckin } from "@/pages/WorkerCheckin";
 import { DriverTracking } from "@/pages/DriverTracking";
 import { FleetTracking } from "@/pages/FleetTracking";
 import { MobileDriverTracking } from "@/components/MobileDriverTracking";
+import { Documents } from "@/pages/Documents";
 
 const queryClient = new QueryClient();
 
@@ -94,6 +95,8 @@ const App = () => {
         return <SimpleCashAdmin />;
       case 'public-inventory':
         return <PublicInventory />;
+      case 'documents':
+        return <Documents />;
       default:
         return <Dashboard />;
     }
