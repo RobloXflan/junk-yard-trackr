@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { Trash2, Plus, Move, Type, Save, Printer, Upload, Image } from 'lucide-react';
+import { Trash2, Plus, Move, Type, Save, Printer, Upload, Image, Car, Calendar, Hash, User, Phone, MapPin, DollarSign, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import dmvFormImage from '@/assets/dmv-bill-of-sale.png';
@@ -17,6 +17,17 @@ interface TextField {
   content: string;
   label: string;
   fontSize: number;
+  fieldType: string;
+}
+
+interface PredefinedField {
+  id: string;
+  label: string;
+  defaultWidth: number;
+  defaultHeight: number;
+  placeholder: string;
+  icon: React.ComponentType<any>;
+  color: string;
 }
 
 interface DocumentTemplate {
@@ -49,6 +60,23 @@ export function InteractiveDocumentEditor() {
   const canvasRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 816, height: 1056 });
+
+  // Predefined field types with smart defaults
+  const predefinedFields: PredefinedField[] = [
+    { id: 'vin', label: 'VIN', defaultWidth: 300, defaultHeight: 30, placeholder: 'Enter vehicle identification number', icon: Hash, color: 'text-blue-600' },
+    { id: 'license_plate', label: 'License Plate', defaultWidth: 150, defaultHeight: 30, placeholder: 'Enter license plate', icon: Car, color: 'text-green-600' },
+    { id: 'year', label: 'Year', defaultWidth: 80, defaultHeight: 30, placeholder: 'YYYY', icon: Calendar, color: 'text-purple-600' },
+    { id: 'make', label: 'Make', defaultWidth: 120, defaultHeight: 30, placeholder: 'Vehicle make', icon: Car, color: 'text-orange-600' },
+    { id: 'model', label: 'Model', defaultWidth: 150, defaultHeight: 30, placeholder: 'Vehicle model', icon: Car, color: 'text-red-600' },
+    { id: 'mileage', label: 'Mileage', defaultWidth: 100, defaultHeight: 30, placeholder: 'Miles', icon: Hash, color: 'text-cyan-600' },
+    { id: 'price', label: 'Price', defaultWidth: 120, defaultHeight: 30, placeholder: '$0.00', icon: DollarSign, color: 'text-emerald-600' },
+    { id: 'date', label: 'Date', defaultWidth: 120, defaultHeight: 30, placeholder: 'MM/DD/YYYY', icon: Calendar, color: 'text-indigo-600' },
+    { id: 'buyer_name', label: 'Buyer Name', defaultWidth: 200, defaultHeight: 30, placeholder: 'Buyer full name', icon: User, color: 'text-pink-600' },
+    { id: 'seller_name', label: 'Seller Name', defaultWidth: 200, defaultHeight: 30, placeholder: 'Seller full name', icon: User, color: 'text-teal-600' },
+    { id: 'address', label: 'Address', defaultWidth: 250, defaultHeight: 60, placeholder: 'Street address, City, State ZIP', icon: MapPin, color: 'text-yellow-600' },
+    { id: 'phone', label: 'Phone Number', defaultWidth: 150, defaultHeight: 30, placeholder: '(555) 123-4567', icon: Phone, color: 'text-violet-600' },
+    { id: 'signature', label: 'Signature', defaultWidth: 200, defaultHeight: 50, placeholder: 'Signature line', icon: FileText, color: 'text-rose-600' }
+  ];
 
   useEffect(() => {
     loadTemplates();
@@ -227,10 +255,28 @@ export function InteractiveDocumentEditor() {
       height: 30,
       content: 'Enter text here',
       label: `Field ${fields.length + 1}`,
-      fontSize: 14
+      fontSize: 14,
+      fieldType: 'custom'
     };
     setFields([...fields, newField]);
     setSelectedField(newField.id);
+  };
+
+  const addPredefinedField = (fieldType: PredefinedField) => {
+    const newField: TextField = {
+      id: Date.now().toString(),
+      x: 100,
+      y: 100,
+      width: fieldType.defaultWidth,
+      height: fieldType.defaultHeight,
+      content: fieldType.placeholder,
+      label: fieldType.label,
+      fontSize: 14,
+      fieldType: fieldType.id
+    };
+    setFields([...fields, newField]);
+    setSelectedField(newField.id);
+    toast.success(`Added ${fieldType.label} field`);
   };
 
   const deleteField = (fieldId: string) => {
@@ -383,72 +429,31 @@ export function InteractiveDocumentEditor() {
       </div>
 
       <div className="grid grid-cols-4 gap-6">
-        {/* Document Canvas */}
-        <div className="col-span-3">
+        {/* Sidebar */}
+        <div className="col-span-1 space-y-4">
+          {/* Field Library */}
           <Card className="p-4">
-            <div
-              ref={canvasRef}
-              className="relative bg-white border rounded-lg overflow-hidden"
-              style={{ width: canvasSize.width, height: canvasSize.height }}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
-            >
-              <img
-                src={currentDocumentUrl}
-                alt="Document Template"
-                className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-                draggable={false}
-              />
-              
-              {fields.map((field) => (
-                <div
-                  key={field.id}
-                  className={`absolute border-2 bg-white/80 cursor-move ${
-                    selectedField === field.id 
-                      ? 'border-primary shadow-lg' 
-                      : 'border-gray-300 hover:border-gray-400'
-                  }`}
-                  style={{
-                    left: field.x,
-                    top: field.y,
-                    width: field.width,
-                    height: field.height,
-                  }}
-                  onMouseDown={(e) => handleMouseDown(e, field.id, 'drag')}
+            <h3 className="font-semibold mb-4 flex items-center gap-2">
+              <Type className="h-4 w-4" />
+              Field Library
+            </h3>
+            <div className="grid grid-cols-1 gap-2">
+              {predefinedFields.map((fieldType) => (
+                <Button
+                  key={fieldType.id}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => addPredefinedField(fieldType)}
+                  className="justify-start gap-2 h-auto py-2 px-3"
                 >
-                  <Textarea
-                    value={field.content}
-                    onChange={(e) => updateField(field.id, { content: e.target.value })}
-                    className="w-full h-full border-none bg-transparent resize-none p-1 text-sm"
-                    style={{ fontSize: field.fontSize }}
-                    onMouseDown={(e) => e.stopPropagation()}
-                  />
-                  
-                  {selectedField === field.id && (
-                    <>
-                      <div
-                        className="absolute -top-2 -right-2 w-4 h-4 bg-primary border-2 border-white rounded-full cursor-se-resize"
-                        onMouseDown={(e) => handleMouseDown(e, field.id, 'resize')}
-                      />
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        className="absolute -top-8 -right-2 h-6 w-6 p-0"
-                        onClick={() => deleteField(field.id)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </>
-                  )}
-                </div>
+                  <fieldType.icon className={`h-4 w-4 ${fieldType.color}`} />
+                  <span className="text-sm">{fieldType.label}</span>
+                </Button>
               ))}
             </div>
           </Card>
-        </div>
 
-        {/* Properties Panel */}
-        <div className="col-span-1">
+          {/* File Format Guide */}
           <Card className="p-4">
             <h3 className="font-semibold mb-4">File Format Guide</h3>
             <div className="text-sm space-y-2 text-muted-foreground">
@@ -463,7 +468,8 @@ export function InteractiveDocumentEditor() {
             </div>
           </Card>
 
-          <Card className="p-4 mt-4">
+          {/* Field Properties */}
+          <Card className="p-4">
             <h3 className="font-semibold mb-4">Template Properties</h3>
             <div className="space-y-4">
               <div>
@@ -478,13 +484,24 @@ export function InteractiveDocumentEditor() {
               {selectedField && (
                 <>
                   <div className="border-t pt-4">
-                    <h4 className="font-medium mb-3">Selected Field</h4>
+                    <h4 className="font-medium mb-3 flex items-center gap-2">
+                      <Move className="h-4 w-4" />
+                      Selected Field
+                    </h4>
                     {(() => {
                       const field = fields.find(f => f.id === selectedField);
                       if (!field) return null;
                       
+                      const fieldTypeInfo = predefinedFields.find(pf => pf.id === field.fieldType);
+                      
                       return (
                         <div className="space-y-3">
+                          {fieldTypeInfo && (
+                            <div className="flex items-center gap-2 p-2 bg-muted/50 rounded">
+                              <fieldTypeInfo.icon className={`h-4 w-4 ${fieldTypeInfo.color}`} />
+                              <span className="text-sm font-medium">{fieldTypeInfo.label} Field</span>
+                            </div>
+                          )}
                           <div>
                             <label className="text-sm font-medium">Label</label>
                             <Input
@@ -508,7 +525,8 @@ export function InteractiveDocumentEditor() {
                               <Input
                                 type="number"
                                 value={field.width}
-                                onChange={(e) => updateField(field.id, { width: parseInt(e.target.value) || 100 })}
+                                onChange={(e) => updateField(field.id, { width: parseInt(e.target.value) || 200 })}
+                                min="50"
                               />
                             </div>
                             <div>
@@ -517,9 +535,19 @@ export function InteractiveDocumentEditor() {
                                 type="number"
                                 value={field.height}
                                 onChange={(e) => updateField(field.id, { height: parseInt(e.target.value) || 30 })}
+                                min="20"
                               />
                             </div>
                           </div>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => deleteField(field.id)}
+                            className="w-full flex items-center gap-2"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Delete Field
+                          </Button>
                         </div>
                       );
                     })()}
@@ -529,54 +557,126 @@ export function InteractiveDocumentEditor() {
             </div>
           </Card>
 
+          {/* Templates */}
           {templates.length > 0 && (
-            <Card className="p-4 mt-4">
+            <Card className="p-4">
               <h3 className="font-semibold mb-4">Saved Templates</h3>
               <div className="space-y-2">
                 {templates.map((template) => (
-                  <div
+                  <Button
                     key={template.id}
-                    className="flex justify-between items-center p-2 border rounded hover:bg-muted cursor-pointer"
+                    variant="ghost"
+                    size="sm"
                     onClick={() => {
                       setFields(template.fields);
-                      setTemplateName(template.name);
                       setCurrentDocumentUrl(template.imageUrl);
+                      setTemplateName(template.name);
                       toast.success(`Loaded template: ${template.name}`);
                     }}
+                    className="w-full justify-start text-sm"
                   >
-                    <span className="text-sm">{template.name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {template.fields.length} fields
-                    </span>
-                  </div>
+                    {template.name}
+                  </Button>
                 ))}
               </div>
             </Card>
           )}
 
+          {/* Uploaded Documents */}
           {uploadedDocuments.length > 0 && (
-            <Card className="p-4 mt-4">
+            <Card className="p-4">
               <h3 className="font-semibold mb-4">Uploaded Documents</h3>
               <div className="space-y-2">
-                {uploadedDocuments.map((doc) => (
-                  <div
+                {uploadedDocuments.slice(0, 5).map((doc) => (
+                  <Button
                     key={doc.id}
-                    className="flex justify-between items-center p-2 border rounded hover:bg-muted cursor-pointer"
+                    variant="ghost"
+                    size="sm"
                     onClick={() => {
                       setCurrentDocumentUrl(doc.url);
-                      setFields([]); // Clear fields when switching documents
-                      toast.success(`Switched to: ${doc.name}`);
+                      toast.success(`Loaded document: ${doc.name}`);
                     }}
+                    className="w-full justify-start text-sm truncate"
                   >
-                    <div className="flex items-center gap-2">
-                      <Image className="h-4 w-4" />
-                      <span className="text-sm truncate">{doc.name}</span>
-                    </div>
-                  </div>
+                    {doc.name}
+                  </Button>
                 ))}
               </div>
             </Card>
           )}
+        </div>
+
+        {/* Document Canvas */}
+        <div className="col-span-3">
+          <Card className="p-4">
+            <div
+              ref={canvasRef}
+              className="relative bg-white border rounded-lg overflow-hidden"
+              style={{ width: canvasSize.width, height: canvasSize.height }}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+            >
+              <img
+                src={currentDocumentUrl}
+                alt="Document Template"
+                className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+                draggable={false}
+              />
+              
+              {fields.map((field) => {
+                const fieldTypeInfo = predefinedFields.find(pf => pf.id === field.fieldType);
+                return (
+                  <div
+                    key={field.id}
+                    className={`absolute border-2 bg-white/80 cursor-move ${
+                      selectedField === field.id 
+                        ? 'border-primary shadow-lg' 
+                        : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                    style={{
+                      left: field.x,
+                      top: field.y,
+                      width: field.width,
+                      height: field.height,
+                    }}
+                    onMouseDown={(e) => handleMouseDown(e, field.id, 'drag')}
+                  >
+                    <Textarea
+                      value={field.content}
+                      onChange={(e) => updateField(field.id, { content: e.target.value })}
+                      className="w-full h-full border-none bg-transparent resize-none p-1 text-sm"
+                      style={{ fontSize: field.fontSize }}
+                      onMouseDown={(e) => e.stopPropagation()}
+                    />
+                    
+                    {selectedField === field.id && (
+                      <>
+                        <div
+                          className="absolute -top-2 -right-2 w-4 h-4 bg-primary border-2 border-white rounded-full cursor-se-resize"
+                          onMouseDown={(e) => handleMouseDown(e, field.id, 'resize')}
+                        />
+                        {fieldTypeInfo && (
+                          <div className="absolute -top-6 -left-2 flex items-center gap-1 px-2 py-1 bg-primary text-primary-foreground text-xs rounded">
+                            <fieldTypeInfo.icon className="h-3 w-3" />
+                            <span>{fieldTypeInfo.label}</span>
+                          </div>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="absolute -top-8 -right-2 h-6 w-6 p-0"
+                          onClick={() => deleteField(field.id)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
         </div>
       </div>
     </div>
