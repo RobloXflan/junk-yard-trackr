@@ -284,6 +284,45 @@ export function InteractiveDocumentEditor() {
     }
   };
 
+  const deleteTemplate = (templateId: string) => {
+    const templateToDelete = templates.find(t => t.id === templateId);
+    if (!templateToDelete) return;
+
+    if (window.confirm(`Are you sure you want to delete the template "${templateToDelete.name}"?`)) {
+      const updatedTemplates = templates.filter(t => t.id !== templateId);
+      setTemplates(updatedTemplates);
+      localStorage.setItem('interactive-document-templates', JSON.stringify(updatedTemplates));
+      toast.success(`Template "${templateToDelete.name}" deleted successfully!`);
+    }
+  };
+
+  const clearCurrentDocument = () => {
+    if (window.confirm('Are you sure you want to clear the current document? This will remove the image and all text fields.')) {
+      setCurrentDocumentUrl('');
+      setFields([]);
+      setSelectedField(null);
+      toast.success('Document cleared successfully!');
+    }
+  };
+
+  const deleteUploadedDocument = async (docId: string, fileName: string) => {
+    if (window.confirm(`Are you sure you want to delete "${fileName}"?`)) {
+      try {
+        const { error } = await supabase.storage
+          .from('documents')
+          .remove([`templates/${fileName}`]);
+
+        if (error) throw error;
+
+        await loadUploadedDocuments();
+        toast.success(`Document "${fileName}" deleted successfully!`);
+      } catch (error) {
+        console.error('Error deleting document:', error);
+        toast.error('Failed to delete document. Please try again.');
+      }
+    }
+  };
+
   const addTextField = () => {
     const newField: TextField = {
       id: Date.now().toString(),
@@ -608,23 +647,42 @@ export function InteractiveDocumentEditor() {
           {/* Templates */}
           {templates.length > 0 && (
             <Card className="p-4">
-              <h3 className="font-semibold mb-4">Saved Templates</h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-semibold">Saved Templates</h3>
+                <Button 
+                  onClick={clearCurrentDocument} 
+                  variant="outline" 
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
               <div className="space-y-2">
                 {templates.map((template) => (
-                  <Button
-                    key={template.id}
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setFields(template.fields);
-                      setCurrentDocumentUrl(template.imageUrl);
-                      setTemplateName(template.name);
-                      toast.success(`Loaded template: ${template.name}`);
-                    }}
-                    className="w-full justify-start text-sm"
-                  >
-                    {template.name}
-                  </Button>
+                  <div key={template.id} className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setFields(template.fields);
+                        setCurrentDocumentUrl(template.imageUrl);
+                        setTemplateName(template.name);
+                        toast.success(`Loaded template: ${template.name}`);
+                      }}
+                      className="flex-1 justify-start text-sm"
+                    >
+                      {template.name}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deleteTemplate(template.id)}
+                      className="text-destructive hover:text-destructive p-1"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
                 ))}
               </div>
             </Card>
@@ -636,18 +694,27 @@ export function InteractiveDocumentEditor() {
               <h3 className="font-semibold mb-4">Uploaded Documents</h3>
               <div className="space-y-2">
                 {uploadedDocuments.slice(0, 5).map((doc) => (
-                  <Button
-                    key={doc.id}
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setCurrentDocumentUrl(doc.url);
-                      toast.success(`Loaded document: ${doc.name}`);
-                    }}
-                    className="w-full justify-start text-sm truncate"
-                  >
-                    {doc.name}
-                  </Button>
+                  <div key={doc.id} className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setCurrentDocumentUrl(doc.url);
+                        toast.success(`Loaded document: ${doc.name}`);
+                      }}
+                      className="flex-1 justify-start text-sm truncate"
+                    >
+                      {doc.name}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deleteUploadedDocument(doc.id, doc.name)}
+                      className="text-destructive hover:text-destructive p-1"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
                 ))}
               </div>
             </Card>
