@@ -183,15 +183,27 @@ export function InteractiveDocumentEditor() {
   };
 
   const loadTemplates = () => {
+    console.log('Loading templates from localStorage...');
     const saved = localStorage.getItem('interactive-document-templates');
+    console.log('Raw localStorage data:', saved);
     if (saved) {
-      const parsedTemplates = JSON.parse(saved);
-      const templatesWithDates = parsedTemplates.map((t: any) => ({
-        ...t,
-        createdAt: new Date(t.createdAt),
-        updatedAt: new Date(t.updatedAt)
-      }));
-      setTemplates(templatesWithDates);
+      try {
+        const parsedTemplates = JSON.parse(saved);
+        console.log('Parsed templates:', parsedTemplates);
+        const templatesWithDates = parsedTemplates.map((t: any) => ({
+          ...t,
+          createdAt: new Date(t.createdAt),
+          updatedAt: new Date(t.updatedAt)
+        }));
+        setTemplates(templatesWithDates);
+        console.log('Templates loaded successfully:', templatesWithDates);
+      } catch (error) {
+        console.error('Error parsing templates:', error);
+        setTemplates([]);
+      }
+    } else {
+      console.log('No templates found in localStorage');
+      setTemplates([]);
     }
   };
 
