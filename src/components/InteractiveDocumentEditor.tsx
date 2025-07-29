@@ -806,6 +806,7 @@ export function InteractiveDocumentEditor() {
                       variant="ghost"
                       size="sm"
                       onClick={() => {
+                        console.log('Loading template:', template.name, 'with imageUrl:', template.imageUrl);
                         setFields(template.fields);
                         setCurrentDocumentUrl(template.imageUrl);
                         setTemplateName(template.name);
