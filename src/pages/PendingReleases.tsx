@@ -7,6 +7,7 @@ import { Copy, Car, User, Calendar, MapPin, Hash, CreditCard, Clock, ExternalLin
 import { useToast } from "@/hooks/use-toast";
 import { useVehicleStore } from "@/hooks/useVehicleStore";
 import { Vehicle, CarImage } from "@/stores/vehicleStore";
+import { formatDate } from "@/lib/utils";
 
 export function PendingReleases() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -323,7 +324,7 @@ export function PendingReleases() {
                       <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4 text-muted-foreground" />
                         <span className="text-sm font-medium">Sale Date:</span>
-                        <span>{new Date(vehicle.saleDate).toLocaleDateString()}</span>
+                        <span>{formatDate(vehicle.saleDate)}</span>
                       </div>
                       <Button
                         variant="ghost"
@@ -372,7 +373,7 @@ export function PendingReleases() {
                         vehicle.licensePlate ? `License Plate: ${vehicle.licensePlate}` : '',
                         vehicle.buyerFirstName && vehicle.buyerLastName ? `Buyer: ${vehicle.buyerFirstName} ${vehicle.buyerLastName}` : '',
                         fullAddress ? `Address: ${fullAddress}` : '',
-                        vehicle.saleDate ? `Sale Date: ${new Date(vehicle.saleDate).toLocaleDateString()}` : '',
+                        vehicle.saleDate ? `Sale Date: ${formatDate(vehicle.saleDate)}` : '',
                         vehicle.salePrice ? `Sale Price: $${parseFloat(vehicle.salePrice).toLocaleString()}` : ''
                       ].filter(Boolean).join('\n');
                       
