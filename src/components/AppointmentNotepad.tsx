@@ -59,8 +59,8 @@ interface AppointmentNotepadProps {
 
 export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillData, onClearPrefill }: AppointmentNotepadProps) {
   const { toast } = useToast();
-  const { quotes } = useQuotesStore();
-  
+  const { quotes, addQuote } = useQuotesStore();
+
   const [appointmentData, setAppointmentData] = useState<AppointmentData>({
     customer_phone: prefillData?.customer_phone || "",
     customer_address: prefillData?.customer_address || "",
@@ -77,6 +77,7 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
   const [isLoading, setIsLoading] = useState(false);
   const [currentAppointmentId, setCurrentAppointmentId] = useState<string | null>(null);
   const [showVoiceAssistant, setShowVoiceAssistant] = useState(false);
+  const [isManualQuote, setIsManualQuote] = useState(false);
 
   // Update form when prefillData changes
   useEffect(() => {
@@ -98,10 +99,12 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
   // Auto-calculate price when vehicle details change
   useEffect(() => {
     if (appointmentData.vehicle_year && appointmentData.vehicle_make && appointmentData.vehicle_model) {
+      setIsManualQuote(false);
       calculatePrice();
     } else {
       setPriceEstimate(null);
       setAppointmentData(prev => ({ ...prev, estimated_price: null }));
+      setIsManualQuote(false);
     }
   }, [appointmentData.vehicle_year, appointmentData.vehicle_make, appointmentData.vehicle_model]);
 
@@ -148,8 +151,15 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
   };
 
   const saveNotes = async (withAppointment: boolean = false) => {
+    if (withAppointment && !appointmentData.customer_phone.trim()) {
+      toast({
+        title: "Phone required",
+        description: "Add a phone number to send an appointment.",
+        variant: "destructive",
+      });
+      return;
+    }
     setIsLoading(true);
-    
     try {
       const { data, error } = await supabase
         .from('appointment_notes')
@@ -176,6 +186,25 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
         title: withAppointment ? "Appointment Sent!" : "Notes Saved",
         description: withAppointment ? "Appointment details sent to Telegram" : "Customer notes saved for future reference"
       });
+
+      // Save manual quote if user provided a quoted price
+      if (
+        isManualQuote &&
+        appointmentData.estimated_price != null &&
+        appointmentData.vehicle_year &&
+        appointmentData.vehicle_make &&
+        appointmentData.vehicle_model
+      ) {
+        addQuote({
+          year: appointmentData.vehicle_year,
+          make: appointmentData.vehicle_make,
+          model: appointmentData.vehicle_model,
+          estimatedPrice: appointmentData.estimated_price,
+          adjustedOffer: appointmentData.estimated_price,
+          confidence: "Manual",
+          dataPoints: 0,
+        });
+      }
 
       // Reset form
       setAppointmentData({
@@ -313,6 +342,7 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
       paperwork: "",
     });
     setPriceEstimate(null);
+    setIsManualQuote(false);
     setCurrentAppointmentId(null);
     onClearPrefill?.();
     onVehicleDataChange?.({ year: "", make: "", model: "" });
@@ -509,10 +539,14 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
             id="estimated_price"
             type="number"
             value={appointmentData.estimated_price || ""}
-            onChange={(e) => setAppointmentData(prev => ({ 
-              ...prev, 
-              estimated_price: e.target.value ? Number(e.target.value) : null 
-            }))}
+            onChange={(e) => {
+              const val = e.target.value;
+              setIsManualQuote(!!val);
+              setAppointmentData(prev => ({ 
+                ...prev, 
+                estimated_price: val ? Number(val) : null 
+              }));
+            }}
             placeholder="Enter custom quote amount"
           />
         </div>
@@ -533,7 +567,7 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
         <div className="flex gap-3 pt-4">
           <Button
             onClick={() => saveNotes(true)}
-            disabled={isLoading}
+            disabled={isLoading || !appointmentData.customer_phone.trim()}
             className="flex items-center gap-2"
           >
             <Send className="w-4 h-4" />
