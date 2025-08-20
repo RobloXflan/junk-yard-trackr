@@ -8,6 +8,59 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import dmvFormImage from '@/assets/dmv-bill-of-sale.png';
 
+// DMV/NCIC Code mapping for vehicle makes
+const DMV_CODE_MAPPING: Record<string, string> = {
+  'acura': 'ACUR',
+  'audi': 'AUDI',
+  'bmw': 'BMW',
+  'buick': 'BUIC',
+  'cadillac': 'CADI',
+  'chevrolet': 'CHEV',
+  'chevy': 'CHEV',
+  'chrysler': 'CHRY',
+  'datsun': 'DATS',
+  'dodge': 'DODG',
+  'fiat': 'FIAT',
+  'ford': 'FORD',
+  'gmc': 'GMC',
+  'honda': 'HOND',
+  'hyundai': 'HYUN',
+  'infiniti': 'INFI',
+  'isuzu': 'ISU',
+  'jaguar': 'JAGU',
+  'jeep': 'JEEP',
+  'kia': 'KIA',
+  'land rover': 'LNDR',
+  'lexus': 'LEXS',
+  'lincoln': 'LINC',
+  'mazda': 'MAZD',
+  'mercedes-benz': 'MERZ',
+  'mercedes': 'MERZ',
+  'mercury': 'MERC',
+  'mini': 'MNNI',
+  'mini cooper': 'MNNI',
+  'mitsubishi': 'MITS',
+  'nissan': 'NISS',
+  'oldsmobile': 'OLDS',
+  'plymouth': 'PLYM',
+  'pontiac': 'PONT',
+  'porsche': 'PORS',
+  'saturn': 'SATR',
+  'subaru': 'SUBA',
+  'suzuki': 'SUZI',
+  'toyota': 'TOYT',
+  'volkswagen': 'VOLK',
+  'vw': 'VOLK',
+  'volvo': 'VOLV'
+};
+
+// Convert vehicle make to DMV/NCIC code
+const convertMakeToDMVCode = (make: string): string => {
+  if (!make) return '';
+  const dmvCode = DMV_CODE_MAPPING[make.toLowerCase().trim()];
+  return dmvCode || make; // Return original make if no mapping found
+};
+
 interface TextField {
   id: string;
   x: number;
@@ -131,7 +184,7 @@ export function InteractiveDocumentEditor() {
                           updatedField.content = vehicleData.year || '';
                           break;
                         case 'make':
-                          updatedField.content = vehicleData.make || '';
+                          updatedField.content = convertMakeToDMVCode(vehicleData.make || '');
                           break;
                         case 'model':
                           updatedField.content = vehicleData.model || '';
