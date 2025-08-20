@@ -1,6 +1,10 @@
 import { InteractiveDocumentEditor } from "@/components/InteractiveDocumentEditor";
 
-export function Documents() {
+interface DocumentsProps {
+  onNavigate?: (page: string) => void;
+}
+
+export function Documents({ onNavigate }: DocumentsProps) {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex justify-between items-center">
@@ -12,7 +16,7 @@ export function Documents() {
         </div>
       </div>
 
-      <InteractiveDocumentEditor />
+      <InteractiveDocumentEditor onNavigate={onNavigate} />
     </div>
   );
 }

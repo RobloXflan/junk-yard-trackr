@@ -92,6 +92,10 @@ interface DocumentTemplate {
   updatedAt: Date;
 }
 
+interface InteractiveDocumentEditorProps {
+  onNavigate?: (page: string) => void;
+}
+
 interface UploadedDocument {
   id: string;
   name: string;
@@ -99,7 +103,7 @@ interface UploadedDocument {
   uploadedAt: Date;
 }
 
-export function InteractiveDocumentEditor() {
+export function InteractiveDocumentEditor({ onNavigate }: InteractiveDocumentEditorProps) {
   const [fields, setFields] = useState<TextField[]>([]);
   const [selectedField, setSelectedField] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -380,9 +384,15 @@ export function InteractiveDocumentEditor() {
       localStorage.setItem('documents-next-vehicle-slot', '2');
     }
     
-    // Navigate back to inventory
-    window.location.href = '/';
-    toast.success('Returning to Vehicle Inventory - select a vehicle to add to the template');
+    // Navigate back to inventory using the proper navigation function
+    if (onNavigate) {
+      onNavigate('inventory');
+      toast.success('Returning to Vehicle Inventory - select a vehicle to add to the template');
+    } else {
+      // Fallback to window location if onNavigate is not available
+      window.location.href = '/';
+      toast.success('Returning to Vehicle Inventory - select a vehicle to add to the template');
+    }
   };
 
   const handleContinueWithOneVehicle = () => {

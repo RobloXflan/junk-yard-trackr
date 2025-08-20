@@ -96,7 +96,7 @@ const App = () => {
       case 'public-inventory':
         return <PublicInventory />;
       case 'documents':
-        return <Documents />;
+        return <Documents onNavigate={setCurrentPage} />;
       default:
         return <Dashboard />;
     }
