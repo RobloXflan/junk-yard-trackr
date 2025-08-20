@@ -79,9 +79,13 @@ export function InteractiveDocumentEditor() {
   ];
 
   useEffect(() => {
-    loadTemplates();
-    loadUploadedDocuments();
-    loadSavedDMVTemplate();
+    const initializeEditor = async () => {
+      await loadTemplates();
+      await loadUploadedDocuments();
+      loadSavedDMVTemplate();
+    };
+    
+    initializeEditor();
   }, []);
 
   const loadSavedDMVTemplate = () => {
@@ -182,29 +186,118 @@ export function InteractiveDocumentEditor() {
     console.log('No saved DMV template found, starting with empty form');
   };
 
-  const loadTemplates = () => {
-    console.log('Loading templates from localStorage...');
+  const loadTemplates = async () => {
+    console.log('Loading templates from both localStorage and Supabase Storage...');
+    
+    // Load from localStorage first
+    const localTemplates: DocumentTemplate[] = [];
     const saved = localStorage.getItem('interactive-document-templates');
-    console.log('Raw localStorage data:', saved);
     if (saved) {
       try {
         const parsedTemplates = JSON.parse(saved);
-        console.log('Parsed templates:', parsedTemplates);
         const templatesWithDates = parsedTemplates.map((t: any) => ({
           ...t,
           createdAt: new Date(t.createdAt),
-          updatedAt: new Date(t.updatedAt)
+          updatedAt: new Date(t.updatedAt),
+          source: 'local'
         }));
-        setTemplates(templatesWithDates);
-        console.log('Templates loaded successfully:', templatesWithDates);
+        localTemplates.push(...templatesWithDates);
       } catch (error) {
-        console.error('Error parsing templates:', error);
-        setTemplates([]);
+        console.error('Error parsing localStorage templates:', error);
       }
-    } else {
-      console.log('No templates found in localStorage');
-      setTemplates([]);
     }
+
+    // Load from Supabase Storage
+    const supabaseTemplates: DocumentTemplate[] = [];
+    try {
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .list('template-data/', {
+          limit: 100,
+          sortBy: { column: 'created_at', order: 'desc' }
+        });
+
+      if (error) {
+        console.error('Error loading templates from Supabase:', error);
+      } else if (data) {
+        // Load each template JSON file
+        for (const file of data) {
+          if (file.name.endsWith('.json')) {
+            try {
+              const { data: fileData, error: downloadError } = await supabase.storage
+                .from('documents')
+                .download(`template-data/${file.name}`);
+
+              if (downloadError) {
+                console.error(`Error downloading template ${file.name}:`, downloadError);
+                continue;
+              }
+
+              const templateText = await fileData.text();
+              const template = JSON.parse(templateText);
+              supabaseTemplates.push({
+                ...template,
+                createdAt: new Date(template.createdAt),
+                updatedAt: new Date(template.updatedAt),
+                source: 'supabase'
+              });
+            } catch (error) {
+              console.error(`Error parsing template ${file.name}:`, error);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error accessing Supabase Storage:', error);
+    }
+
+    // Migrate localStorage templates to Supabase if they don't exist there
+    if (localTemplates.length > 0 && !localStorage.getItem('templates-migrated')) {
+      await migrateLocalTemplatesToSupabase(localTemplates);
+      localStorage.setItem('templates-migrated', 'true');
+    }
+
+    // Merge templates (Supabase takes precedence for duplicates by name)
+    const allTemplates = [...localTemplates];
+    supabaseTemplates.forEach(supabaseTemplate => {
+      const existsLocally = localTemplates.some(local => local.name === supabaseTemplate.name);
+      if (!existsLocally) {
+        allTemplates.push(supabaseTemplate);
+      }
+    });
+
+    setTemplates(allTemplates);
+    console.log(`Templates loaded: ${localTemplates.length} from localStorage, ${supabaseTemplates.length} from Supabase`);
+  };
+
+  const migrateLocalTemplatesToSupabase = async (localTemplates: DocumentTemplate[]) => {
+    console.log('Migrating localStorage templates to Supabase Storage...');
+    
+    for (const template of localTemplates) {
+      try {
+        const fileName = `${template.name.replace(/[^a-zA-Z0-9-_]/g, '_')}_${template.id}.json`;
+        const templateData = {
+          ...template,
+          migratedAt: new Date().toISOString()
+        };
+
+        const { error } = await supabase.storage
+          .from('documents')
+          .upload(`template-data/${fileName}`, new Blob([JSON.stringify(templateData, null, 2)], {
+            type: 'application/json'
+          }));
+
+        if (error) {
+          console.error(`Error migrating template ${template.name}:`, error);
+        } else {
+          console.log(`Successfully migrated template: ${template.name}`);
+        }
+      } catch (error) {
+        console.error(`Error migrating template ${template.name}:`, error);
+      }
+    }
+    
+    toast.success('Templates migrated to cloud storage for persistent saving!');
   };
 
   const loadUploadedDocuments = async () => {
@@ -341,7 +434,7 @@ export function InteractiveDocumentEditor() {
     }
   };
 
-  const saveTemplate = () => {
+  const saveTemplate = async () => {
     console.log('Attempting to save template...');
     console.log('Template name:', templateName);
     console.log('Current document URL:', currentDocumentUrl);
@@ -366,6 +459,9 @@ export function InteractiveDocumentEditor() {
       return;
     }
 
+    // Show saving feedback
+    const savingToast = toast.loading('Saving template to cloud storage...');
+
     try {
       const template: DocumentTemplate = {
         id: Date.now().toString(),
@@ -378,32 +474,69 @@ export function InteractiveDocumentEditor() {
 
       console.log('Template to save:', template);
 
+      // Save to Supabase Storage
+      const fileName = `${template.name.replace(/[^a-zA-Z0-9-_]/g, '_')}_${template.id}.json`;
+      const { error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(`template-data/${fileName}`, new Blob([JSON.stringify(template, null, 2)], {
+          type: 'application/json'
+        }));
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Also save to localStorage as backup for fast loading
       const updatedTemplates = [...templates, template];
       setTemplates(updatedTemplates);
       localStorage.setItem('interactive-document-templates', JSON.stringify(updatedTemplates));
       
-      console.log('Template saved successfully to localStorage');
+      console.log('Template saved successfully to both Supabase and localStorage');
       console.log('Updated templates list:', updatedTemplates);
       
+      toast.dismiss(savingToast);
       toast.success(`Template "${templateName}" saved successfully with ${fields.length} fields!`);
       
       // Reset the template name for next save
       setTemplateName('');
     } catch (error) {
       console.error('Error saving template:', error);
-      toast.error('Failed to save template. Please try again.');
+      toast.dismiss(savingToast);
+      toast.error('Failed to save template to cloud storage. Please try again.');
     }
   };
 
-  const deleteTemplate = (templateId: string) => {
+  const deleteTemplate = async (templateId: string) => {
     const templateToDelete = templates.find(t => t.id === templateId);
     if (!templateToDelete) return;
 
     if (window.confirm(`Are you sure you want to delete the template "${templateToDelete.name}"?`)) {
-      const updatedTemplates = templates.filter(t => t.id !== templateId);
-      setTemplates(updatedTemplates);
-      localStorage.setItem('interactive-document-templates', JSON.stringify(updatedTemplates));
-      toast.success(`Template "${templateToDelete.name}" deleted successfully!`);
+      const deletingToast = toast.loading('Deleting template...');
+      
+      try {
+        // Delete from Supabase Storage
+        const fileName = `${templateToDelete.name.replace(/[^a-zA-Z0-9-_]/g, '_')}_${templateToDelete.id}.json`;
+        const { error: deleteError } = await supabase.storage
+          .from('documents')
+          .remove([`template-data/${fileName}`]);
+
+        if (deleteError) {
+          console.error('Error deleting from Supabase:', deleteError);
+          // Continue with local deletion even if Supabase fails
+        }
+
+        // Delete from local state and localStorage
+        const updatedTemplates = templates.filter(t => t.id !== templateId);
+        setTemplates(updatedTemplates);
+        localStorage.setItem('interactive-document-templates', JSON.stringify(updatedTemplates));
+        
+        toast.dismiss(deletingToast);
+        toast.success(`Template "${templateToDelete.name}" deleted successfully!`);
+      } catch (error) {
+        console.error('Error deleting template:', error);
+        toast.dismiss(deletingToast);
+        toast.error('Failed to delete template. Please try again.');
+      }
     }
   };
 
