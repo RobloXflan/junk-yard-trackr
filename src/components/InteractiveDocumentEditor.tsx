@@ -170,6 +170,10 @@ export function InteractiveDocumentEditor({ onNavigate }: InteractiveDocumentEdi
         console.log('Loading SA trip:', currentTripKey);
         setIsInTripMode(true);
         
+        // Clear any stale global vehicle data to avoid cross-trip contamination
+        localStorage.removeItem('documents-vehicle-data-1');
+        localStorage.removeItem('documents-vehicle-data-2');
+        
         const tripData = localStorage.getItem(currentTripKey);
         if (tripData) {
           const parsedTripData = JSON.parse(tripData);
@@ -232,27 +236,14 @@ export function InteractiveDocumentEditor({ onNavigate }: InteractiveDocumentEdi
                 console.log('Loading SA Recycling template from Supabase:', saTemplate);
                 let templateFields = [...(saTemplate.fields || [])];
                 
-                // Check for dual vehicle data to pre-fill (supports legacy key)
+                // Check for dual vehicle data to pre-fill (explicit slots only)
                 const v1Str = localStorage.getItem('documents-vehicle-data-1');
                 const v2Str = localStorage.getItem('documents-vehicle-data-2');
-                const genericStr = localStorage.getItem('documents-vehicle-data');
                 
                 let v1: any = null;
                 let v2: any = null;
-                let generic: any = null;
                 try { v1 = v1Str ? JSON.parse(v1Str) : null; } catch (e) { console.error('Error parsing vehicle 1 data:', e); }
                 try { v2 = v2Str ? JSON.parse(v2Str) : null; } catch (e) { console.error('Error parsing vehicle 2 data:', e); }
-                try { generic = genericStr ? JSON.parse(genericStr) : null; } catch (e) { console.error('Error parsing generic vehicle data:', e); }
-                
-                // If no explicit V1 stored but we have a generic payload from Inventory, treat it as V1
-                if (!v1 && generic) {
-                  localStorage.setItem('documents-vehicle-data-1', JSON.stringify(generic));
-                  v1 = generic;
-                // If V1 exists and a different generic payload arrives, treat it as V2
-                } else if (v1 && generic && (!v2 || (v2 && v2.id !== generic.id)) && v1.id !== generic.id) {
-                  localStorage.setItem('documents-vehicle-data-2', JSON.stringify(generic));
-                  v2 = generic;
-                }
                 
                 // Prefill Vehicle 1
                 if (v1) {
@@ -317,7 +308,7 @@ export function InteractiveDocumentEditor({ onNavigate }: InteractiveDocumentEdi
                 }
 
                 // Prefill Vehicle 2 and auto-add fields if they don't exist
-                if (v2) {
+                if (v2 && isInTripMode) {
                   console.log('Found vehicle 2 data for pre-filling:', v2);
                   setVehicleData2(v2);
                   
@@ -365,6 +356,13 @@ export function InteractiveDocumentEditor({ onNavigate }: InteractiveDocumentEdi
                       return updatedField;
                     });
                   }
+                }
+                
+                // If no Vehicle 2 selected in trip mode, ensure all Vehicle 2 fields are blank
+                if (!v2 && isInTripMode) {
+                  templateFields = templateFields.map(field =>
+                    field.fieldType.endsWith('_2') ? { ...field, content: '' } : field
+                  );
                 }
                 
                 // Show success message based on vehicles loaded
