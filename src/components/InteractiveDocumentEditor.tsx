@@ -254,9 +254,6 @@ export function InteractiveDocumentEditor() {
                       
                       return updatedField;
                     });
-                    
-                    // Clear the vehicle 1 data after using it
-                    localStorage.removeItem('documents-vehicle-data-1');
                   } catch (error) {
                     console.error('Error parsing vehicle 1 data:', error);
                   }
@@ -301,9 +298,6 @@ export function InteractiveDocumentEditor() {
                       
                       return updatedField;
                     });
-                    
-                    // Clear the vehicle 2 data after using it
-                    localStorage.removeItem('documents-vehicle-data-2');
                   } catch (error) {
                     console.error('Error parsing vehicle 2 data:', error);
                   }
