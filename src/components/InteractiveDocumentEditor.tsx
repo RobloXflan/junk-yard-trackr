@@ -123,6 +123,10 @@ export function InteractiveDocumentEditor({ onNavigate }: InteractiveDocumentEdi
   const [vehicleData1, setVehicleData1] = useState<any>(null);
   const [vehicleData2, setVehicleData2] = useState<any>(null);
   const [currentVehicleSlot, setCurrentVehicleSlot] = useState<1 | 2>(1);
+  
+  // SA Trip mode state
+  const [isInTripMode, setIsInTripMode] = useState(false);
+  const [currentTripData, setCurrentTripData] = useState<any>(null);
 
   // Predefined field types with smart defaults - Vehicle 1
   const predefinedFieldsVehicle1: PredefinedField[] = [
