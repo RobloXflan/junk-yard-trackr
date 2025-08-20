@@ -82,108 +82,149 @@ export function InteractiveDocumentEditor() {
     const initializeEditor = async () => {
       await loadTemplates();
       await loadUploadedDocuments();
-      loadSavedDMVTemplate();
+      await loadDefaultSARecyclingTemplate();
     };
     
     initializeEditor();
   }, []);
 
-  const loadSavedDMVTemplate = () => {
+  const loadDefaultSARecyclingTemplate = async () => {
+    // First check Supabase Storage for SA Recycling template
+    try {
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .list('template-data/', {
+          limit: 100
+        });
+
+      if (!error && data) {
+        for (const file of data) {
+          if (file.name.includes('SA_Recycling')) {
+            try {
+              const { data: fileData, error: downloadError } = await supabase.storage
+                .from('documents')
+                .download(`template-data/${file.name}`);
+
+              if (!downloadError) {
+                const templateText = await fileData.text();
+                const saTemplate = JSON.parse(templateText);
+                
+                console.log('Loading SA Recycling template from Supabase:', saTemplate);
+                let templateFields = [...(saTemplate.fields || [])];
+                
+                // Check for vehicle data to pre-fill
+                const vehicleDataStr = localStorage.getItem('documents-vehicle-data');
+                if (vehicleDataStr) {
+                  try {
+                    const vehicleData = JSON.parse(vehicleDataStr);
+                    console.log('Found vehicle data for pre-filling:', vehicleData);
+                    
+                    // Map vehicle data to form fields
+                    templateFields = templateFields.map(field => {
+                      const updatedField = { ...field };
+                      
+                      switch (field.fieldType) {
+                        case 'vin':
+                          updatedField.content = vehicleData.vehicleId || '';
+                          break;
+                        case 'year':
+                          updatedField.content = vehicleData.year || '';
+                          break;
+                        case 'make':
+                          updatedField.content = vehicleData.make || '';
+                          break;
+                        case 'model':
+                          updatedField.content = vehicleData.model || '';
+                          break;
+                        case 'license_plate':
+                          updatedField.content = vehicleData.licensePlate || '';
+                          break;
+                        case 'mileage':
+                          updatedField.content = vehicleData.mileage || '';
+                          break;
+                        case 'seller_name':
+                          updatedField.content = vehicleData.sellerName || '';
+                          break;
+                        case 'seller_address':
+                          updatedField.content = vehicleData.sellerAddress || '';
+                          break;
+                        case 'seller_phone':
+                          updatedField.content = vehicleData.sellerPhone || '';
+                          break;
+                        case 'buyer_name':
+                          const buyerName = [vehicleData.buyerFirstName, vehicleData.buyerLastName]
+                            .filter(Boolean).join(' ');
+                          updatedField.content = buyerName || '';
+                          break;
+                        case 'buyer_address':
+                          updatedField.content = vehicleData.buyerAddress || '';
+                          break;
+                        case 'buyer_phone':
+                          updatedField.content = vehicleData.buyerPhone || '';
+                          break;
+                        case 'sale_price':
+                          updatedField.content = vehicleData.salePrice || '';
+                          break;
+                        case 'sale_date':
+                          updatedField.content = vehicleData.saleDate || '';
+                          break;
+                      }
+                      
+                      return updatedField;
+                    });
+                    
+                    // Clear the vehicle data after using it
+                    localStorage.removeItem('documents-vehicle-data');
+                    
+                    // Show success message
+                    setTimeout(() => {
+                      toast.success("Vehicle data loaded - form fields have been pre-filled with vehicle information");
+                    }, 100);
+                    
+                  } catch (error) {
+                    console.error('Error parsing vehicle data:', error);
+                  }
+                }
+                
+                setFields(templateFields);
+                setCurrentDocumentUrl(saTemplate.imageUrl);
+                setTemplateName('SA Recycling');
+                console.log('Loaded SA Recycling template from Supabase with', templateFields.length, 'fields');
+                return;
+              }
+            } catch (error) {
+              console.error('Error loading SA Recycling template from Supabase:', error);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error accessing Supabase Storage:', error);
+    }
+
+    // Fallback: check localStorage for SA Recycling template
     const saved = localStorage.getItem('interactive-document-templates');
     if (saved) {
       const parsedTemplates = JSON.parse(saved);
-      const dmvTemplate = parsedTemplates.find((t: any) => t.name === 'DMV Bill of Sale');
+      const saTemplate = parsedTemplates.find((t: any) => t.name === 'SA Recycling');
       
-      if (dmvTemplate) {
-        console.log('Loading saved DMV template:', dmvTemplate);
-        let templateFields = [...(dmvTemplate.fields || [])];
-        
-        // Check for vehicle data to pre-fill
-        const vehicleDataStr = localStorage.getItem('documents-vehicle-data');
-        if (vehicleDataStr) {
-          try {
-            const vehicleData = JSON.parse(vehicleDataStr);
-            console.log('Found vehicle data for pre-filling:', vehicleData);
-            
-            // Map vehicle data to form fields
-            templateFields = templateFields.map(field => {
-              const updatedField = { ...field };
-              
-              switch (field.fieldType) {
-                case 'vin':
-                  updatedField.content = vehicleData.vehicleId || '';
-                  break;
-                case 'year':
-                  updatedField.content = vehicleData.year || '';
-                  break;
-                case 'make':
-                  updatedField.content = vehicleData.make || '';
-                  break;
-                case 'model':
-                  updatedField.content = vehicleData.model || '';
-                  break;
-                case 'license_plate':
-                  updatedField.content = vehicleData.licensePlate || '';
-                  break;
-                case 'mileage':
-                  updatedField.content = vehicleData.mileage || '';
-                  break;
-                case 'seller_name':
-                  updatedField.content = vehicleData.sellerName || '';
-                  break;
-                case 'seller_address':
-                  updatedField.content = vehicleData.sellerAddress || '';
-                  break;
-                case 'seller_phone':
-                  updatedField.content = vehicleData.sellerPhone || '';
-                  break;
-                case 'buyer_name':
-                  const buyerName = [vehicleData.buyerFirstName, vehicleData.buyerLastName]
-                    .filter(Boolean).join(' ');
-                  updatedField.content = buyerName || '';
-                  break;
-                case 'buyer_address':
-                  updatedField.content = vehicleData.buyerAddress || '';
-                  break;
-                case 'buyer_phone':
-                  updatedField.content = vehicleData.buyerPhone || '';
-                  break;
-                case 'sale_price':
-                  updatedField.content = vehicleData.salePrice || '';
-                  break;
-                case 'sale_date':
-                  updatedField.content = vehicleData.saleDate || '';
-                  break;
-              }
-              
-              return updatedField;
-            });
-            
-            // Clear the vehicle data after using it
-            localStorage.removeItem('documents-vehicle-data');
-            
-            // Show success message
-            setTimeout(() => {
-              toast.success("Vehicle data loaded - form fields have been pre-filled with vehicle information");
-            }, 100);
-            
-          } catch (error) {
-            console.error('Error parsing vehicle data:', error);
-          }
-        }
+      if (saTemplate) {
+        console.log('Loading SA Recycling template from localStorage:', saTemplate);
+        let templateFields = [...(saTemplate.fields || [])];
         
         setFields(templateFields);
-        setCurrentDocumentUrl(dmvTemplate.imageUrl);
-        setTemplateName('DMV Bill of Sale');
-        console.log('Loaded saved DMV Bill of Sale template with', templateFields.length, 'fields');
+        setCurrentDocumentUrl(saTemplate.imageUrl);
+        setTemplateName('SA Recycling');
+        console.log('Loaded SA Recycling template from localStorage with', templateFields.length, 'fields');
         return;
       }
     }
     
-    // Fallback: if no saved template found, keep current document URL but no fields
+    // Final fallback: if no SA Recycling template found, start with empty form
     setCurrentDocumentUrl(dmvFormImage);
     setFields([]);
-    console.log('No saved DMV template found, starting with empty form');
+    setTemplateName('SA Recycling');
+    console.log('No SA Recycling template found, starting with empty form');
   };
 
   const loadTemplates = async () => {
