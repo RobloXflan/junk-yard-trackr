@@ -7,6 +7,7 @@ import { Trash2, Plus, Move, Type, Save, Printer, Upload, Image, Car, Calendar, 
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import dmvFormImage from '@/assets/dmv-bill-of-sale.png';
+import { format } from 'date-fns';
 
 // DMV/NCIC Code mapping for vehicle makes
 const DMV_CODE_MAPPING: Record<string, string> = {
@@ -157,9 +158,47 @@ export function InteractiveDocumentEditor({ onNavigate }: InteractiveDocumentEdi
 
   useEffect(() => {
     const initializeEditor = async () => {
+      // Check for SA trip mode first
+      const currentTripKey = localStorage.getItem('current-sa-trip');
+      const autoPrint = localStorage.getItem('auto-print-trip');
+      
+      if (currentTripKey) {
+        console.log('Loading SA trip:', currentTripKey);
+        setIsInTripMode(true);
+        
+        const tripData = localStorage.getItem(currentTripKey);
+        if (tripData) {
+          const parsedTripData = JSON.parse(tripData);
+          setCurrentTripData(parsedTripData);
+          
+          // Load vehicles from trip data
+          if (parsedTripData.vehicle1) {
+            setVehicleData1(parsedTripData.vehicle1);
+            localStorage.setItem('documents-vehicle-data-1', JSON.stringify(parsedTripData.vehicle1));
+          }
+          if (parsedTripData.vehicle2) {
+            setVehicleData2(parsedTripData.vehicle2);
+            localStorage.setItem('documents-vehicle-data-2', JSON.stringify(parsedTripData.vehicle2));
+          }
+        }
+        
+        // Clean up navigation data
+        localStorage.removeItem('current-sa-trip');
+        if (autoPrint) {
+          localStorage.removeItem('auto-print-trip');
+        }
+      }
+      
       await loadTemplates();
       await loadUploadedDocuments();
       await loadDefaultSARecyclingTemplate();
+      
+      // Auto print if requested
+      if (autoPrint && currentTripKey) {
+        setTimeout(() => {
+          handlePrint();
+        }, 1000);
+      }
     };
     
     initializeEditor();
@@ -647,6 +686,43 @@ export function InteractiveDocumentEditor({ onNavigate }: InteractiveDocumentEdi
     }
   };
 
+  const saveTrip = () => {
+    if (!isInTripMode || !currentTripData) {
+      toast.error('Not in trip mode');
+      return;
+    }
+
+    const today = format(new Date(), 'yyyy-MM-dd');
+    const tripNumber = getCurrentTripNumber();
+    const tripKey = `sa-trip-${today}-${tripNumber}`;
+    
+    const tripDataToSave = {
+      ...currentTripData,
+      vehicle1: vehicleData1,
+      vehicle2: vehicleData2,
+      savedAt: new Date().toISOString(),
+      templateFields: fields
+    };
+    
+    localStorage.setItem(tripKey, JSON.stringify(tripDataToSave));
+    
+    toast.success(`Trip ${tripNumber} saved successfully`);
+  };
+
+  const saveTripAndPrint = () => {
+    saveTrip();
+    setTimeout(() => {
+      handlePrint();
+    }, 500);
+  };
+
+  const getCurrentTripNumber = () => {
+    // Extract trip number from localStorage or context
+    const currentTripKey = localStorage.getItem('current-sa-trip') || '';
+    const matches = currentTripKey.match(/sa-trip-\d{4}-\d{2}-\d{2}-(\d+)/);
+    return matches ? parseInt(matches[1]) : 1;
+  };
+
   const saveTemplate = async () => {
     console.log('Attempting to save template...');
     console.log('Template name:', templateName);
@@ -1011,6 +1087,19 @@ export function InteractiveDocumentEditor({ onNavigate }: InteractiveDocumentEdi
             <Printer className="h-4 w-4" />
             Print
           </Button>
+          {isInTripMode && (
+            <>
+              <Button onClick={saveTrip} variant="outline" className="flex items-center gap-2">
+                <Save className="h-4 w-4" />
+                Save Trip
+              </Button>
+              <Button onClick={saveTripAndPrint} className="flex items-center gap-2">
+                <Save className="h-4 w-4" />
+                <Printer className="h-4 w-4 ml-1" />
+                Save & Print
+              </Button>
+            </>
+          )}
         </div>
       </div>
 

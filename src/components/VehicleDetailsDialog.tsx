@@ -17,6 +17,9 @@ import { useVehicleStore } from "@/hooks/useVehicleStore";
 import { Buyer } from "@/hooks/useBuyers";
 import { supabase } from "@/integrations/supabase/client";
 import { RecyclingDateDialog } from "./forms/RecyclingDateDialog";
+import { TripSelectionDialog } from "./TripSelectionDialog";
+import { VehicleSlotSelectionDialog } from "./VehicleSlotSelectionDialog";
+import { format } from "date-fns";
 
 // Define a type for stored documents (JSON-serializable)
 interface StoredDocument {
@@ -57,6 +60,9 @@ export function VehicleDetailsDialog({
   const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
   const [recyclingDialogOpen, setRecyclingDialogOpen] = useState(false);
   const [recyclingType, setRecyclingType] = useState<"sa-recycling" | "pick-your-part" | null>(null);
+  const [showTripSelection, setShowTripSelection] = useState(false);
+  const [showSlotSelection, setShowSlotSelection] = useState(false);
+  const [selectedTripNumber, setSelectedTripNumber] = useState<number>(0);
 
   useEffect(() => {
     console.log('VehicleDetailsDialog: Vehicle prop changed:', vehicle);
@@ -129,6 +135,63 @@ export function VehicleDetailsDialog({
         variant: "destructive",
       });
     }
+  };
+
+  const handleTripSelected = (tripNumber: number) => {
+    setSelectedTripNumber(tripNumber);
+    setShowTripSelection(false);
+    setShowSlotSelection(true);
+  };
+
+  const handleSlotSelected = (slot: 1 | 2) => {
+    const today = format(new Date(), 'yyyy-MM-dd');
+    const tripKey = `sa-trip-${today}-${selectedTripNumber}`;
+    
+    // Get existing trip data
+    const existingTripData = localStorage.getItem(tripKey);
+    const tripData = existingTripData ? JSON.parse(existingTripData) : {};
+    
+    // Add vehicle to the selected slot
+    const vehicleData = {
+      vehicleId: localVehicle.vehicleId,
+      year: localVehicle.year,
+      make: localVehicle.make,
+      model: localVehicle.model,
+      licensePlate: localVehicle.licensePlate,
+      sellerName: localVehicle.sellerName,
+      purchasePrice: localVehicle.purchasePrice,
+      purchaseDate: localVehicle.purchaseDate,
+      buyerFirstName: localVehicle.buyerFirstName,
+      buyerLastName: localVehicle.buyerLastName,
+      buyerAddress: localVehicle.buyerAddress,
+      salePrice: localVehicle.salePrice,
+      saleDate: localVehicle.saleDate,
+      id: localVehicle.id
+    };
+    
+    if (slot === 1) {
+      tripData.vehicle1 = vehicleData;
+    } else {
+      tripData.vehicle2 = vehicleData;
+    }
+    
+    // Save trip data
+    localStorage.setItem(tripKey, JSON.stringify(tripData));
+    
+    // Set up navigation data for documents page
+    localStorage.setItem('current-sa-trip', tripKey);
+    localStorage.setItem('documents-next-vehicle-slot', slot.toString());
+    
+    setShowSlotSelection(false);
+    
+    if (onNavigate) {
+      onNavigate('documents');
+    }
+    
+    toast({
+      title: "Vehicle Added to Trip",
+      description: `Vehicle added to Trip ${selectedTripNumber}, Slot ${slot}`,
+    });
   };
 
   const handleRecyclingConfirm = async (date: string) => {
@@ -478,27 +541,7 @@ export function VehicleDetailsDialog({
                 <Button 
                   variant="outline" 
                   className="flex items-center gap-2"
-                  onClick={() => {
-                    // Store vehicle data for Documents page pre-filling
-                    localStorage.setItem('documents-vehicle-data', JSON.stringify({
-                      vehicleId: localVehicle.vehicleId,
-                      year: localVehicle.year,
-                      make: localVehicle.make,
-                      model: localVehicle.model,
-                      licensePlate: localVehicle.licensePlate,
-                      sellerName: localVehicle.sellerName,
-                      buyerFirstName: localVehicle.buyerFirstName,
-                      buyerLastName: localVehicle.buyerLastName,
-                      buyerAddress: localVehicle.buyerAddress,
-                      salePrice: localVehicle.salePrice,
-                      saleDate: localVehicle.saleDate,
-                      id: localVehicle.id
-                    }));
-                    
-                    if (onNavigate) {
-                      onNavigate('documents');
-                    }
-                  }}
+                  onClick={() => setShowTripSelection(true)}
                 >
                   <FileText className="w-4 h-4" />
                   Documents
@@ -832,6 +875,21 @@ export function VehicleDetailsDialog({
             ? localVehicle.saRecyclingDate || new Date().toISOString().split('T')[0]
             : localVehicle.pickYourPartDate || new Date().toISOString().split('T')[0]
         }
+      />
+
+      <TripSelectionDialog
+        open={showTripSelection}
+        onClose={() => setShowTripSelection(false)}
+        onTripSelected={handleTripSelected}
+        vehicleData={localVehicle}
+      />
+
+      <VehicleSlotSelectionDialog
+        open={showSlotSelection}
+        onClose={() => setShowSlotSelection(false)}
+        onSlotSelected={handleSlotSelected}
+        tripNumber={selectedTripNumber}
+        vehicleData={localVehicle}
       />
     </>
   );

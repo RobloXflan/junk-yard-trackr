@@ -1,5 +1,5 @@
 
-import { Car, BarChart3, Upload, Clock, Settings, CheckCircle, FileText, TrendingUp, ShoppingCart, ScanLine, Calendar, Printer, Users } from "lucide-react";
+import { Car, BarChart3, Upload, Clock, Settings, CheckCircle, FileText, TrendingUp, ShoppingCart, ScanLine, Calendar, Printer, Users, Truck } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -49,6 +49,11 @@ const mainMenuItems = [
     title: "Appointments",
     page: "appointments",
     icon: Calendar,
+  },
+  {
+    title: "SA Trips",
+    page: "sa-trips",
+    icon: Truck,
   },
   {
     title: "Workers",

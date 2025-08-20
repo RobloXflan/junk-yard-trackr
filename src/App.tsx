@@ -30,6 +30,7 @@ import { DriverTracking } from "@/pages/DriverTracking";
 import { FleetTracking } from "@/pages/FleetTracking";
 import { MobileDriverTracking } from "@/components/MobileDriverTracking";
 import { Documents } from "@/pages/Documents";
+import { SATrips } from "@/pages/SATrips";
 
 const queryClient = new QueryClient();
 
@@ -97,6 +98,8 @@ const App = () => {
         return <PublicInventory />;
       case 'documents':
         return <Documents onNavigate={setCurrentPage} />;
+      case 'sa-trips':
+        return <SATrips />;
       default:
         return <Dashboard />;
     }
