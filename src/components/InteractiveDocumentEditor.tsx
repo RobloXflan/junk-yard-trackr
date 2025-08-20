@@ -199,7 +199,7 @@ export function InteractiveDocumentEditor({ onNavigate }: InteractiveDocumentEdi
       
       await loadTemplates();
       await loadUploadedDocuments();
-      await loadDefaultSARecyclingTemplate();
+      await loadDefaultTemplate();
       
       // Auto print if requested
       if (autoPrint && currentTripKey) {
@@ -212,8 +212,8 @@ export function InteractiveDocumentEditor({ onNavigate }: InteractiveDocumentEdi
     initializeEditor();
   }, []);
 
-  const loadDefaultSARecyclingTemplate = async () => {
-    // First check Supabase Storage for SA Recycling template
+  const loadDefaultTemplate = async () => {
+    // First check Supabase Storage for "theonlyreal" template
     try {
       const { data, error } = await supabase.storage
         .from('documents')
@@ -223,7 +223,7 @@ export function InteractiveDocumentEditor({ onNavigate }: InteractiveDocumentEdi
 
       if (!error && data) {
         for (const file of data) {
-          if (file.name.includes('SA_Recycling')) {
+          if (file.name.includes('theonlyreal')) {
             try {
               const { data: fileData, error: downloadError } = await supabase.storage
                 .from('documents')
@@ -231,10 +231,10 @@ export function InteractiveDocumentEditor({ onNavigate }: InteractiveDocumentEdi
 
               if (!downloadError) {
                 const templateText = await fileData.text();
-                const saTemplate = JSON.parse(templateText);
+                const defaultTemplate = JSON.parse(templateText);
                 
-                console.log('Loading SA Recycling template from Supabase:', saTemplate);
-                let templateFields = [...(saTemplate.fields || [])];
+                console.log('Loading theonlyreal template from Supabase:', defaultTemplate);
+                let templateFields = [...(defaultTemplate.fields || [])];
                 
                 // Check for dual vehicle data to pre-fill (explicit slots only)
                 const v1Str = localStorage.getItem('documents-vehicle-data-1');
@@ -307,7 +307,7 @@ export function InteractiveDocumentEditor({ onNavigate }: InteractiveDocumentEdi
                   });
                 }
 
-                // Prefill Vehicle 2 and auto-add fields if they don't exist
+                // Only prefill Vehicle 2 in trip mode and when explicitly selected
                 if (v2 && isInTripMode) {
                   console.log('Found vehicle 2 data for pre-filling:', v2);
                   setVehicleData2(v2);
@@ -356,10 +356,16 @@ export function InteractiveDocumentEditor({ onNavigate }: InteractiveDocumentEdi
                       return updatedField;
                     });
                   }
+                } else {
+                  // Clear Vehicle 2 data when not in trip mode or no Vehicle 2 selected
+                  setVehicleData2(null);
+                  templateFields = templateFields.map(field =>
+                    field.fieldType.endsWith('_2') ? { ...field, content: '' } : field
+                  );
                 }
                 
-                // If no Vehicle 2 selected in trip mode, ensure all Vehicle 2 fields are blank
-                if (!v2 && isInTripMode) {
+                // Additional cleanup: If not in trip mode, clear all Vehicle 2 fields
+                if (!isInTripMode) {
                   templateFields = templateFields.map(field =>
                     field.fieldType.endsWith('_2') ? { ...field, content: '' } : field
                   );
@@ -378,13 +384,13 @@ export function InteractiveDocumentEditor({ onNavigate }: InteractiveDocumentEdi
                 }, 100);
                 
                 setFields(templateFields);
-                setCurrentDocumentUrl(saTemplate.imageUrl);
-                setTemplateName('SA Recycling');
-                console.log('Loaded SA Recycling template from Supabase with', templateFields.length, 'fields');
+                setCurrentDocumentUrl(defaultTemplate.imageUrl);
+                setTemplateName('theonlyreal');
+                console.log('Loaded theonlyreal template from Supabase with', templateFields.length, 'fields');
                 return;
               }
             } catch (error) {
-              console.error('Error loading SA Recycling template from Supabase:', error);
+              console.error('Error loading theonlyreal template from Supabase:', error);
             }
           }
         }
@@ -393,29 +399,29 @@ export function InteractiveDocumentEditor({ onNavigate }: InteractiveDocumentEdi
       console.error('Error accessing Supabase Storage:', error);
     }
 
-    // Fallback: check localStorage for SA Recycling template
+    // Fallback: check localStorage for "theonlyreal" template
     const saved = localStorage.getItem('interactive-document-templates');
     if (saved) {
       const parsedTemplates = JSON.parse(saved);
-      const saTemplate = parsedTemplates.find((t: any) => t.name === 'SA Recycling');
+      const defaultTemplate = parsedTemplates.find((t: any) => t.name === 'theonlyreal');
       
-      if (saTemplate) {
-        console.log('Loading SA Recycling template from localStorage:', saTemplate);
-        let templateFields = [...(saTemplate.fields || [])];
+      if (defaultTemplate) {
+        console.log('Loading theonlyreal template from localStorage:', defaultTemplate);
+        let templateFields = [...(defaultTemplate.fields || [])];
         
         setFields(templateFields);
-        setCurrentDocumentUrl(saTemplate.imageUrl);
-        setTemplateName('SA Recycling');
-        console.log('Loaded SA Recycling template from localStorage with', templateFields.length, 'fields');
+        setCurrentDocumentUrl(defaultTemplate.imageUrl);
+        setTemplateName('theonlyreal');
+        console.log('Loaded theonlyreal template from localStorage with', templateFields.length, 'fields');
         return;
       }
     }
     
-    // Final fallback: if no SA Recycling template found, start with empty form
+    // Final fallback: if no "theonlyreal" template found, start with empty form
     setCurrentDocumentUrl(dmvFormImage);
     setFields([]);
-    setTemplateName('SA Recycling');
-    console.log('No SA Recycling template found, starting with empty form');
+    setTemplateName('theonlyreal');
+    console.log('No theonlyreal template found, starting with empty form');
   };
 
   // Navigation helper functions
