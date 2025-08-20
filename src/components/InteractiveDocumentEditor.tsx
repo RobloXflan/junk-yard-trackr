@@ -113,23 +113,43 @@ export function InteractiveDocumentEditor() {
   const canvasRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 816, height: 1056 });
+  
+  // Dual vehicle state management
+  const [vehicleData1, setVehicleData1] = useState<any>(null);
+  const [vehicleData2, setVehicleData2] = useState<any>(null);
+  const [currentVehicleSlot, setCurrentVehicleSlot] = useState<1 | 2>(1);
 
-  // Predefined field types with smart defaults
-  const predefinedFields: PredefinedField[] = [
-    { id: 'vin', label: 'VIN', defaultWidth: 300, defaultHeight: 30, placeholder: 'Enter vehicle identification number', icon: Hash, color: 'text-blue-600' },
-    { id: 'license_plate', label: 'License Plate', defaultWidth: 150, defaultHeight: 30, placeholder: 'Enter license plate', icon: Car, color: 'text-green-600' },
-    { id: 'year', label: 'Year', defaultWidth: 80, defaultHeight: 30, placeholder: 'YYYY', icon: Calendar, color: 'text-purple-600' },
-    { id: 'make', label: 'Make', defaultWidth: 120, defaultHeight: 30, placeholder: 'Vehicle make', icon: Car, color: 'text-orange-600' },
-    { id: 'model', label: 'Model', defaultWidth: 150, defaultHeight: 30, placeholder: 'Vehicle model', icon: Car, color: 'text-red-600' },
-    { id: 'mileage', label: 'Mileage', defaultWidth: 100, defaultHeight: 30, placeholder: 'Miles', icon: Hash, color: 'text-cyan-600' },
-    { id: 'price', label: 'Price', defaultWidth: 120, defaultHeight: 30, placeholder: '$0.00', icon: DollarSign, color: 'text-emerald-600' },
-    { id: 'date', label: 'Date', defaultWidth: 120, defaultHeight: 30, placeholder: 'MM/DD/YYYY', icon: Calendar, color: 'text-indigo-600' },
+  // Predefined field types with smart defaults - Vehicle 1
+  const predefinedFieldsVehicle1: PredefinedField[] = [
+    { id: 'vin', label: 'VIN (Vehicle 1)', defaultWidth: 300, defaultHeight: 30, placeholder: 'Enter vehicle identification number', icon: Hash, color: 'text-blue-600' },
+    { id: 'license_plate', label: 'License Plate (Vehicle 1)', defaultWidth: 150, defaultHeight: 30, placeholder: 'Enter license plate', icon: Car, color: 'text-green-600' },
+    { id: 'year', label: 'Year (Vehicle 1)', defaultWidth: 80, defaultHeight: 30, placeholder: 'YYYY', icon: Calendar, color: 'text-purple-600' },
+    { id: 'make', label: 'Make (Vehicle 1)', defaultWidth: 120, defaultHeight: 30, placeholder: 'Vehicle make', icon: Car, color: 'text-orange-600' },
+    { id: 'model', label: 'Model (Vehicle 1)', defaultWidth: 150, defaultHeight: 30, placeholder: 'Vehicle model', icon: Car, color: 'text-red-600' },
+    { id: 'mileage', label: 'Mileage (Vehicle 1)', defaultWidth: 100, defaultHeight: 30, placeholder: 'Miles', icon: Hash, color: 'text-cyan-600' },
+    { id: 'price', label: 'Price (Vehicle 1)', defaultWidth: 120, defaultHeight: 30, placeholder: '$0.00', icon: DollarSign, color: 'text-emerald-600' },
+    { id: 'date', label: 'Date (Vehicle 1)', defaultWidth: 120, defaultHeight: 30, placeholder: 'MM/DD/YYYY', icon: Calendar, color: 'text-indigo-600' },
     { id: 'buyer_name', label: 'Buyer Name', defaultWidth: 200, defaultHeight: 30, placeholder: 'Buyer full name', icon: User, color: 'text-pink-600' },
     { id: 'seller_name', label: 'Seller Name', defaultWidth: 200, defaultHeight: 30, placeholder: 'Seller full name', icon: User, color: 'text-teal-600' },
     { id: 'address', label: 'Address', defaultWidth: 250, defaultHeight: 60, placeholder: 'Street address, City, State ZIP', icon: MapPin, color: 'text-yellow-600' },
     { id: 'phone', label: 'Phone Number', defaultWidth: 150, defaultHeight: 30, placeholder: '(555) 123-4567', icon: Phone, color: 'text-violet-600' },
     { id: 'signature', label: 'Signature', defaultWidth: 200, defaultHeight: 50, placeholder: 'Signature line', icon: FileText, color: 'text-rose-600' }
   ];
+
+  // Predefined field types with smart defaults - Vehicle 2
+  const predefinedFieldsVehicle2: PredefinedField[] = [
+    { id: 'vin_2', label: 'VIN (Vehicle 2)', defaultWidth: 300, defaultHeight: 30, placeholder: 'Enter vehicle identification number', icon: Hash, color: 'text-blue-400' },
+    { id: 'license_plate_2', label: 'License Plate (Vehicle 2)', defaultWidth: 150, defaultHeight: 30, placeholder: 'Enter license plate', icon: Car, color: 'text-green-400' },
+    { id: 'year_2', label: 'Year (Vehicle 2)', defaultWidth: 80, defaultHeight: 30, placeholder: 'YYYY', icon: Calendar, color: 'text-purple-400' },
+    { id: 'make_2', label: 'Make (Vehicle 2)', defaultWidth: 120, defaultHeight: 30, placeholder: 'Vehicle make', icon: Car, color: 'text-orange-400' },
+    { id: 'model_2', label: 'Model (Vehicle 2)', defaultWidth: 150, defaultHeight: 30, placeholder: 'Vehicle model', icon: Car, color: 'text-red-400' },
+    { id: 'mileage_2', label: 'Mileage (Vehicle 2)', defaultWidth: 100, defaultHeight: 30, placeholder: 'Miles', icon: Hash, color: 'text-cyan-400' },
+    { id: 'price_2', label: 'Price (Vehicle 2)', defaultWidth: 120, defaultHeight: 30, placeholder: '$0.00', icon: DollarSign, color: 'text-emerald-400' },
+    { id: 'date_2', label: 'Date (Vehicle 2)', defaultWidth: 120, defaultHeight: 30, placeholder: 'MM/DD/YYYY', icon: Calendar, color: 'text-indigo-400' },
+  ];
+
+  // Combined predefined fields for reference
+  const predefinedFields = [...predefinedFieldsVehicle1, ...predefinedFieldsVehicle2];
 
   useEffect(() => {
     const initializeEditor = async () => {
@@ -165,14 +185,17 @@ export function InteractiveDocumentEditor() {
                 console.log('Loading SA Recycling template from Supabase:', saTemplate);
                 let templateFields = [...(saTemplate.fields || [])];
                 
-                // Check for vehicle data to pre-fill
-                const vehicleDataStr = localStorage.getItem('documents-vehicle-data');
-                if (vehicleDataStr) {
+                // Check for dual vehicle data to pre-fill
+                const vehicle1Data = localStorage.getItem('documents-vehicle-data-1');
+                const vehicle2Data = localStorage.getItem('documents-vehicle-data-2');
+                
+                if (vehicle1Data) {
                   try {
-                    const vehicleData = JSON.parse(vehicleDataStr);
-                    console.log('Found vehicle data for pre-filling:', vehicleData);
+                    const vehicleData = JSON.parse(vehicle1Data);
+                    console.log('Found vehicle 1 data for pre-filling:', vehicleData);
+                    setVehicleData1(vehicleData);
                     
-                    // Map vehicle data to form fields
+                    // Map vehicle 1 data to form fields
                     templateFields = templateFields.map(field => {
                       const updatedField = { ...field };
                       
@@ -194,6 +217,9 @@ export function InteractiveDocumentEditor() {
                           break;
                         case 'mileage':
                           updatedField.content = vehicleData.mileage || '';
+                          break;
+                        case 'price':
+                          updatedField.content = vehicleData.salePrice || '';
                           break;
                         case 'seller_name':
                           updatedField.content = vehicleData.sellerName || '';
@@ -221,23 +247,78 @@ export function InteractiveDocumentEditor() {
                         case 'sale_date':
                           updatedField.content = vehicleData.saleDate || '';
                           break;
+                        case 'date':
+                          updatedField.content = vehicleData.saleDate || '';
+                          break;
                       }
                       
                       return updatedField;
                     });
                     
-                    // Clear the vehicle data after using it
-                    localStorage.removeItem('documents-vehicle-data');
-                    
-                    // Show success message
-                    setTimeout(() => {
-                      toast.success("Vehicle data loaded - form fields have been pre-filled with vehicle information");
-                    }, 100);
-                    
+                    // Clear the vehicle 1 data after using it
+                    localStorage.removeItem('documents-vehicle-data-1');
                   } catch (error) {
-                    console.error('Error parsing vehicle data:', error);
+                    console.error('Error parsing vehicle 1 data:', error);
                   }
                 }
+
+                if (vehicle2Data) {
+                  try {
+                    const vehicleData = JSON.parse(vehicle2Data);
+                    console.log('Found vehicle 2 data for pre-filling:', vehicleData);
+                    setVehicleData2(vehicleData);
+                    
+                    // Map vehicle 2 data to form fields with _2 suffix
+                    templateFields = templateFields.map(field => {
+                      const updatedField = { ...field };
+                      
+                      switch (field.fieldType) {
+                        case 'vin_2':
+                          updatedField.content = vehicleData.vehicleId || '';
+                          break;
+                        case 'year_2':
+                          updatedField.content = vehicleData.year || '';
+                          break;
+                        case 'make_2':
+                          updatedField.content = convertMakeToDMVCode(vehicleData.make || '');
+                          break;
+                        case 'model_2':
+                          updatedField.content = vehicleData.model || '';
+                          break;
+                        case 'license_plate_2':
+                          updatedField.content = vehicleData.licensePlate || '';
+                          break;
+                        case 'mileage_2':
+                          updatedField.content = vehicleData.mileage || '';
+                          break;
+                        case 'price_2':
+                          updatedField.content = vehicleData.salePrice || '';
+                          break;
+                        case 'date_2':
+                          updatedField.content = vehicleData.saleDate || '';
+                          break;
+                      }
+                      
+                      return updatedField;
+                    });
+                    
+                    // Clear the vehicle 2 data after using it
+                    localStorage.removeItem('documents-vehicle-data-2');
+                  } catch (error) {
+                    console.error('Error parsing vehicle 2 data:', error);
+                  }
+                }
+                
+                // Show success message based on vehicles loaded
+                setTimeout(() => {
+                  if (vehicle1Data && vehicle2Data) {
+                    toast.success("Both vehicles loaded - form fields have been pre-filled");
+                  } else if (vehicle1Data) {
+                    toast.success("Vehicle 1 data loaded - form fields have been pre-filled");
+                  } else if (vehicle2Data) {
+                    toast.success("Vehicle 2 data loaded - form fields have been pre-filled");
+                  }
+                }, 100);
                 
                 setFields(templateFields);
                 setCurrentDocumentUrl(saTemplate.imageUrl);
@@ -278,6 +359,36 @@ export function InteractiveDocumentEditor() {
     setFields([]);
     setTemplateName('SA Recycling');
     console.log('No SA Recycling template found, starting with empty form');
+  };
+
+  // Navigation helper functions
+  const handleGoBackToInventory = () => {
+    // Store current template data before navigating
+    const currentTemplateData = {
+      templateName,
+      fields,
+      currentDocumentUrl,
+      vehicleData1,
+      vehicleData2
+    };
+    localStorage.setItem('documents-current-template', JSON.stringify(currentTemplateData));
+    
+    // Determine which vehicle slot to fill next
+    if (!vehicleData1) {
+      setCurrentVehicleSlot(1);
+      localStorage.setItem('documents-next-vehicle-slot', '1');
+    } else if (!vehicleData2) {
+      setCurrentVehicleSlot(2);
+      localStorage.setItem('documents-next-vehicle-slot', '2');
+    }
+    
+    // Navigate back to inventory
+    window.location.href = '/';
+    toast.success('Returning to Vehicle Inventory - select a vehicle to add to the template');
+  };
+
+  const handleContinueWithOneVehicle = () => {
+    toast.success('Continuing with single vehicle template');
   };
 
   const loadTemplates = async () => {
@@ -895,6 +1006,53 @@ export function InteractiveDocumentEditor() {
         </div>
       </div>
 
+      {/* Dual Vehicle Management Controls */}
+      {templateName === 'SA Recycling' && (
+        <Card className="p-4 bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <h3 className="font-semibold text-blue-900 dark:text-blue-100">SA Recycling - Dual Vehicle Template</h3>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Car className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm">Vehicle 1:</span>
+                  <span className={`text-sm font-medium ${vehicleData1 ? 'text-green-600' : 'text-gray-500'}`}>
+                    {vehicleData1 ? `${vehicleData1.year} ${convertMakeToDMVCode(vehicleData1.make)} ${vehicleData1.model}` : 'Not loaded'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Car className="h-4 w-4 text-blue-400" />
+                  <span className="text-sm">Vehicle 2:</span>
+                  <span className={`text-sm font-medium ${vehicleData2 ? 'text-green-600' : 'text-gray-500'}`}>
+                    {vehicleData2 ? `${vehicleData2.year} ${convertMakeToDMVCode(vehicleData2.make)} ${vehicleData2.model}` : 'Not loaded'}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {!vehicleData2 && (
+                <Button 
+                  onClick={handleGoBackToInventory}
+                  variant="outline"
+                  size="sm"
+                  className="bg-blue-100 border-blue-300 text-blue-700 hover:bg-blue-200"
+                >
+                  Add Second Vehicle
+                </Button>
+              )}
+              <Button 
+                onClick={handleContinueWithOneVehicle}
+                variant="ghost"
+                size="sm"
+                className="text-blue-600 hover:text-blue-700"
+              >
+                Continue with One Vehicle
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
       <div className="grid grid-cols-4 gap-6">
         {/* Sidebar */}
         <div className="col-span-1 space-y-4">
@@ -904,19 +1062,43 @@ export function InteractiveDocumentEditor() {
               <Type className="h-4 w-4" />
               Field Library
             </h3>
-            <div className="grid grid-cols-1 gap-2">
-              {predefinedFields.map((fieldType) => (
-                <Button
-                  key={fieldType.id}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => addPredefinedField(fieldType)}
-                  className="justify-start gap-2 h-auto py-2 px-3"
-                >
-                  <fieldType.icon className={`h-4 w-4 ${fieldType.color}`} />
-                  <span className="text-sm">{fieldType.label}</span>
-                </Button>
-              ))}
+            
+            {/* Vehicle 1 Fields */}
+            <div className="mb-6">
+              <h4 className="font-medium text-sm mb-3 text-blue-600">Vehicle 1 Fields</h4>
+              <div className="grid grid-cols-1 gap-2">
+                {predefinedFieldsVehicle1.map((fieldType) => (
+                  <Button
+                    key={fieldType.id}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => addPredefinedField(fieldType)}
+                    className="justify-start gap-2 h-auto py-2 px-3"
+                  >
+                    <fieldType.icon className={`h-4 w-4 ${fieldType.color}`} />
+                    <span className="text-sm">{fieldType.label}</span>
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Vehicle 2 Fields */}
+            <div>
+              <h4 className="font-medium text-sm mb-3 text-blue-400">Vehicle 2 Fields</h4>
+              <div className="grid grid-cols-1 gap-2">
+                {predefinedFieldsVehicle2.map((fieldType) => (
+                  <Button
+                    key={fieldType.id}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => addPredefinedField(fieldType)}
+                    className="justify-start gap-2 h-auto py-2 px-3"
+                  >
+                    <fieldType.icon className={`h-4 w-4 ${fieldType.color}`} />
+                    <span className="text-sm">{fieldType.label}</span>
+                  </Button>
+                ))}
+              </div>
             </div>
           </Card>
 
