@@ -316,41 +316,55 @@ export function InteractiveDocumentEditor({ onNavigate }: InteractiveDocumentEdi
                   });
                 }
 
-                // Prefill Vehicle 2
+                // Prefill Vehicle 2 and auto-add fields if they don't exist
                 if (v2) {
                   console.log('Found vehicle 2 data for pre-filling:', v2);
                   setVehicleData2(v2);
                   
-                  templateFields = templateFields.map(field => {
-                    const updatedField = { ...field };
-                    switch (field.fieldType) {
-                      case 'vin_2':
-                        updatedField.content = v2.vehicleId || '';
-                        break;
-                      case 'year_2':
-                        updatedField.content = v2.year || '';
-                        break;
-                      case 'make_2':
-                        updatedField.content = convertMakeToDMVCode(v2.make || '');
-                        break;
-                      case 'model_2':
-                        updatedField.content = v2.model || '';
-                        break;
-                      case 'license_plate_2':
-                        updatedField.content = v2.licensePlate || '';
-                        break;
-                      case 'mileage_2':
-                        updatedField.content = v2.mileage || '';
-                        break;
-                      case 'price_2':
-                        updatedField.content = v2.salePrice || '';
-                        break;
-                      case 'date_2':
-                        updatedField.content = v2.saleDate || '';
-                        break;
-                    }
-                    return updatedField;
-                  });
+                  // First, check if Vehicle 2 fields exist
+                  const hasVehicle2Fields = templateFields.some(field => 
+                    field.fieldType.endsWith('_2')
+                  );
+                  
+                  if (!hasVehicle2Fields) {
+                    console.log('No Vehicle 2 fields found, automatically adding them...');
+                    // Auto-add Vehicle 2 fields below Vehicle 1 fields
+                    const vehicle2Fields = addVehicle2FieldsAutomatically(templateFields, v2);
+                    templateFields = [...templateFields, ...vehicle2Fields];
+                    console.log('Added', vehicle2Fields.length, 'Vehicle 2 fields automatically');
+                  } else {
+                    // Pre-fill existing Vehicle 2 fields
+                    templateFields = templateFields.map(field => {
+                      const updatedField = { ...field };
+                      switch (field.fieldType) {
+                        case 'vin_2':
+                          updatedField.content = v2.vehicleId || '';
+                          break;
+                        case 'year_2':
+                          updatedField.content = v2.year || '';
+                          break;
+                        case 'make_2':
+                          updatedField.content = convertMakeToDMVCode(v2.make || '');
+                          break;
+                        case 'model_2':
+                          updatedField.content = v2.model || '';
+                          break;
+                        case 'license_plate_2':
+                          updatedField.content = v2.licensePlate || '';
+                          break;
+                        case 'mileage_2':
+                          updatedField.content = v2.mileage || '';
+                          break;
+                        case 'price_2':
+                          updatedField.content = v2.salePrice || '';
+                          break;
+                        case 'date_2':
+                          updatedField.content = v2.saleDate || '';
+                          break;
+                      }
+                      return updatedField;
+                    });
+                  }
                 }
                 
                 // Show success message based on vehicles loaded
@@ -718,6 +732,110 @@ export function InteractiveDocumentEditor({ onNavigate }: InteractiveDocumentEdi
     setTimeout(() => {
       handlePrint();
     }, 500);
+  };
+
+  const addVehicle2FieldsAutomatically = (existingFields: TextField[], vehicleData: any): TextField[] => {
+    // Find the bottom-most Y position of existing fields to position Vehicle 2 fields below
+    const maxY = existingFields.reduce((max, field) => 
+      Math.max(max, field.y + field.height), 0
+    );
+    
+    const startY = maxY + 50; // Start 50px below the last field
+    const leftColumnX = 100;  // Left column position
+    const rightColumnX = 400; // Right column position
+    
+    const vehicle2Fields: TextField[] = [
+      {
+        id: `vin_2_${Date.now()}`,
+        x: leftColumnX,
+        y: startY,
+        width: 300,
+        height: 30,
+        content: vehicleData.vehicleId || '',
+        label: 'VIN (Vehicle 2)',
+        fontSize: 14,
+        fieldType: 'vin_2'
+      },
+      {
+        id: `year_2_${Date.now() + 1}`,
+        x: rightColumnX,
+        y: startY,
+        width: 80,
+        height: 30,
+        content: vehicleData.year || '',
+        label: 'Year (Vehicle 2)',
+        fontSize: 14,
+        fieldType: 'year_2'
+      },
+      {
+        id: `make_2_${Date.now() + 2}`,
+        x: leftColumnX,
+        y: startY + 40,
+        width: 120,
+        height: 30,
+        content: convertMakeToDMVCode(vehicleData.make || ''),
+        label: 'Make (Vehicle 2)',
+        fontSize: 14,
+        fieldType: 'make_2'
+      },
+      {
+        id: `model_2_${Date.now() + 3}`,
+        x: rightColumnX,
+        y: startY + 40,
+        width: 150,
+        height: 30,
+        content: vehicleData.model || '',
+        label: 'Model (Vehicle 2)',
+        fontSize: 14,
+        fieldType: 'model_2'
+      },
+      {
+        id: `license_plate_2_${Date.now() + 4}`,
+        x: leftColumnX,
+        y: startY + 80,
+        width: 150,
+        height: 30,
+        content: vehicleData.licensePlate || '',
+        label: 'License Plate (Vehicle 2)',
+        fontSize: 14,
+        fieldType: 'license_plate_2'
+      },
+      {
+        id: `mileage_2_${Date.now() + 5}`,
+        x: rightColumnX,
+        y: startY + 80,
+        width: 100,
+        height: 30,
+        content: vehicleData.mileage || '',
+        label: 'Mileage (Vehicle 2)',
+        fontSize: 14,
+        fieldType: 'mileage_2'
+      },
+      {
+        id: `price_2_${Date.now() + 6}`,
+        x: leftColumnX,
+        y: startY + 120,
+        width: 120,
+        height: 30,
+        content: vehicleData.salePrice || '',
+        label: 'Price (Vehicle 2)',
+        fontSize: 14,
+        fieldType: 'price_2'
+      },
+      {
+        id: `date_2_${Date.now() + 7}`,
+        x: rightColumnX,
+        y: startY + 120,
+        width: 120,
+        height: 30,
+        content: vehicleData.saleDate || '',
+        label: 'Date (Vehicle 2)',
+        fontSize: 14,
+        fieldType: 'date_2'
+      }
+    ];
+    
+    return vehicle2Fields;
   };
 
   const getCurrentTripNumber = () => {
