@@ -185,131 +185,135 @@ export function InteractiveDocumentEditor() {
                 console.log('Loading SA Recycling template from Supabase:', saTemplate);
                 let templateFields = [...(saTemplate.fields || [])];
                 
-                // Check for dual vehicle data to pre-fill
-                const vehicle1Data = localStorage.getItem('documents-vehicle-data-1');
-                const vehicle2Data = localStorage.getItem('documents-vehicle-data-2');
+                // Check for dual vehicle data to pre-fill (supports legacy key)
+                const v1Str = localStorage.getItem('documents-vehicle-data-1');
+                const v2Str = localStorage.getItem('documents-vehicle-data-2');
+                const genericStr = localStorage.getItem('documents-vehicle-data');
                 
-                if (vehicle1Data) {
-                  try {
-                    const vehicleData = JSON.parse(vehicle1Data);
-                    console.log('Found vehicle 1 data for pre-filling:', vehicleData);
-                    setVehicleData1(vehicleData);
-                    
-                    // Map vehicle 1 data to form fields
-                    templateFields = templateFields.map(field => {
-                      const updatedField = { ...field };
-                      
-                      switch (field.fieldType) {
-                        case 'vin':
-                          updatedField.content = vehicleData.vehicleId || '';
-                          break;
-                        case 'year':
-                          updatedField.content = vehicleData.year || '';
-                          break;
-                        case 'make':
-                          updatedField.content = convertMakeToDMVCode(vehicleData.make || '');
-                          break;
-                        case 'model':
-                          updatedField.content = vehicleData.model || '';
-                          break;
-                        case 'license_plate':
-                          updatedField.content = vehicleData.licensePlate || '';
-                          break;
-                        case 'mileage':
-                          updatedField.content = vehicleData.mileage || '';
-                          break;
-                        case 'price':
-                          updatedField.content = vehicleData.salePrice || '';
-                          break;
-                        case 'seller_name':
-                          updatedField.content = vehicleData.sellerName || '';
-                          break;
-                        case 'seller_address':
-                          updatedField.content = vehicleData.sellerAddress || '';
-                          break;
-                        case 'seller_phone':
-                          updatedField.content = vehicleData.sellerPhone || '';
-                          break;
-                        case 'buyer_name':
-                          const buyerName = [vehicleData.buyerFirstName, vehicleData.buyerLastName]
-                            .filter(Boolean).join(' ');
-                          updatedField.content = buyerName || '';
-                          break;
-                        case 'buyer_address':
-                          updatedField.content = vehicleData.buyerAddress || '';
-                          break;
-                        case 'buyer_phone':
-                          updatedField.content = vehicleData.buyerPhone || '';
-                          break;
-                        case 'sale_price':
-                          updatedField.content = vehicleData.salePrice || '';
-                          break;
-                        case 'sale_date':
-                          updatedField.content = vehicleData.saleDate || '';
-                          break;
-                        case 'date':
-                          updatedField.content = vehicleData.saleDate || '';
-                          break;
-                      }
-                      
-                      return updatedField;
-                    });
-                  } catch (error) {
-                    console.error('Error parsing vehicle 1 data:', error);
-                  }
+                let v1: any = null;
+                let v2: any = null;
+                let generic: any = null;
+                try { v1 = v1Str ? JSON.parse(v1Str) : null; } catch (e) { console.error('Error parsing vehicle 1 data:', e); }
+                try { v2 = v2Str ? JSON.parse(v2Str) : null; } catch (e) { console.error('Error parsing vehicle 2 data:', e); }
+                try { generic = genericStr ? JSON.parse(genericStr) : null; } catch (e) { console.error('Error parsing generic vehicle data:', e); }
+                
+                // If no explicit V1 stored but we have a generic payload from Inventory, treat it as V1
+                if (!v1 && generic) {
+                  localStorage.setItem('documents-vehicle-data-1', JSON.stringify(generic));
+                  v1 = generic;
+                // If V1 exists and a different generic payload arrives, treat it as V2
+                } else if (v1 && generic && (!v2 || (v2 && v2.id !== generic.id)) && v1.id !== generic.id) {
+                  localStorage.setItem('documents-vehicle-data-2', JSON.stringify(generic));
+                  v2 = generic;
+                }
+                
+                // Prefill Vehicle 1
+                if (v1) {
+                  console.log('Found vehicle 1 data for pre-filling:', v1);
+                  setVehicleData1(v1);
+                  
+                  templateFields = templateFields.map(field => {
+                    const updatedField = { ...field };
+                    switch (field.fieldType) {
+                      case 'vin':
+                        updatedField.content = v1.vehicleId || '';
+                        break;
+                      case 'year':
+                        updatedField.content = v1.year || '';
+                        break;
+                      case 'make':
+                        updatedField.content = convertMakeToDMVCode(v1.make || '');
+                        break;
+                      case 'model':
+                        updatedField.content = v1.model || '';
+                        break;
+                      case 'license_plate':
+                        updatedField.content = v1.licensePlate || '';
+                        break;
+                      case 'mileage':
+                        updatedField.content = v1.mileage || '';
+                        break;
+                      case 'price':
+                        updatedField.content = v1.salePrice || '';
+                        break;
+                      case 'seller_name':
+                        updatedField.content = v1.sellerName || '';
+                        break;
+                      case 'seller_address':
+                        updatedField.content = v1.sellerAddress || '';
+                        break;
+                      case 'seller_phone':
+                        updatedField.content = v1.sellerPhone || '';
+                        break;
+                      case 'buyer_name':
+                        const buyerName = [v1.buyerFirstName, v1.buyerLastName].filter(Boolean).join(' ');
+                        updatedField.content = buyerName || '';
+                        break;
+                      case 'buyer_address':
+                        updatedField.content = v1.buyerAddress || '';
+                        break;
+                      case 'buyer_phone':
+                        updatedField.content = v1.buyerPhone || '';
+                        break;
+                      case 'sale_price':
+                        updatedField.content = v1.salePrice || '';
+                        break;
+                      case 'sale_date':
+                        updatedField.content = v1.saleDate || '';
+                        break;
+                      case 'date':
+                        updatedField.content = v1.saleDate || '';
+                        break;
+                    }
+                    return updatedField;
+                  });
                 }
 
-                if (vehicle2Data) {
-                  try {
-                    const vehicleData = JSON.parse(vehicle2Data);
-                    console.log('Found vehicle 2 data for pre-filling:', vehicleData);
-                    setVehicleData2(vehicleData);
-                    
-                    // Map vehicle 2 data to form fields with _2 suffix
-                    templateFields = templateFields.map(field => {
-                      const updatedField = { ...field };
-                      
-                      switch (field.fieldType) {
-                        case 'vin_2':
-                          updatedField.content = vehicleData.vehicleId || '';
-                          break;
-                        case 'year_2':
-                          updatedField.content = vehicleData.year || '';
-                          break;
-                        case 'make_2':
-                          updatedField.content = convertMakeToDMVCode(vehicleData.make || '');
-                          break;
-                        case 'model_2':
-                          updatedField.content = vehicleData.model || '';
-                          break;
-                        case 'license_plate_2':
-                          updatedField.content = vehicleData.licensePlate || '';
-                          break;
-                        case 'mileage_2':
-                          updatedField.content = vehicleData.mileage || '';
-                          break;
-                        case 'price_2':
-                          updatedField.content = vehicleData.salePrice || '';
-                          break;
-                        case 'date_2':
-                          updatedField.content = vehicleData.saleDate || '';
-                          break;
-                      }
-                      
-                      return updatedField;
-                    });
-                  } catch (error) {
-                    console.error('Error parsing vehicle 2 data:', error);
-                  }
+                // Prefill Vehicle 2
+                if (v2) {
+                  console.log('Found vehicle 2 data for pre-filling:', v2);
+                  setVehicleData2(v2);
+                  
+                  templateFields = templateFields.map(field => {
+                    const updatedField = { ...field };
+                    switch (field.fieldType) {
+                      case 'vin_2':
+                        updatedField.content = v2.vehicleId || '';
+                        break;
+                      case 'year_2':
+                        updatedField.content = v2.year || '';
+                        break;
+                      case 'make_2':
+                        updatedField.content = convertMakeToDMVCode(v2.make || '');
+                        break;
+                      case 'model_2':
+                        updatedField.content = v2.model || '';
+                        break;
+                      case 'license_plate_2':
+                        updatedField.content = v2.licensePlate || '';
+                        break;
+                      case 'mileage_2':
+                        updatedField.content = v2.mileage || '';
+                        break;
+                      case 'price_2':
+                        updatedField.content = v2.salePrice || '';
+                        break;
+                      case 'date_2':
+                        updatedField.content = v2.saleDate || '';
+                        break;
+                    }
+                    return updatedField;
+                  });
                 }
                 
                 // Show success message based on vehicles loaded
                 setTimeout(() => {
-                  if (vehicle1Data && vehicle2Data) {
+                  const hasV1 = !!v1; const hasV2 = !!v2;
+                  if (hasV1 && hasV2) {
                     toast.success("Both vehicles loaded - form fields have been pre-filled");
-                  } else if (vehicle1Data) {
+                  } else if (hasV1) {
                     toast.success("Vehicle 1 data loaded - form fields have been pre-filled");
-                  } else if (vehicle2Data) {
+                  } else if (hasV2) {
                     toast.success("Vehicle 2 data loaded - form fields have been pre-filled");
                   }
                 }, 100);
