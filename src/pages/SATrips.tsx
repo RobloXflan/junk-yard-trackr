@@ -121,6 +121,7 @@ export function SATrips() {
     localStorage.removeItem('documents-vehicle-data-1');
     localStorage.removeItem('documents-vehicle-data-2');
     localStorage.removeItem('documents-next-vehicle-slot');
+    localStorage.removeItem('documents-current-template');
     
     // Refresh the trips list
     loadSavedTrips();

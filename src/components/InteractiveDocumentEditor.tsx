@@ -160,6 +160,177 @@ export function InteractiveDocumentEditor({ onNavigate }: InteractiveDocumentEdi
   // Combined predefined fields for reference
   const predefinedFields = [...predefinedFieldsVehicle1, ...predefinedFieldsVehicle2];
 
+  // Normalize and prefill fields with vehicle data
+  const normalizeAndPrefillFields = (templateFields: TextField[]): TextField[] => {
+    let normalizedFields = [...templateFields];
+    
+    // First, clear all known Vehicle 1 and Vehicle 2 field contents
+    const knownVehicleFieldTypes = [
+      'vin', 'year', 'make', 'model', 'license_plate', 'mileage', 'price', 'date', 
+      'seller_name', 'seller_address', 'seller_phone', 'buyer_name', 'buyer_address', 
+      'buyer_phone', 'sale_price', 'sale_date',
+      'vin_2', 'year_2', 'make_2', 'model_2', 'license_plate_2', 'mileage_2', 'price_2', 'date_2'
+    ];
+    
+    normalizedFields = normalizedFields.map(field => 
+      knownVehicleFieldTypes.includes(field.fieldType) ? { ...field, content: '' } : field
+    );
+    
+    // Get current vehicle data
+    const v1Str = localStorage.getItem('documents-vehicle-data-1');
+    const v2Str = localStorage.getItem('documents-vehicle-data-2');
+    
+    let v1: any = null;
+    let v2: any = null;
+    try { v1 = v1Str ? JSON.parse(v1Str) : null; } catch (e) { console.error('Error parsing vehicle 1 data:', e); }
+    try { v2 = v2Str ? JSON.parse(v2Str) : null; } catch (e) { console.error('Error parsing vehicle 2 data:', e); }
+    
+    // Prefill Vehicle 1 if present
+    if (v1) {
+      console.log('Pre-filling Vehicle 1 data:', v1);
+      setVehicleData1(v1);
+      
+      normalizedFields = normalizedFields.map(field => {
+        const updatedField = { ...field };
+        switch (field.fieldType) {
+          case 'vin':
+            updatedField.content = v1.vehicleId || '';
+            break;
+          case 'year':
+            updatedField.content = v1.year || '';
+            break;
+          case 'make':
+            updatedField.content = convertMakeToDMVCode(v1.make || '');
+            break;
+          case 'model':
+            updatedField.content = v1.model || '';
+            break;
+          case 'license_plate':
+            updatedField.content = v1.licensePlate || '';
+            break;
+          case 'mileage':
+            updatedField.content = v1.mileage || '';
+            break;
+          case 'price':
+            updatedField.content = v1.salePrice || '';
+            break;
+          case 'seller_name':
+            updatedField.content = v1.sellerName || '';
+            break;
+          case 'seller_address':
+            updatedField.content = v1.sellerAddress || '';
+            break;
+          case 'seller_phone':
+            updatedField.content = v1.sellerPhone || '';
+            break;
+          case 'buyer_name':
+            const buyerName = [v1.buyerFirstName, v1.buyerLastName].filter(Boolean).join(' ');
+            updatedField.content = buyerName || '';
+            break;
+          case 'buyer_address':
+            updatedField.content = v1.buyerAddress || '';
+            break;
+          case 'buyer_phone':
+            updatedField.content = v1.buyerPhone || '';
+            break;
+          case 'sale_price':
+            updatedField.content = v1.salePrice || '';
+            break;
+          case 'sale_date':
+            updatedField.content = v1.saleDate || '';
+            break;
+          case 'date':
+            updatedField.content = v1.saleDate || '';
+            break;
+        }
+        return updatedField;
+      });
+    }
+
+    // Only prefill Vehicle 2 in trip mode and when explicitly selected
+    if (v2 && isInTripMode) {
+      console.log('Pre-filling Vehicle 2 data:', v2);
+      setVehicleData2(v2);
+      
+      // Check if Vehicle 2 fields exist
+      const hasVehicle2Fields = normalizedFields.some(field => 
+        field.fieldType.endsWith('_2')
+      );
+      
+      if (!hasVehicle2Fields) {
+        console.log('No Vehicle 2 fields found, automatically adding them...');
+        const vehicle2Fields = addVehicle2FieldsAutomatically(normalizedFields, v2);
+        normalizedFields = [...normalizedFields, ...vehicle2Fields];
+        console.log('Added', vehicle2Fields.length, 'Vehicle 2 fields automatically');
+      } else {
+        // Pre-fill existing Vehicle 2 fields with compatibility mapping
+        normalizedFields = normalizedFields.map(field => {
+          const updatedField = { ...field };
+          
+          // Try exact fieldType match first, then compatibility patterns
+          let vehicle2FieldType = field.fieldType;
+          if (!vehicle2FieldType.endsWith('_2')) {
+            // Handle compatibility patterns like "VIN (Vehicle 2)", "Vehicle 2 VIN", etc.
+            if (field.label && (field.label.includes('Vehicle 2') || field.label.includes('(Vehicle 2)'))) {
+              if (field.label.toLowerCase().includes('vin')) vehicle2FieldType = 'vin_2';
+              else if (field.label.toLowerCase().includes('year')) vehicle2FieldType = 'year_2';
+              else if (field.label.toLowerCase().includes('make')) vehicle2FieldType = 'make_2';
+              else if (field.label.toLowerCase().includes('model')) vehicle2FieldType = 'model_2';
+              else if (field.label.toLowerCase().includes('license')) vehicle2FieldType = 'license_plate_2';
+              else if (field.label.toLowerCase().includes('mileage')) vehicle2FieldType = 'mileage_2';
+              else if (field.label.toLowerCase().includes('price')) vehicle2FieldType = 'price_2';
+              else if (field.label.toLowerCase().includes('date')) vehicle2FieldType = 'date_2';
+            }
+          }
+          
+          switch (vehicle2FieldType) {
+            case 'vin_2':
+              updatedField.content = v2.vehicleId || '';
+              console.log(`Filled ${field.label} with VIN:`, v2.vehicleId);
+              break;
+            case 'year_2':
+              updatedField.content = v2.year || '';
+              console.log(`Filled ${field.label} with year:`, v2.year);
+              break;
+            case 'make_2':
+              updatedField.content = convertMakeToDMVCode(v2.make || '');
+              console.log(`Filled ${field.label} with make:`, v2.make);
+              break;
+            case 'model_2':
+              updatedField.content = v2.model || '';
+              console.log(`Filled ${field.label} with model:`, v2.model);
+              break;
+            case 'license_plate_2':
+              updatedField.content = v2.licensePlate || '';
+              console.log(`Filled ${field.label} with license plate:`, v2.licensePlate);
+              break;
+            case 'mileage_2':
+              updatedField.content = v2.mileage || '';
+              console.log(`Filled ${field.label} with mileage:`, v2.mileage);
+              break;
+            case 'price_2':
+              updatedField.content = v2.salePrice || '';
+              console.log(`Filled ${field.label} with price:`, v2.salePrice);
+              break;
+            case 'date_2':
+              updatedField.content = v2.saleDate || '';
+              console.log(`Filled ${field.label} with date:`, v2.saleDate);
+              break;
+          }
+          return updatedField;
+        });
+      }
+    } else if (!isInTripMode || !v2) {
+      // Clear Vehicle 2 data when not in trip mode or no Vehicle 2 selected
+      setVehicleData2(null);
+      normalizedFields = normalizedFields.map(field =>
+        (field.fieldType.endsWith('_2') || (field.label && field.label.includes('Vehicle 2'))) ? { ...field, content: '' } : field
+      );
+    }
+    
+    return normalizedFields;
+  };
+
   useEffect(() => {
     const initializeEditor = async () => {
       // Check for SA trip mode first
@@ -212,6 +383,88 @@ export function InteractiveDocumentEditor({ onNavigate }: InteractiveDocumentEdi
     initializeEditor();
   }, []);
 
+  // Live update Vehicle 2 fields when vehicleData2 changes
+  useEffect(() => {
+    if (fields.length === 0) return; // Don't run during initial load
+    
+    console.log('vehicleData2 changed:', vehicleData2);
+    
+    setFields(currentFields => {
+      let updatedFields = [...currentFields];
+      
+      if (vehicleData2 && isInTripMode) {
+        // Vehicle 2 was added - check if we need to add fields or just prefill existing ones
+        const hasVehicle2Fields = updatedFields.some(field => 
+          field.fieldType.endsWith('_2') || (field.label && field.label.includes('Vehicle 2'))
+        );
+        
+        if (!hasVehicle2Fields) {
+          console.log('Auto-adding Vehicle 2 fields...');
+          const vehicle2Fields = addVehicle2FieldsAutomatically(updatedFields, vehicleData2);
+          updatedFields = [...updatedFields, ...vehicle2Fields];
+        } else {
+          console.log('Pre-filling existing Vehicle 2 fields...');
+          updatedFields = updatedFields.map(field => {
+            const updatedField = { ...field };
+            
+            // Try exact fieldType match first, then compatibility patterns
+            let vehicle2FieldType = field.fieldType;
+            if (!vehicle2FieldType.endsWith('_2')) {
+              if (field.label && (field.label.includes('Vehicle 2') || field.label.includes('(Vehicle 2)'))) {
+                if (field.label.toLowerCase().includes('vin')) vehicle2FieldType = 'vin_2';
+                else if (field.label.toLowerCase().includes('year')) vehicle2FieldType = 'year_2';
+                else if (field.label.toLowerCase().includes('make')) vehicle2FieldType = 'make_2';
+                else if (field.label.toLowerCase().includes('model')) vehicle2FieldType = 'model_2';
+                else if (field.label.toLowerCase().includes('license')) vehicle2FieldType = 'license_plate_2';
+                else if (field.label.toLowerCase().includes('mileage')) vehicle2FieldType = 'mileage_2';
+                else if (field.label.toLowerCase().includes('price')) vehicle2FieldType = 'price_2';
+                else if (field.label.toLowerCase().includes('date')) vehicle2FieldType = 'date_2';
+              }
+            }
+            
+            switch (vehicle2FieldType) {
+              case 'vin_2':
+                updatedField.content = vehicleData2.vehicleId || '';
+                break;
+              case 'year_2':
+                updatedField.content = vehicleData2.year || '';
+                break;
+              case 'make_2':
+                updatedField.content = convertMakeToDMVCode(vehicleData2.make || '');
+                break;
+              case 'model_2':
+                updatedField.content = vehicleData2.model || '';
+                break;
+              case 'license_plate_2':
+                updatedField.content = vehicleData2.licensePlate || '';
+                break;
+              case 'mileage_2':
+                updatedField.content = vehicleData2.mileage || '';
+                break;
+              case 'price_2':
+                updatedField.content = vehicleData2.salePrice || '';
+                break;
+              case 'date_2':
+                updatedField.content = vehicleData2.saleDate || '';
+                break;
+            }
+            return updatedField;
+          });
+        }
+        
+        toast.success('Vehicle 2 data loaded and pre-filled');
+      } else if (!vehicleData2) {
+        // Vehicle 2 was removed - clear all Vehicle 2 fields
+        console.log('Clearing Vehicle 2 fields...');
+        updatedFields = updatedFields.map(field =>
+          (field.fieldType.endsWith('_2') || (field.label && field.label.includes('Vehicle 2'))) ? { ...field, content: '' } : field
+        );
+      }
+      
+      return updatedFields;
+    });
+  }, [vehicleData2, isInTripMode]);
+
   const loadDefaultTemplate = async () => {
     // First check Supabase Storage for "theonlyreal" template
     try {
@@ -236,144 +489,21 @@ export function InteractiveDocumentEditor({ onNavigate }: InteractiveDocumentEdi
                 console.log('Loading theonlyreal template from Supabase:', defaultTemplate);
                 let templateFields = [...(defaultTemplate.fields || [])];
                 
-                // Check for dual vehicle data to pre-fill (explicit slots only)
-                const v1Str = localStorage.getItem('documents-vehicle-data-1');
-                const v2Str = localStorage.getItem('documents-vehicle-data-2');
+                // Normalize and prefill all fields
+                templateFields = normalizeAndPrefillFields(templateFields);
                 
-                let v1: any = null;
-                let v2: any = null;
-                try { v1 = v1Str ? JSON.parse(v1Str) : null; } catch (e) { console.error('Error parsing vehicle 1 data:', e); }
-                try { v2 = v2Str ? JSON.parse(v2Str) : null; } catch (e) { console.error('Error parsing vehicle 2 data:', e); }
-                
-                // Prefill Vehicle 1
-                if (v1) {
-                  console.log('Found vehicle 1 data for pre-filling:', v1);
-                  setVehicleData1(v1);
-                  
-                  templateFields = templateFields.map(field => {
-                    const updatedField = { ...field };
-                    switch (field.fieldType) {
-                      case 'vin':
-                        updatedField.content = v1.vehicleId || '';
-                        break;
-                      case 'year':
-                        updatedField.content = v1.year || '';
-                        break;
-                      case 'make':
-                        updatedField.content = convertMakeToDMVCode(v1.make || '');
-                        break;
-                      case 'model':
-                        updatedField.content = v1.model || '';
-                        break;
-                      case 'license_plate':
-                        updatedField.content = v1.licensePlate || '';
-                        break;
-                      case 'mileage':
-                        updatedField.content = v1.mileage || '';
-                        break;
-                      case 'price':
-                        updatedField.content = v1.salePrice || '';
-                        break;
-                      case 'seller_name':
-                        updatedField.content = v1.sellerName || '';
-                        break;
-                      case 'seller_address':
-                        updatedField.content = v1.sellerAddress || '';
-                        break;
-                      case 'seller_phone':
-                        updatedField.content = v1.sellerPhone || '';
-                        break;
-                      case 'buyer_name':
-                        const buyerName = [v1.buyerFirstName, v1.buyerLastName].filter(Boolean).join(' ');
-                        updatedField.content = buyerName || '';
-                        break;
-                      case 'buyer_address':
-                        updatedField.content = v1.buyerAddress || '';
-                        break;
-                      case 'buyer_phone':
-                        updatedField.content = v1.buyerPhone || '';
-                        break;
-                      case 'sale_price':
-                        updatedField.content = v1.salePrice || '';
-                        break;
-                      case 'sale_date':
-                        updatedField.content = v1.saleDate || '';
-                        break;
-                      case 'date':
-                        updatedField.content = v1.saleDate || '';
-                        break;
-                    }
-                    return updatedField;
-                  });
-                }
-
-                // Only prefill Vehicle 2 in trip mode and when explicitly selected
-                if (v2 && isInTripMode) {
-                  console.log('Found vehicle 2 data for pre-filling:', v2);
-                  setVehicleData2(v2);
-                  
-                  // First, check if Vehicle 2 fields exist
-                  const hasVehicle2Fields = templateFields.some(field => 
-                    field.fieldType.endsWith('_2')
-                  );
-                  
-                  if (!hasVehicle2Fields) {
-                    console.log('No Vehicle 2 fields found, automatically adding them...');
-                    // Auto-add Vehicle 2 fields below Vehicle 1 fields
-                    const vehicle2Fields = addVehicle2FieldsAutomatically(templateFields, v2);
-                    templateFields = [...templateFields, ...vehicle2Fields];
-                    console.log('Added', vehicle2Fields.length, 'Vehicle 2 fields automatically');
-                  } else {
-                    // Pre-fill existing Vehicle 2 fields
-                    templateFields = templateFields.map(field => {
-                      const updatedField = { ...field };
-                      switch (field.fieldType) {
-                        case 'vin_2':
-                          updatedField.content = v2.vehicleId || '';
-                          break;
-                        case 'year_2':
-                          updatedField.content = v2.year || '';
-                          break;
-                        case 'make_2':
-                          updatedField.content = convertMakeToDMVCode(v2.make || '');
-                          break;
-                        case 'model_2':
-                          updatedField.content = v2.model || '';
-                          break;
-                        case 'license_plate_2':
-                          updatedField.content = v2.licensePlate || '';
-                          break;
-                        case 'mileage_2':
-                          updatedField.content = v2.mileage || '';
-                          break;
-                        case 'price_2':
-                          updatedField.content = v2.salePrice || '';
-                          break;
-                        case 'date_2':
-                          updatedField.content = v2.saleDate || '';
-                          break;
-                      }
-                      return updatedField;
-                    });
-                  }
-                } else {
-                  // Clear Vehicle 2 data when not in trip mode or no Vehicle 2 selected
-                  setVehicleData2(null);
-                  templateFields = templateFields.map(field =>
-                    field.fieldType.endsWith('_2') ? { ...field, content: '' } : field
-                  );
-                }
-                
-                // Additional cleanup: If not in trip mode, clear all Vehicle 2 fields
-                if (!isInTripMode) {
-                  templateFields = templateFields.map(field =>
-                    field.fieldType.endsWith('_2') ? { ...field, content: '' } : field
-                  );
-                }
+                setFields(templateFields);
+                setCurrentDocumentUrl(defaultTemplate.imageUrl);
+                setTemplateName('theonlyreal');
+                console.log('Loaded theonlyreal template from Supabase with', templateFields.length, 'fields');
                 
                 // Show success message based on vehicles loaded
                 setTimeout(() => {
-                  const hasV1 = !!v1; const hasV2 = !!v2;
+                  const v1Str = localStorage.getItem('documents-vehicle-data-1');
+                  const v2Str = localStorage.getItem('documents-vehicle-data-2');
+                  const hasV1 = !!v1Str;
+                  const hasV2 = !!v2Str && isInTripMode;
+                  
                   if (hasV1 && hasV2) {
                     toast.success("Both vehicles loaded - form fields have been pre-filled");
                   } else if (hasV1) {
@@ -383,10 +513,6 @@ export function InteractiveDocumentEditor({ onNavigate }: InteractiveDocumentEdi
                   }
                 }, 100);
                 
-                setFields(templateFields);
-                setCurrentDocumentUrl(defaultTemplate.imageUrl);
-                setTemplateName('theonlyreal');
-                console.log('Loaded theonlyreal template from Supabase with', templateFields.length, 'fields');
                 return;
               }
             } catch (error) {
@@ -408,6 +534,9 @@ export function InteractiveDocumentEditor({ onNavigate }: InteractiveDocumentEdi
       if (defaultTemplate) {
         console.log('Loading theonlyreal template from localStorage:', defaultTemplate);
         let templateFields = [...(defaultTemplate.fields || [])];
+        
+        // Apply the same normalization and prefill logic for localStorage fallback
+        templateFields = normalizeAndPrefillFields(templateFields);
         
         setFields(templateFields);
         setCurrentDocumentUrl(defaultTemplate.imageUrl);
@@ -878,16 +1007,34 @@ export function InteractiveDocumentEditor({ onNavigate }: InteractiveDocumentEdi
     const savingToast = toast.loading('Saving template to cloud storage...');
 
     try {
+      // Strip vehicle contents from fields before saving to avoid baking stale data
+      const knownVehicleFieldTypes = [
+        'vin', 'year', 'make', 'model', 'license_plate', 'mileage', 'price', 'date', 
+        'seller_name', 'seller_address', 'seller_phone', 'buyer_name', 'buyer_address', 
+        'buyer_phone', 'sale_price', 'sale_date',
+        'vin_2', 'year_2', 'make_2', 'model_2', 'license_plate_2', 'mileage_2', 'price_2', 'date_2'
+      ];
+      
+      const cleanedFields = fields.map(field => {
+        if (knownVehicleFieldTypes.includes(field.fieldType) || 
+            (field.label && field.label.includes('Vehicle'))) {
+          // Find the predefined field to get its placeholder, or use empty string
+          const predefinedField = predefinedFields.find(pf => pf.id === field.fieldType);
+          return { ...field, content: predefinedField?.placeholder || '' };
+        }
+        return field;
+      });
+      
       const template: DocumentTemplate = {
         id: Date.now().toString(),
         name: templateName.trim(),
         imageUrl: currentDocumentUrl,
-        fields: [...fields], // Create a copy of the fields array
+        fields: cleanedFields, // Use cleaned fields without vehicle data
         createdAt: new Date(),
         updatedAt: new Date()
       };
 
-      console.log('Template to save:', template);
+      console.log('Template to save (with cleaned fields):', template);
 
       // Save to Supabase Storage
       const fileName = `${template.name.replace(/[^a-zA-Z0-9-_]/g, '_')}_${template.id}.json`;
@@ -1230,7 +1377,7 @@ export function InteractiveDocumentEditor({ onNavigate }: InteractiveDocumentEdi
       </div>
 
       {/* Dual Vehicle Management Controls */}
-      {templateName === 'SA Recycling' && (
+      {(templateName === 'theonlyreal' || isInTripMode) && (
         <Card className="p-4 bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
