@@ -614,7 +614,7 @@ export function VehicleDetailsDialog({
               <div className="flex justify-center">
                 <Button 
                   variant="outline" 
-                  className="flex items-center gap-2 border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white"
+                  className="flex items-center gap-2 bg-orange-500 text-white border-orange-500 hover:bg-orange-600"
                   onClick={() => setShowPypTripSelection(true)}
                 >
                   <FileText className="w-4 h-4" />
