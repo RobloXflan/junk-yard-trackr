@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
-import { FileText, Printer } from "lucide-react";
+import { FileText, Printer, Upload, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useDropzone } from "react-dropzone";
 
 interface Template {
   id: string;
@@ -12,6 +13,7 @@ interface Template {
   description: string;
   previewImage: string;
   required: boolean;
+  uploadedImage?: string;
 }
 
 const PYP_TEMPLATES: Template[] = [
@@ -81,6 +83,45 @@ export function PYPTemplateSelectionDialog({
     // Pre-select required templates
     PYP_TEMPLATES.filter(t => t.required).map(t => t.id)
   );
+  const [uploadedImages, setUploadedImages] = useState<Record<string, string>>({});
+
+  const handleImageUpload = useCallback((templateId: string, files: File[]) => {
+    const file = files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an image file (PNG, JPG, etc.)",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Create preview URL
+    const imageUrl = URL.createObjectURL(file);
+    setUploadedImages(prev => ({
+      ...prev,
+      [templateId]: imageUrl
+    }));
+
+    toast({
+      title: "Template uploaded",
+      description: `${file.name} uploaded successfully`,
+    });
+  }, []);
+
+  const handleRemoveImage = (templateId: string) => {
+    setUploadedImages(prev => {
+      const newImages = { ...prev };
+      if (newImages[templateId]) {
+        URL.revokeObjectURL(newImages[templateId]);
+        delete newImages[templateId];
+      }
+      return newImages;
+    });
+  };
 
   const handleTemplateToggle = (templateId: string, required: boolean) => {
     if (required) return; // Can't unselect required templates
@@ -93,7 +134,10 @@ export function PYPTemplateSelectionDialog({
   };
 
   const handleProceed = () => {
-    const selected = PYP_TEMPLATES.filter(t => selectedTemplates.includes(t.id));
+    const selected = PYP_TEMPLATES.filter(t => selectedTemplates.includes(t.id)).map(template => ({
+      ...template,
+      uploadedImage: uploadedImages[template.id]
+    }));
     
     if (selected.length === 0) {
       toast({
@@ -106,6 +150,59 @@ export function PYPTemplateSelectionDialog({
 
     onTemplatesSelected(selected);
     onClose();
+  };
+
+  // Template upload component
+  const TemplateUploadZone = ({ templateId, templateName }: { templateId: string; templateName: string }) => {
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({
+      accept: {
+        'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp']
+      },
+      maxFiles: 1,
+      onDrop: (files) => handleImageUpload(templateId, files)
+    });
+
+    const hasUpload = uploadedImages[templateId];
+
+    if (hasUpload) {
+      return (
+        <div className="relative aspect-[3/4] bg-muted rounded-lg overflow-hidden">
+          <img
+            src={uploadedImages[templateId]}
+            alt={`${templateName} template`}
+            className="w-full h-full object-cover"
+          />
+          <Button
+            size="sm"
+            variant="destructive"
+            className="absolute top-2 right-2 h-6 w-6 p-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRemoveImage(templateId);
+            }}
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
+      );
+    }
+
+    return (
+      <div
+        {...getRootProps()}
+        className={`aspect-[3/4] border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors ${
+          isDragActive
+            ? 'border-primary bg-primary/5'
+            : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50'
+        }`}
+      >
+        <input {...getInputProps()} />
+        <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+        <p className="text-sm text-center text-muted-foreground px-2">
+          {isDragActive ? 'Drop PNG template here' : 'Click or drag PNG template'}
+        </p>
+      </div>
+    );
   };
 
   return (
@@ -125,7 +222,7 @@ export function PYPTemplateSelectionDialog({
 
         <div className="space-y-4">
           <div className="text-sm text-muted-foreground">
-            Select the documents you need for this vehicle. Required documents are pre-selected.
+            Select the documents you need for this vehicle and upload PNG templates. Required documents are pre-selected.
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -135,27 +232,16 @@ export function PYPTemplateSelectionDialog({
               return (
                 <Card 
                   key={template.id}
-                  className={`cursor-pointer transition-all duration-200 ${
+                  className={`transition-all duration-200 ${
                     isSelected 
                       ? 'ring-2 ring-primary border-primary bg-primary/5' 
                       : 'hover:shadow-md border-border'
                   }`}
-                  onClick={() => handleTemplateToggle(template.id, template.required)}
                 >
                   <CardContent className="p-4">
                     <div className="space-y-3">
-                      {/* Preview Image */}
-                      <div className="aspect-[3/4] bg-muted rounded-lg flex items-center justify-center overflow-hidden">
-                        <img 
-                          src={template.previewImage}
-                          alt={`${template.name} preview`}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OTk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkRvY3VtZW50IFByZXZpZXc8L3RleHQ+PC9zdmc+';
-                          }}
-                        />
-                      </div>
+                      {/* Upload Zone */}
+                      <TemplateUploadZone templateId={template.id} templateName={template.name} />
 
                       {/* Template Info */}
                       <div className="space-y-2">
@@ -172,11 +258,18 @@ export function PYPTemplateSelectionDialog({
                           {template.description}
                         </p>
                         
-                        {template.required && (
-                          <div className="text-xs text-orange-600 font-medium">
-                            Required Document
-                          </div>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {template.required && (
+                            <div className="text-xs text-orange-600 font-medium">
+                              Required Document
+                            </div>
+                          )}
+                          {uploadedImages[template.id] && (
+                            <div className="text-xs text-green-600 font-medium">
+                              Template Uploaded
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </CardContent>
