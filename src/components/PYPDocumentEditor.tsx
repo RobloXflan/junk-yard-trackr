@@ -76,6 +76,32 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
     loadUploadedDocuments();
   }, []);
 
+  // Load selected PYP templates (from localStorage) into the editor on first load
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('selected-pyp-templates');
+      if (!raw) return;
+      const templates: Array<{ name: string; uploadedImage?: string } | any> = JSON.parse(raw);
+      if (Array.isArray(templates) && templates.length) {
+        const docs = templates
+          .filter((t) => t && typeof t === 'object' && t.uploadedImage)
+          .map((t, idx) => ({
+            id: `pyp-local-${idx}-${Date.now()}`,
+            name: t.name || `Template ${idx + 1}.png`,
+            url: t.uploadedImage as string,
+            uploadedAt: new Date(),
+          }));
+        if (docs.length) {
+          setUploadedDocuments(docs);
+          setCurrentDocumentUrl(docs[0].url);
+          toast.success(`Loaded ${docs.length} template${docs.length > 1 ? 's' : ''} from selection`);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load selected PYP templates:', e);
+    }
+  }, []);
+
   // Load uploaded documents (PYP specific storage)
   const loadUploadedDocuments = async () => {
     try {

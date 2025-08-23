@@ -987,15 +987,18 @@ export function VehicleDetailsDialog({
         isOpen={showPypTemplateSelection}
         onClose={() => setShowPypTemplateSelection(false)}
         onTemplatesSelected={(templates) => {
-          // Navigate to PYP documents with selected templates
-          const templateIds = templates.map(t => t.id);
-          localStorage.setItem('selected-pyp-templates', JSON.stringify(templateIds));
-          localStorage.setItem('pyp-vehicle-info', JSON.stringify({
-            year: localVehicle.year,
-            make: localVehicle.make,
-            model: localVehicle.model,
-            vin: localVehicle.vehicleId
-          }));
+          // Persist full selected templates (including uploaded images) and vehicle info
+          try {
+            localStorage.setItem('selected-pyp-templates', JSON.stringify(templates));
+            localStorage.setItem('pyp-vehicle-info', JSON.stringify({
+              year: localVehicle.year,
+              make: localVehicle.make,
+              model: localVehicle.model,
+              vin: localVehicle.vehicleId
+            }));
+          } catch (e) {
+            console.error('Failed to save PYP template selection:', e);
+          }
           onNavigate && onNavigate('pyp-documents');
         }}
         vehicleInfo={{

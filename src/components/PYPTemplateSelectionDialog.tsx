@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
@@ -99,24 +99,32 @@ export function PYPTemplateSelectionDialog({
       return;
     }
 
-    // Create preview URL
-    const imageUrl = URL.createObjectURL(file);
-    setUploadedImages(prev => ({
-      ...prev,
-      [templateId]: imageUrl
-    }));
-
-    toast({
-      title: "Template uploaded",
-      description: `${file.name} uploaded successfully`,
-    });
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      setUploadedImages(prev => ({
+        ...prev,
+        [templateId]: dataUrl
+      }));
+      toast({
+        title: "Template uploaded",
+        description: `${file.name} uploaded successfully`,
+      });
+    };
+    reader.onerror = () => {
+      toast({
+        title: "Upload failed",
+        description: "Could not read image file.",
+        variant: "destructive"
+      });
+    };
+    reader.readAsDataURL(file);
   }, []);
 
   const handleRemoveImage = (templateId: string) => {
     setUploadedImages(prev => {
       const newImages = { ...prev };
       if (newImages[templateId]) {
-        URL.revokeObjectURL(newImages[templateId]);
         delete newImages[templateId];
       }
       return newImages;
@@ -218,6 +226,9 @@ export function PYPTemplateSelectionDialog({
               Vehicle: {vehicleInfo.year} {vehicleInfo.make} {vehicleInfo.model} - VIN: {vehicleInfo.vin}
             </p>
           )}
+          <DialogDescription className="sr-only">
+            Select the documents you need for this vehicle and upload PNG templates. Required documents are pre-selected.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
