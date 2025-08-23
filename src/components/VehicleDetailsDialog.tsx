@@ -615,7 +615,7 @@ export function VehicleDetailsDialog({
                 <Button 
                   variant="outline" 
                   className="flex items-center gap-2 bg-orange-500 text-white border-orange-500 hover:bg-orange-600"
-                  onClick={() => setShowPypTripSelection(true)}
+                  onClick={() => onNavigate && onNavigate('pyp-documents')}
                 >
                   <FileText className="w-4 h-4" />
                   PYP Papers

@@ -56,6 +56,11 @@ const mainMenuItems = [
     icon: Truck,
   },
   {
+    title: "PYP Documents",
+    page: "pyp-documents",
+    icon: FileText,
+  },
+  {
     title: "Workers",
     page: "workers",
     icon: Users,
