@@ -63,6 +63,9 @@ export function VehicleDetailsDialog({
   const [showTripSelection, setShowTripSelection] = useState(false);
   const [showSlotSelection, setShowSlotSelection] = useState(false);
   const [selectedTripNumber, setSelectedTripNumber] = useState<number>(0);
+  const [showPypTripSelection, setShowPypTripSelection] = useState(false);
+  const [showPypSlotSelection, setShowPypSlotSelection] = useState(false);
+  const [selectedPypTripNumber, setSelectedPypTripNumber] = useState<number>(0);
 
   useEffect(() => {
     console.log('VehicleDetailsDialog: Vehicle prop changed:', vehicle);
@@ -191,6 +194,63 @@ export function VehicleDetailsDialog({
     toast({
       title: "Vehicle Added to Trip",
       description: `Vehicle added to Trip ${selectedTripNumber}, Slot ${slot}`,
+    });
+  };
+
+  const handlePypTripSelected = (tripNumber: number) => {
+    setSelectedPypTripNumber(tripNumber);
+    setShowPypTripSelection(false);
+    setShowPypSlotSelection(true);
+  };
+
+  const handlePypSlotSelected = (slot: 1 | 2) => {
+    const today = format(new Date(), 'yyyy-MM-dd');
+    const tripKey = `pyp-trip-${today}-${selectedPypTripNumber}`;
+    
+    // Get existing trip data
+    const existingTripData = localStorage.getItem(tripKey);
+    const tripData = existingTripData ? JSON.parse(existingTripData) : {};
+    
+    // Add vehicle to the selected slot
+    const vehicleData = {
+      vehicleId: localVehicle.vehicleId,
+      year: localVehicle.year,
+      make: localVehicle.make,
+      model: localVehicle.model,
+      licensePlate: localVehicle.licensePlate,
+      sellerName: localVehicle.sellerName,
+      purchasePrice: localVehicle.purchasePrice,
+      purchaseDate: localVehicle.purchaseDate,
+      buyerFirstName: localVehicle.buyerFirstName,
+      buyerLastName: localVehicle.buyerLastName,
+      buyerAddress: localVehicle.buyerAddress,
+      salePrice: localVehicle.salePrice,
+      saleDate: localVehicle.saleDate,
+      id: localVehicle.id
+    };
+    
+    if (slot === 1) {
+      tripData.vehicle1 = vehicleData;
+    } else {
+      tripData.vehicle2 = vehicleData;
+    }
+    
+    // Save trip data
+    localStorage.setItem(tripKey, JSON.stringify(tripData));
+    
+    // Set up navigation data for documents page
+    localStorage.setItem('current-pyp-trip', tripKey);
+    localStorage.setItem('documents-next-vehicle-slot', slot.toString());
+    
+    setShowPypSlotSelection(false);
+    
+    if (onNavigate) {
+      onNavigate('documents');
+    }
+    
+    toast({
+      title: "Vehicle Added to PYP Trip",
+      description: `Vehicle added to PYP Trip ${selectedPypTripNumber}, Slot ${slot}`,
     });
   };
 
@@ -549,6 +609,20 @@ export function VehicleDetailsDialog({
               </div>
             )}
 
+            {/* Pick Your Part Papers Button */}
+            {selectedStatus === 'pick-your-part' && (
+              <div className="flex justify-center">
+                <Button 
+                  variant="outline" 
+                  className="flex items-center gap-2 border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white"
+                  onClick={() => setShowPypTripSelection(true)}
+                >
+                  <FileText className="w-4 h-4" />
+                  PYP Papers
+                </Button>
+              </div>
+            )}
+
             {/* Vehicle Details */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -889,6 +963,21 @@ export function VehicleDetailsDialog({
         onClose={() => setShowSlotSelection(false)}
         onSlotSelected={handleSlotSelected}
         tripNumber={selectedTripNumber}
+        vehicleData={localVehicle}
+      />
+
+      <TripSelectionDialog
+        open={showPypTripSelection}
+        onClose={() => setShowPypTripSelection(false)}
+        onTripSelected={handlePypTripSelected}
+        vehicleData={localVehicle}
+      />
+
+      <VehicleSlotSelectionDialog
+        open={showPypSlotSelection}
+        onClose={() => setShowPypSlotSelection(false)}
+        onSlotSelected={handlePypSlotSelected}
+        tripNumber={selectedPypTripNumber}
         vehicleData={localVehicle}
       />
     </>
