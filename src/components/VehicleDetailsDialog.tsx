@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { RecyclingDateDialog } from "./forms/RecyclingDateDialog";
 import { TripSelectionDialog } from "./TripSelectionDialog";
 import { VehicleSlotSelectionDialog } from "./VehicleSlotSelectionDialog";
+import { PYPTemplateSelectionDialog } from "./PYPTemplateSelectionDialog";
 import { format } from "date-fns";
 
 // Define a type for stored documents (JSON-serializable)
@@ -66,6 +67,7 @@ export function VehicleDetailsDialog({
   const [showPypTripSelection, setShowPypTripSelection] = useState(false);
   const [showPypSlotSelection, setShowPypSlotSelection] = useState(false);
   const [selectedPypTripNumber, setSelectedPypTripNumber] = useState<number>(0);
+  const [showPypTemplateSelection, setShowPypTemplateSelection] = useState(false);
 
   useEffect(() => {
     console.log('VehicleDetailsDialog: Vehicle prop changed:', vehicle);
@@ -615,7 +617,7 @@ export function VehicleDetailsDialog({
                 <Button 
                   variant="outline" 
                   className="flex items-center gap-2 bg-orange-500 text-white border-orange-500 hover:bg-orange-600"
-                  onClick={() => onNavigate && onNavigate('pyp-documents')}
+                  onClick={() => setShowPypTemplateSelection(true)}
                 >
                   <FileText className="w-4 h-4" />
                   PYP Papers
@@ -979,6 +981,29 @@ export function VehicleDetailsDialog({
         onSlotSelected={handlePypSlotSelected}
         tripNumber={selectedPypTripNumber}
         vehicleData={localVehicle}
+      />
+
+      <PYPTemplateSelectionDialog
+        isOpen={showPypTemplateSelection}
+        onClose={() => setShowPypTemplateSelection(false)}
+        onTemplatesSelected={(templates) => {
+          // Navigate to PYP documents with selected templates
+          const templateIds = templates.map(t => t.id);
+          localStorage.setItem('selected-pyp-templates', JSON.stringify(templateIds));
+          localStorage.setItem('pyp-vehicle-info', JSON.stringify({
+            year: localVehicle.year,
+            make: localVehicle.make,
+            model: localVehicle.model,
+            vin: localVehicle.vehicleId
+          }));
+          onNavigate && onNavigate('pyp-documents');
+        }}
+        vehicleInfo={{
+          year: localVehicle.year,
+          make: localVehicle.make,
+          model: localVehicle.model,
+          vin: localVehicle.vehicleId
+        }}
       />
     </>
   );
