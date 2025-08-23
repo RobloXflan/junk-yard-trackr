@@ -124,7 +124,18 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
             uploadedAt: new Date(file.created_at || Date.now())
           }));
 
-        setUploadedDocuments(documents);
+        // Merge Supabase documents with any existing ones (e.g., from local selection)
+        setUploadedDocuments((prev) => {
+          const merged = [...documents];
+          for (const d of prev) {
+            if (!merged.some((m) => m.url === d.url)) merged.push(d);
+          }
+          // If no current document selected, default to first
+          if (!currentDocumentUrl && merged.length > 0) {
+            setCurrentDocumentUrl(merged[0].url);
+          }
+          return merged;
+        });
       }
     } catch (error) {
       console.error('Error loading uploaded documents:', error);

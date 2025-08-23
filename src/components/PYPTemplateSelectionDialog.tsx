@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { FileText, Printer, Upload, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useDropzone } from "react-dropzone";
-
+import { supabase } from "@/integrations/supabase/client";
 interface Template {
   id: string;
   name: string;
@@ -85,7 +85,7 @@ export function PYPTemplateSelectionDialog({
   );
   const [uploadedImages, setUploadedImages] = useState<Record<string, string>>({});
 
-  const handleImageUpload = useCallback((templateId: string, files: File[]) => {
+  const handleImageUpload = useCallback(async (templateId: string, files: File[]) => {
     const file = files[0];
     if (!file) return;
 
@@ -99,6 +99,7 @@ export function PYPTemplateSelectionDialog({
       return;
     }
 
+    // Immediate local preview via Data URL
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = reader.result as string;
@@ -106,21 +107,44 @@ export function PYPTemplateSelectionDialog({
         ...prev,
         [templateId]: dataUrl
       }));
-      toast({
-        title: "Template uploaded",
-        description: `${file.name} uploaded successfully`,
-      });
-    };
-    reader.onerror = () => {
-      toast({
-        title: "Upload failed",
-        description: "Could not read image file.",
-        variant: "destructive"
-      });
     };
     reader.readAsDataURL(file);
+
+    // Background upload to Supabase for persistence
+    try {
+      const path = `pyp-templates/${templateId}/${Date.now()}-${file.name}`;
+      const { error } = await supabase.storage
+        .from('documents')
+        .upload(path, file, { cacheControl: '31536000', upsert: false });
+      if (error) throw error;
+
+      const { data } = supabase.storage.from('documents').getPublicUrl(path);
+      if (data?.publicUrl) {
+        setUploadedImages(prev => ({
+          ...prev,
+          [templateId]: data.publicUrl
+        }));
+        toast({ title: "Template saved", description: "Stored in cloud and will stay for future use." });
+      }
+    } catch (e) {
+      console.warn('Supabase upload failed; keeping local copy only', e);
+      toast({ title: "Saved locally", description: "Cloud upload failed; template will persist locally on this device." });
+    }
   }, []);
 
+  // Persist uploaded images locally so they remain when reopening
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('pyp-template-images');
+      if (raw) setUploadedImages(JSON.parse(raw));
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('pyp-template-images', JSON.stringify(uploadedImages));
+    } catch {}
+  }, [uploadedImages]);
   const handleRemoveImage = (templateId: string) => {
     setUploadedImages(prev => {
       const newImages = { ...prev };
