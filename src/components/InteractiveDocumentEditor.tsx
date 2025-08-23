@@ -248,7 +248,7 @@ export function InteractiveDocumentEditor({ onNavigate }: InteractiveDocumentEdi
     }
 
     // Only prefill Vehicle 2 in trip mode and when explicitly selected
-    if (v2 && isInTripMode) {
+    if (v2) {
       console.log('Pre-filling Vehicle 2 data:', v2);
       setVehicleData2(v2);
       
@@ -320,7 +320,7 @@ export function InteractiveDocumentEditor({ onNavigate }: InteractiveDocumentEdi
           return updatedField;
         });
       }
-    } else if (!isInTripMode || !v2) {
+    } else if (!v2) {
       // Clear Vehicle 2 data when not in trip mode or no Vehicle 2 selected
       setVehicleData2(null);
       normalizedFields = normalizedFields.map(field =>
@@ -392,7 +392,7 @@ export function InteractiveDocumentEditor({ onNavigate }: InteractiveDocumentEdi
     setFields(currentFields => {
       let updatedFields = [...currentFields];
       
-      if (vehicleData2 && isInTripMode) {
+      if (vehicleData2) {
         // Vehicle 2 was added - check if we need to add fields or just prefill existing ones
         const hasVehicle2Fields = updatedFields.some(field => 
           field.fieldType.endsWith('_2') || (field.label && field.label.includes('Vehicle 2'))
