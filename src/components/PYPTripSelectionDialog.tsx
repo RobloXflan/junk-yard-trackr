@@ -81,7 +81,7 @@ export function PYPTripSelectionDialog({
                           {tripNumber}
                         </div>
                         <div>
-                          <div className="font-medium">PYP Trip {tripNumber}</div>
+                          <div className="font-medium">Trip {tripNumber}</div>
                           <div className="text-sm text-muted-foreground">
                             {format(new Date(), 'MMM d, yyyy')}
                           </div>
