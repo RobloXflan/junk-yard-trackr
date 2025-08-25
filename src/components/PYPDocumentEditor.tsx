@@ -309,11 +309,28 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
     
     // If no fields exist, try to load saved template fields first
     if (updatedFields.length === 0) {
-      const savedFields = localStorage.getItem(`pyp-template-fields-${currentDocument.name}`);
+      // First check for default PYP template
+      const defaultTemplate = getDefaultTemplateName();
+      let savedFields = null;
+      
+      if (defaultTemplate) {
+        savedFields = localStorage.getItem(`pyp-template-fields-${defaultTemplate}`);
+        if (savedFields) {
+          console.log('Loading default PYP template:', defaultTemplate);
+        }
+      }
+      
+      // Fallback to document-specific template
+      if (!savedFields) {
+        savedFields = localStorage.getItem(`pyp-template-fields-${currentDocument.name}`);
+        if (savedFields) {
+          console.log('Loading document-specific template for', currentDocument.name);
+        }
+      }
+      
       if (savedFields) {
         try {
           updatedFields = JSON.parse(savedFields);
-          console.log('Loaded saved field layout for', currentDocument.name);
         } catch (e) {
           console.error('Error loading saved fields:', e);
         }
@@ -483,6 +500,28 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
     }
   };
 
+  // Save as default PYP template
+  const saveAsDefaultTemplate = () => {
+    if (!currentDocument) {
+      toast.error('No document selected');
+      return;
+    }
+    
+    const docFields = documentFields[currentDocument.id] || [];
+    const templateName = currentDocument.name;
+    
+    try {
+      // Save the template fields
+      localStorage.setItem(`pyp-template-fields-${templateName}`, JSON.stringify(docFields));
+      // Mark this as the default PYP template
+      localStorage.setItem('pyp-default-template', templateName);
+      toast.success(`${templateName} set as default PYP template`);
+    } catch (error) {
+      console.error('Error saving default template:', error);
+      toast.error('Failed to save default template');
+    }
+  };
+
   // Load field positions for current template
   const loadFieldPositions = () => {
     if (!currentDocument) {
@@ -508,6 +547,17 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
     } else {
       toast.info(`No saved field positions found for ${templateName}`);
     }
+  };
+
+  // Get current default template name
+  const getDefaultTemplateName = (): string | null => {
+    return localStorage.getItem('pyp-default-template');
+  };
+
+  // Check if current document is the default template
+  const isCurrentDocumentDefault = (): boolean => {
+    const defaultTemplate = getDefaultTemplateName();
+    return defaultTemplate === currentDocument?.name;
   };
   // Load uploaded documents (PYP specific storage)
   const loadUploadedDocuments = async () => {
@@ -986,6 +1036,16 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
               >
                 <FileText className="w-4 h-4" />
                 Save Layout
+              </Button>
+              
+              <Button
+                variant="outline" 
+                size="sm"
+                onClick={saveAsDefaultTemplate}
+                className={`flex items-center gap-2 ${isCurrentDocumentDefault() ? 'bg-primary text-primary-foreground' : ''}`}
+              >
+                <Car className="w-4 h-4" />
+                {isCurrentDocumentDefault() ? 'Default Template ✓' : 'Set as Default'}
               </Button>
               
               <Button
