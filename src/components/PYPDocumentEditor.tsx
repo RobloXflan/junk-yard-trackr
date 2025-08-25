@@ -58,6 +58,8 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
   // Dual vehicle state management (for bill of sale documents)
   const [vehicleData1, setVehicleData1] = useState<any>(null);
   const [vehicleData2, setVehicleData2] = useState<any>(null);
+  const [currentVehicleSlot, setCurrentVehicleSlot] = useState<1 | 2>(1);
+  const [currentTripData, setCurrentTripData] = useState<any>(null);
 
   // Get current document and its fields
   const currentDocument = uploadedDocuments[currentDocumentIndex];
@@ -103,10 +105,58 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
     : predefinedFieldsVehicle1;
 
   useEffect(() => {
-    loadUploadedDocuments();
+    const initializeEditor = async () => {
+      // Check for current PYP trip and auto-load data
+      const currentTripKey = localStorage.getItem('current-pyp-trip');
+      
+      if (currentTripKey) {
+        console.log('Loading PYP trip data from:', currentTripKey);
+        const tripData = localStorage.getItem(currentTripKey);
+        
+        if (tripData) {
+          const parsedTripData = JSON.parse(tripData);
+          setCurrentTripData(parsedTripData);
+          
+          // Load vehicles from trip data
+          if (parsedTripData.vehicle1) {
+            setVehicleData1(parsedTripData.vehicle1);
+            localStorage.setItem('documents-vehicle-data-1', JSON.stringify(parsedTripData.vehicle1));
+          }
+          if (parsedTripData.vehicle2) {
+            setVehicleData2(parsedTripData.vehicle2);
+            localStorage.setItem('documents-vehicle-data-2', JSON.stringify(parsedTripData.vehicle2));
+          }
+        }
+      } else {
+        // Check for vehicle data in localStorage (fallback)
+        const v1Str = localStorage.getItem('documents-vehicle-data-1');
+        const v2Str = localStorage.getItem('documents-vehicle-data-2');
+        
+        let v1: any = null;
+        let v2: any = null;
+        
+        try { v1 = v1Str ? JSON.parse(v1Str) : null; } catch (e) { console.error('Error parsing vehicle 1 data:', e); }
+        try { v2 = v2Str ? JSON.parse(v2Str) : null; } catch (e) { console.error('Error parsing vehicle 2 data:', e); }
+        
+        if (v1) {
+          console.log('Found Vehicle 1 data for PYP:', v1);
+          setVehicleData1(v1);
+        }
+        
+        if (v2) {
+          console.log('Found Vehicle 2 data for PYP:', v2);
+          setVehicleData2(v2);
+        }
+      }
+      
+      // Load existing templates and documents
+      await loadUploadedDocuments();
+    };
+    
+    initializeEditor();
   }, []);
 
-  // Load selected PYP templates (from localStorage) into the editor on first load
+  // Load selected PYP templates and saved field positions
   useEffect(() => {
     try {
       const raw = localStorage.getItem('selected-pyp-templates');
@@ -124,7 +174,24 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
         if (docs.length) {
           setUploadedDocuments(docs);
           setCurrentDocumentIndex(0);
-          toast.success(`Loaded ${docs.length} template${docs.length > 1 ? 's' : ''} from selection`);
+          
+          // Load saved field positions for each template
+          docs.forEach(doc => {
+            const savedFields = localStorage.getItem(`pyp-template-fields-${doc.name}`);
+            if (savedFields) {
+              try {
+                const parsedFields = JSON.parse(savedFields);
+                setDocumentFields(prev => ({
+                  ...prev,
+                  [doc.id]: parsedFields
+                }));
+              } catch (e) {
+                console.error('Error loading saved fields for', doc.name, e);
+              }
+            }
+          });
+          
+          toast.success(`Loaded ${docs.length} template${docs.length > 1 ? 's' : ''} with saved field positions`);
         }
       }
     } catch (e) {
@@ -134,36 +201,124 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
 
   // Load vehicle data for auto-population (similar to SA recycling process)
   useEffect(() => {
-    // Check for vehicle data in localStorage
-    const v1Str = localStorage.getItem('documents-vehicle-data-1');
-    const v2Str = localStorage.getItem('documents-vehicle-data-2');
     
-    let v1: any = null;
-    let v2: any = null;
-    
-    try { v1 = v1Str ? JSON.parse(v1Str) : null; } catch (e) { console.error('Error parsing vehicle 1 data:', e); }
-    try { v2 = v2Str ? JSON.parse(v2Str) : null; } catch (e) { console.error('Error parsing vehicle 2 data:', e); }
-    
-    if (v1) {
-      console.log('Found Vehicle 1 data for PYP:', v1);
-      setVehicleData1(v1);
-    }
-    
-    if (v2) {
-      console.log('Found Vehicle 2 data for PYP:', v2);
-      setVehicleData2(v2);
-    }
   }, []);
+    
+  // Live update Vehicle 2 fields when vehicleData2 changes (similar to SA recycling)
+  useEffect(() => {
+    if (!currentDocument || fields.length === 0) return; // Don't run during initial load
+    
+    console.log('vehicleData2 changed:', vehicleData2);
+    
+    const docId = currentDocument.id;
+    
+    setDocumentFields(prevFields => {
+      const currentFields = prevFields[docId] || [];
+      let updatedFields = [...currentFields];
+      
+      if (vehicleData2 && isBillOfSale) {
+        // Vehicle 2 was added - check if we need to add fields or just prefill existing ones
+        const hasVehicle2Fields = updatedFields.some(field => 
+          field.fieldType.endsWith('_2') || (field.label && field.label.includes('Vehicle 2'))
+        );
+        
+        if (!hasVehicle2Fields) {
+          console.log('Auto-adding Vehicle 2 fields...');
+          const vehicle2Fields = addVehicle2FieldsAutomatically(updatedFields, vehicleData2);
+          updatedFields = [...updatedFields, ...vehicle2Fields];
+        } else {
+          console.log('Pre-filling existing Vehicle 2 fields...');
+          updatedFields = updatedFields.map(field => {
+            const updatedField = { ...field };
+            
+            // Try exact fieldType match first, then compatibility patterns
+            let vehicle2FieldType = field.fieldType;
+            if (!vehicle2FieldType.endsWith('_2')) {
+              if (field.label && (field.label.includes('Vehicle 2') || field.label.includes('(Vehicle 2)'))) {
+                if (field.label.toLowerCase().includes('vin')) vehicle2FieldType = 'vin_2';
+                else if (field.label.toLowerCase().includes('year')) vehicle2FieldType = 'year_2';
+                else if (field.label.toLowerCase().includes('make')) vehicle2FieldType = 'make_2';
+                else if (field.label.toLowerCase().includes('model')) vehicle2FieldType = 'model_2';
+                else if (field.label.toLowerCase().includes('license')) vehicle2FieldType = 'license_plate_2';
+                else if (field.label.toLowerCase().includes('mileage')) vehicle2FieldType = 'mileage_2';
+                else if (field.label.toLowerCase().includes('price')) vehicle2FieldType = 'price_2';
+                else if (field.label.toLowerCase().includes('date')) vehicle2FieldType = 'date_2';
+              }
+            }
+            
+            switch (vehicle2FieldType) {
+              case 'vin_2':
+                updatedField.content = vehicleData2.vehicleId || '';
+                break;
+              case 'year_2':
+                updatedField.content = vehicleData2.year || '';
+                break;
+              case 'make_2':
+                updatedField.content = vehicleData2.make || '';
+                break;
+              case 'model_2':
+                updatedField.content = vehicleData2.model || '';
+                break;
+              case 'license_plate_2':
+                updatedField.content = vehicleData2.licensePlate || '';
+                break;
+              case 'mileage_2':
+                updatedField.content = vehicleData2.mileage || '';
+                break;
+              case 'price_2':
+                updatedField.content = vehicleData2.salePrice || '';
+                break;
+              case 'date_2':
+                updatedField.content = vehicleData2.saleDate || '';
+                break;
+            }
+            
+            return updatedField;
+          });
+        }
+      } else if (!vehicleData2) {
+        // Clear Vehicle 2 data when vehicleData2 is removed
+        updatedFields = updatedFields.map(field => 
+          (field.fieldType.endsWith('_2') || (field.label && field.label.includes('Vehicle 2'))) ? { ...field, content: '' } : field
+        );
+      }
+      
+      return {
+        ...prevFields,
+        [docId]: updatedFields
+      };
+    });
+  }, [vehicleData2, currentDocument, isBillOfSale]);
 
   // Auto-populate vehicle fields when vehicle data or documents change
   useEffect(() => {
-    if (!currentDocument || (!vehicleData1 && !vehicleData2)) return;
+    if (!currentDocument || !vehicleData1) return;
     
     const docId = currentDocument.id;
     const existingFields = documentFields[docId] || [];
     
+    // Don't auto-populate if fields already exist and have content (preserve manual work)
+    const hasPopulatedFields = existingFields.some(field => field.content && field.content.trim() !== '');
+    if (hasPopulatedFields && existingFields.length > 0) {
+      console.log('Skipping auto-population - fields already have content');
+      return;
+    }
+    
     // Auto-populate existing fields or create new ones if none exist for this document
     let updatedFields = [...existingFields];
+    
+    // If no fields exist, try to load saved template fields first
+    if (updatedFields.length === 0) {
+      const savedFields = localStorage.getItem(`pyp-template-fields-${currentDocument.name}`);
+      if (savedFields) {
+        try {
+          updatedFields = JSON.parse(savedFields);
+          console.log('Loaded saved field layout for', currentDocument.name);
+        } catch (e) {
+          console.error('Error loading saved fields:', e);
+        }
+      }
+    }
     
     // Populate Vehicle 1 fields
     if (vehicleData1) {
@@ -207,49 +362,153 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
       });
     }
     
-    // Populate Vehicle 2 fields (only for bill of sale documents)
-    if (vehicleData2 && isBillOfSale) {
-      console.log('Auto-populating Vehicle 2 fields for bill of sale');
-      updatedFields = updatedFields.map(field => {
-        const updatedField = { ...field };
-        switch (field.fieldType) {
-          case 'vin_2':
-            updatedField.content = vehicleData2.vehicleId || '';
-            break;
-          case 'year_2':
-            updatedField.content = vehicleData2.year || '';
-            break;
-          case 'make_2':
-            updatedField.content = vehicleData2.make || '';
-            break;
-          case 'model_2':
-            updatedField.content = vehicleData2.model || '';
-            break;
-          case 'license_plate_2':
-            updatedField.content = vehicleData2.licensePlate || '';
-            break;
-          case 'mileage_2':
-            updatedField.content = vehicleData2.mileage || '';
-            break;
-          case 'price_2':
-            updatedField.content = vehicleData2.salePrice || '';
-            break;
-          case 'date_2':
-            updatedField.content = vehicleData2.saleDate || '';
-            break;
-        }
-        return updatedField;
-      });
-    }
-    
     // Update fields for this document
     setDocumentFields(prev => ({
       ...prev,
       [docId]: updatedFields
     }));
     
-  }, [currentDocument, vehicleData1, vehicleData2, isBillOfSale]);
+  }, [currentDocument, vehicleData1]);
 
+  // Add Vehicle 2 fields automatically when needed (similar to SA recycling)
+  const addVehicle2FieldsAutomatically = (existingFields: TextField[], vehicleData: any): TextField[] => {
+    // Find the bottom-most Y position of existing fields to position Vehicle 2 fields below
+    const maxY = existingFields.reduce((max, field) => 
+      Math.max(max, field.y + field.height), 0
+    );
+    
+    const startY = maxY + 50; // Start 50px below the last field
+    const leftColumnX = 100;  // Left column position
+    const rightColumnX = 400; // Right column position
+    
+    const vehicle2Fields: TextField[] = [
+      {
+        id: `vin_2_${Date.now()}`,
+        x: leftColumnX,
+        y: startY,
+        width: 300,
+        height: 30,
+        content: vehicleData.vehicleId || '',
+        label: 'VIN (Vehicle 2)',
+        fontSize: 14,
+        fieldType: 'vin_2'
+      },
+      {
+        id: `year_2_${Date.now() + 1}`,
+        x: rightColumnX,
+        y: startY,
+        width: 80,
+        height: 30,
+        content: vehicleData.year || '',
+        label: 'Year (Vehicle 2)',
+        fontSize: 14,
+        fieldType: 'year_2'
+      },
+      {
+        id: `make_2_${Date.now() + 2}`,
+        x: leftColumnX,
+        y: startY + 40,
+        width: 120,
+        height: 30,
+        content: vehicleData.make || '',
+        label: 'Make (Vehicle 2)',
+        fontSize: 14,
+        fieldType: 'make_2'
+      },
+      {
+        id: `model_2_${Date.now() + 3}`,
+        x: rightColumnX,
+        y: startY + 40,
+        width: 150,
+        height: 30,
+        content: vehicleData.model || '',
+        label: 'Model (Vehicle 2)',
+        fontSize: 14,
+        fieldType: 'model_2'
+      },
+      {
+        id: `license_plate_2_${Date.now() + 4}`,
+        x: leftColumnX,
+        y: startY + 80,
+        width: 150,
+        height: 30,
+        content: vehicleData.licensePlate || '',
+        label: 'License Plate (Vehicle 2)',
+        fontSize: 14,
+        fieldType: 'license_plate_2'
+      },
+      {
+        id: `price_2_${Date.now() + 5}`,
+        x: rightColumnX,
+        y: startY + 80,
+        width: 120,
+        height: 30,
+        content: vehicleData.salePrice || '',
+        label: 'Price (Vehicle 2)',
+        fontSize: 14,
+        fieldType: 'price_2'
+      },
+      {
+        id: `date_2_${Date.now() + 6}`,
+        x: leftColumnX,
+        y: startY + 120,
+        width: 120,
+        height: 30,
+        content: vehicleData.saleDate || '',
+        label: 'Date (Vehicle 2)',
+        fontSize: 14,
+        fieldType: 'date_2'
+      }
+    ];
+    
+    return vehicle2Fields;
+  };
+
+  // Save field positions for current template
+  const saveFieldPositions = () => {
+    if (!currentDocument) {
+      toast.error('No document selected');
+      return;
+    }
+    
+    const docFields = documentFields[currentDocument.id] || [];
+    const templateName = currentDocument.name;
+    
+    try {
+      localStorage.setItem(`pyp-template-fields-${templateName}`, JSON.stringify(docFields));
+      toast.success(`Field positions saved for ${templateName}`);
+    } catch (error) {
+      console.error('Error saving field positions:', error);
+      toast.error('Failed to save field positions');
+    }
+  };
+
+  // Load field positions for current template
+  const loadFieldPositions = () => {
+    if (!currentDocument) {
+      toast.error('No document selected');
+      return;
+    }
+    
+    const templateName = currentDocument.name;
+    const savedFields = localStorage.getItem(`pyp-template-fields-${templateName}`);
+    
+    if (savedFields) {
+      try {
+        const parsedFields = JSON.parse(savedFields);
+        setDocumentFields(prev => ({
+          ...prev,
+          [currentDocument.id]: parsedFields
+        }));
+        toast.success(`Field positions loaded for ${templateName}`);
+      } catch (error) {
+        console.error('Error loading field positions:', error);
+        toast.error('Failed to load field positions');
+      }
+    } else {
+      toast.info(`No saved field positions found for ${templateName}`);
+    }
+  };
   // Load uploaded documents (PYP specific storage)
   const loadUploadedDocuments = async () => {
     try {
@@ -719,6 +978,25 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
                     />
                   </div>
 
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={saveFieldPositions}
+                className="flex items-center gap-2"
+              >
+                <FileText className="w-4 h-4" />
+                Save Layout
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={loadFieldPositions}
+                className="flex items-center gap-2"
+              >
+                <Upload className="w-4 h-4" />
+                Load Layout
+              </Button>
                   <Button
                     onClick={() => deleteField(field.id)}
                     variant="destructive"
