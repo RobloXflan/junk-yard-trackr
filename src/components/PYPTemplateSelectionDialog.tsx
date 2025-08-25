@@ -507,6 +507,12 @@ export function PYPTemplateSelectionDialog({
         onClose={() => setShowVehicleDetails(false)}
         onVehicleSubmit={handleVehicleDetailsSubmit}
         title={`Add Vehicle ${selectedSlot} to PYP Trip`}
+        initialData={vehicleInfo ? {
+          year: vehicleInfo.year,
+          make: vehicleInfo.make,
+          model: vehicleInfo.model,
+          vehicleId: vehicleInfo.vin
+        } : undefined}
       />
 
       {/* Trip Selection Dialog */}

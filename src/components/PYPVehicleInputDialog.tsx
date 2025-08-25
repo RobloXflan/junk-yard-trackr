@@ -10,19 +10,26 @@ interface PYPVehicleInputDialogProps {
   onClose: () => void;
   onVehicleSubmit: (vehicleData: any) => void;
   title?: string;
+  initialData?: {
+    year: string;
+    make: string;
+    model: string;
+    vehicleId: string;
+  };
 }
 
 export function PYPVehicleInputDialog({ 
   open, 
   onClose, 
   onVehicleSubmit,
-  title = "Add Vehicle to PYP Trip"
+  title = "Add Vehicle to PYP Trip",
+  initialData
 }: PYPVehicleInputDialogProps) {
   const [formData, setFormData] = useState({
-    vehicleId: '',
-    year: '',
-    make: '',
-    model: '',
+    vehicleId: initialData?.vehicleId || '',
+    year: initialData?.year || '',
+    make: initialData?.make || '',
+    model: initialData?.model || '',
     licensePlate: '',
     mileage: '',
     salePrice: '',
