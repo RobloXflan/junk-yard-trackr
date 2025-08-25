@@ -43,17 +43,22 @@ interface PYPDocumentEditorProps {
 
 // Separate PYP Document Editor - No saved templates functionality
 export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
-  const [fields, setFields] = useState<TextField[]>([]);
+  const [documentFields, setDocumentFields] = useState<Record<string, TextField[]>>({});
   const [selectedField, setSelectedField] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
-  const [currentDocumentUrl, setCurrentDocumentUrl] = useState(dmvFormImage);
+  const [currentDocumentIndex, setCurrentDocumentIndex] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 816, height: 1056 });
+
+  // Get current document and its fields
+  const currentDocument = uploadedDocuments[currentDocumentIndex];
+  const currentDocumentUrl = currentDocument?.url || dmvFormImage;
+  const fields = documentFields[currentDocument?.id || 'default'] || [];
 
   // Predefined field types for PYP
   const predefinedFields: PredefinedField[] = [
@@ -93,7 +98,7 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
           }));
         if (docs.length) {
           setUploadedDocuments(docs);
-          setCurrentDocumentUrl(docs[0].url);
+          setCurrentDocumentIndex(0);
           toast.success(`Loaded ${docs.length} template${docs.length > 1 ? 's' : ''} from selection`);
         }
       }
@@ -131,8 +136,8 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
             if (!merged.some((m) => m.url === d.url)) merged.push(d);
           }
           // If no current document selected, default to first
-          if (!currentDocumentUrl && merged.length > 0) {
-            setCurrentDocumentUrl(merged[0].url);
+          if (currentDocumentIndex === 0 && merged.length > 0) {
+            setCurrentDocumentIndex(0);
           }
           return merged;
         });
@@ -216,9 +221,20 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
         .getPublicUrl(`pyp-uploads/${fileName}`)
         .data.publicUrl;
 
-      // Update current document and reload list
-      setCurrentDocumentUrl(publicUrl);
-      await loadUploadedDocuments();
+      // Add uploaded document and set as current
+      const newDoc: UploadedDocument = {
+        id: `upload-${Date.now()}`,
+        name: fileName,
+        url: publicUrl,
+        uploadedAt: new Date()
+      };
+      
+      setUploadedDocuments(prev => {
+        const updated = [...prev, newDoc];
+        // Set as current document
+        setCurrentDocumentIndex(updated.length - 1);
+        return updated;
+      });
       
       toast.success('Document uploaded successfully!');
     } catch (error) {
@@ -230,6 +246,15 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
         fileInputRef.current.value = '';
       }
     }
+  };
+
+  // Update fields for current document
+  const updateFieldsForCurrentDoc = (updater: (fields: TextField[]) => TextField[]) => {
+    const docId = currentDocument?.id || 'default';
+    setDocumentFields(prev => ({
+      ...prev,
+      [docId]: updater(prev[docId] || [])
+    }));
   };
 
   // Add text field
@@ -245,7 +270,7 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
       fontSize: 14,
       fieldType: 'text'
     };
-    setFields([...fields, newField]);
+    updateFieldsForCurrentDoc(fields => [...fields, newField]);
     setSelectedField(newField.id);
   };
 
@@ -265,13 +290,13 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
       fontSize: 14,
       fieldType: fieldType
     };
-    setFields([...fields, newField]);
+    updateFieldsForCurrentDoc(fields => [...fields, newField]);
     setSelectedField(newField.id);
   };
 
   // Delete field
   const deleteField = (fieldId: string) => {
-    setFields(fields.filter(f => f.id !== fieldId));
+    updateFieldsForCurrentDoc(fields => fields.filter(f => f.id !== fieldId));
     if (selectedField === fieldId) {
       setSelectedField(null);
     }
@@ -279,9 +304,11 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
 
   // Update field content
   const updateField = (fieldId: string, updates: Partial<TextField>) => {
-    setFields(fields.map(field => 
-      field.id === fieldId ? { ...field, ...updates } : field
-    ));
+    updateFieldsForCurrentDoc(fields => 
+      fields.map(field => 
+        field.id === fieldId ? { ...field, ...updates } : field
+      )
+    );
   };
 
   // Mouse event handlers for drag and resize
@@ -342,20 +369,23 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
     setIsResizing(false);
   };
 
-  // Print functionality
+  // Print all documents functionality
   const handlePrint = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
+    // Create print content for all documents
     const printContent = `
       <!DOCTYPE html>
       <html>
         <head>
-          <title>PYP Document</title>
+          <title>PYP Documents</title>
           <style>
             @media print {
               @page { margin: 0; size: 8.5in 11in; }
               body { margin: 0; padding: 0; }
+              .document-page { page-break-after: always; }
+              .document-page:last-child { page-break-after: auto; }
             }
             body {
               margin: 0;
@@ -367,7 +397,6 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
               width: 816px;
               height: 1056px;
               margin: 0 auto;
-              background-image: url('${currentDocumentUrl}');
               background-size: contain;
               background-repeat: no-repeat;
               background-position: center;
@@ -388,17 +417,24 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
           </style>
         </head>
         <body>
-          <div class="document-container">
-            ${fields.map(field => `
-              <div class="field" style="
-                left: ${field.x}px;
-                top: ${field.y}px;
-                width: ${field.width}px;
-                height: ${field.height}px;
-                font-size: ${field.fontSize}px;
-              ">${field.content || field.label}</div>
-            `).join('')}
-          </div>
+          ${uploadedDocuments.map((doc, index) => {
+            const docFields = documentFields[doc.id] || [];
+            return `
+              <div class="document-page">
+                <div class="document-container" style="background-image: url('${doc.url}');">
+                  ${docFields.map(field => `
+                    <div class="field" style="
+                      left: ${field.x}px;
+                      top: ${field.y}px;
+                      width: ${field.width}px;
+                      height: ${field.height}px;
+                      font-size: ${field.fontSize}px;
+                    ">${field.content || field.label}</div>
+                  `).join('')}
+                </div>
+              </div>
+            `;
+          }).join('')}
         </body>
       </html>
     `;
@@ -442,20 +478,20 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
             <div className="mb-4">
               <h4 className="text-sm font-medium text-gray-700 mb-2">Uploaded Documents</h4>
               <div className="space-y-1 max-h-32 overflow-y-auto">
-                {uploadedDocuments.map((doc) => (
-                  <button
-                    key={doc.id}
-                    onClick={() => setCurrentDocumentUrl(doc.url)}
-                    className={`w-full text-left px-2 py-1 rounded text-xs truncate transition-colors ${
-                      currentDocumentUrl === doc.url
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'hover:bg-gray-100 text-gray-600'
-                    }`}
-                    title={doc.name}
-                  >
-                    {doc.name}
-                  </button>
-                ))}
+                 {uploadedDocuments.map((doc, index) => (
+                   <button
+                     key={doc.id}
+                     onClick={() => setCurrentDocumentIndex(index)}
+                     className={`w-full text-left px-2 py-1 rounded text-xs truncate transition-colors ${
+                       currentDocumentIndex === index
+                         ? 'bg-blue-100 text-blue-800'
+                         : 'hover:bg-gray-100 text-gray-600'
+                     }`}
+                     title={doc.name}
+                   >
+                     {doc.name}
+                   </button>
+                 ))}
               </div>
             </div>
           )}
@@ -560,7 +596,34 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
       <div className="flex-1 flex flex-col">
         {/* Top Toolbar */}
         <div className="bg-white border-b border-gray-200 p-4 flex justify-between items-center">
-          <h1 className="text-xl font-semibold text-gray-800">PYP Document Editor</h1>
+          <div className="flex items-center space-x-4">
+            <h1 className="text-xl font-semibold text-gray-800">PYP Document Editor</h1>
+            
+            {/* Document Navigation */}
+            {uploadedDocuments.length > 1 && (
+              <div className="flex items-center space-x-2 bg-gray-50 px-3 py-1 rounded-lg">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentDocumentIndex(Math.max(0, currentDocumentIndex - 1))}
+                  disabled={currentDocumentIndex === 0}
+                >
+                  Previous
+                </Button>
+                <span className="text-sm font-medium">
+                  {currentDocumentIndex + 1} of {uploadedDocuments.length}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentDocumentIndex(Math.min(uploadedDocuments.length - 1, currentDocumentIndex + 1))}
+                  disabled={currentDocumentIndex === uploadedDocuments.length - 1}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+          </div>
           
           <div className="flex items-center space-x-2">
             <Button
@@ -568,7 +631,7 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
               className="flex items-center space-x-2"
             >
               <Printer className="w-4 h-4" />
-              <span>Print</span>
+              <span>Print All ({uploadedDocuments.length})</span>
             </Button>
           </div>
         </div>
