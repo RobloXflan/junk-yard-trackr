@@ -32,6 +32,7 @@ import { MobileDriverTracking } from "@/components/MobileDriverTracking";
 import { Documents } from "@/pages/Documents";
 import { PYPDocuments } from "@/pages/PYPDocuments";
 import { SATrips } from "@/pages/SATrips";
+import { PYPTrips } from "@/pages/PYPTrips";
 
 const queryClient = new QueryClient();
 
@@ -103,6 +104,8 @@ const App = () => {
         return <PYPDocuments onNavigate={setCurrentPage} />;
       case 'sa-trips':
         return <SATrips />;
+      case 'pyp-trips':
+        return <PYPTrips />;
       default:
         return <Dashboard />;
     }

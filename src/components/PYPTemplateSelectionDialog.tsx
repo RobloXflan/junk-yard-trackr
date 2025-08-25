@@ -8,6 +8,10 @@ import { FileText, Printer, Upload, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useDropzone } from "react-dropzone";
 import { supabase } from "@/integrations/supabase/client";
+import { PYPTripSelectionDialog } from "./PYPTripSelectionDialog";
+import { PYPVehicleSlotSelectionDialog } from "./PYPVehicleSlotSelectionDialog";
+import { PYPVehicleInputDialog } from "./PYPVehicleInputDialog";
+import { format } from "date-fns";
 
 interface Template {
   id: string;
@@ -109,6 +113,14 @@ export function PYPTemplateSelectionDialog({
   });
 
   const [uploadedImages, setUploadedImages] = useState<Record<string, string>>({});
+
+  // Trip and vehicle selection state
+  const [showTripSelection, setShowTripSelection] = useState(false);
+  const [showSlotSelection, setShowSlotSelection] = useState(false);
+  const [showVehicleDetails, setShowVehicleDetails] = useState(false);
+  const [selectedTripNumber, setSelectedTripNumber] = useState<number>(1);
+  const [selectedSlot, setSelectedSlot] = useState<1 | 2>(1);
+  const [currentVehicleData, setCurrentVehicleData] = useState<any>(null);
 
   const handleImageUpload = useCallback(async (templateId: string, files: File[]) => {
     const file = files[0];
@@ -229,6 +241,85 @@ export function PYPTemplateSelectionDialog({
       localStorage.setItem('selected-pyp-templates', JSON.stringify(selected));
     } catch {}
 
+    // Start the vehicle selection process
+    setShowVehicleDetails(true);
+  };
+
+  // Handle vehicle details submission (first vehicle)
+  const handleVehicleDetailsSubmit = (vehicleData: any) => {
+    setCurrentVehicleData(vehicleData);
+    setShowVehicleDetails(false);
+    setShowTripSelection(true);
+  };
+
+  // Handle trip selection
+  const handleTripSelected = (tripNumber: number) => {
+    setSelectedTripNumber(tripNumber);
+    setShowTripSelection(false);
+    setShowSlotSelection(true);
+  };
+
+  // Handle slot selection
+  const handleSlotSelected = (slot: 1 | 2) => {
+    setSelectedSlot(slot);
+    setShowSlotSelection(false);
+    
+    // Save the vehicle to the selected trip and slot
+    const today = format(new Date(), 'yyyy-MM-dd');
+    const tripKey = `pyp-trip-${today}-${selectedTripNumber}`;
+    
+    // Get existing trip data
+    let tripData: any = {};
+    try {
+      const existing = localStorage.getItem(tripKey);
+      if (existing) {
+        tripData = JSON.parse(existing);
+      }
+    } catch (e) {
+      console.error('Error loading trip data:', e);
+    }
+    
+    // Add the vehicle to the selected slot
+    if (slot === 1) {
+      tripData.vehicle1 = currentVehicleData;
+    } else {
+      tripData.vehicle2 = currentVehicleData;
+    }
+    
+    // Add timestamp
+    tripData.savedAt = new Date().toISOString();
+    
+    // Save trip data
+    localStorage.setItem(tripKey, JSON.stringify(tripData));
+    
+    // Set vehicle data for document editor
+    localStorage.setItem(`documents-vehicle-data-${slot}`, JSON.stringify(currentVehicleData));
+    
+    // Check if we need to ask for a second vehicle (for bill of sale)
+    const hasBillOfSale = selectedTemplates.includes('bill-of-sale');
+    if (hasBillOfSale && !tripData.vehicle2) {
+      // Ask if they want to add a second vehicle
+      const addSecondVehicle = confirm('This trip includes a Bill of Sale document which supports 2 vehicles. Would you like to add a second vehicle?');
+      if (addSecondVehicle) {
+        setShowVehicleDetails(true);
+        setSelectedSlot(2);
+        return;
+      }
+    }
+    
+    // Set current trip for the PYP editor
+    localStorage.setItem('current-pyp-trip', tripKey);
+    
+    const selected = PYP_TEMPLATES.filter(t => selectedTemplates.includes(t.id)).map(template => ({
+      ...template,
+      uploadedImage: uploadedImages[template.id]
+    }));
+    
+    toast({
+      title: "Trip Created",
+      description: `Vehicle added to PYP Trip ${selectedTripNumber}, Slot ${slot}`,
+    });
+    
     onTemplatesSelected(selected);
     onClose();
   };
@@ -410,6 +501,31 @@ export function PYPTemplateSelectionDialog({
           </Button>
         </div>
       </DialogContent>
+
+      {/* Vehicle Input Dialog */}
+      <PYPVehicleInputDialog
+        open={showVehicleDetails}
+        onClose={() => setShowVehicleDetails(false)}
+        onVehicleSubmit={handleVehicleDetailsSubmit}
+        title={`Add Vehicle ${selectedSlot} to PYP Trip`}
+      />
+
+      {/* Trip Selection Dialog */}
+      <PYPTripSelectionDialog
+        open={showTripSelection}
+        onClose={() => setShowTripSelection(false)}
+        onTripSelected={handleTripSelected}
+        vehicleData={currentVehicleData}
+      />
+
+      {/* Vehicle Slot Selection Dialog */}
+      <PYPVehicleSlotSelectionDialog
+        open={showSlotSelection}
+        onClose={() => setShowSlotSelection(false)}
+        onSlotSelected={handleSlotSelected}
+        tripNumber={selectedTripNumber}
+        vehicleData={currentVehicleData}
+      />
     </Dialog>
   );
 }
