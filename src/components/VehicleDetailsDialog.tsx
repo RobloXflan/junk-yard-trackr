@@ -1006,7 +1006,7 @@ export function VehicleDetailsDialog({
               make: localVehicle.make,
               model: localVehicle.model,
               vin: localVehicle.vehicleId,
-              saleDate: localVehicle.saleDate,
+              saleDate: localVehicle.pickYourPartDate,
               licensePlate: localVehicle.licensePlate
             }}
       />
