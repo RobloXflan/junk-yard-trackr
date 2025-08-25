@@ -54,28 +54,53 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 816, height: 1056 });
+  
+  // Dual vehicle state management (for bill of sale documents)
+  const [vehicleData1, setVehicleData1] = useState<any>(null);
+  const [vehicleData2, setVehicleData2] = useState<any>(null);
 
   // Get current document and its fields
   const currentDocument = uploadedDocuments[currentDocumentIndex];
   const currentDocumentUrl = currentDocument?.url || dmvFormImage;
   const fields = documentFields[currentDocument?.id || 'default'] || [];
 
-  // Predefined field types for PYP
-  const predefinedFields: PredefinedField[] = [
-    { id: 'vin', label: 'VIN', defaultWidth: 300, defaultHeight: 30, placeholder: 'Enter vehicle identification number', icon: Hash, color: 'text-blue-600' },
-    { id: 'license_plate', label: 'License Plate', defaultWidth: 150, defaultHeight: 30, placeholder: 'Enter license plate', icon: Car, color: 'text-green-600' },
-    { id: 'year', label: 'Year', defaultWidth: 80, defaultHeight: 30, placeholder: 'YYYY', icon: Calendar, color: 'text-purple-600' },
-    { id: 'make', label: 'Make', defaultWidth: 120, defaultHeight: 30, placeholder: 'Vehicle make', icon: Car, color: 'text-orange-600' },
-    { id: 'model', label: 'Model', defaultWidth: 150, defaultHeight: 30, placeholder: 'Vehicle model', icon: Car, color: 'text-red-600' },
-    { id: 'mileage', label: 'Mileage', defaultWidth: 100, defaultHeight: 30, placeholder: 'Miles', icon: Hash, color: 'text-cyan-600' },
-    { id: 'price', label: 'Price', defaultWidth: 120, defaultHeight: 30, placeholder: '$0.00', icon: DollarSign, color: 'text-emerald-600' },
-    { id: 'date', label: 'Date', defaultWidth: 120, defaultHeight: 30, placeholder: 'MM/DD/YYYY', icon: Calendar, color: 'text-indigo-600' },
+  // Check if current document is bill of sale (supports dual vehicles)
+  const isBillOfSale = currentDocument?.name.toLowerCase().includes('bill of sale') || 
+                       currentDocument?.name.toLowerCase().includes('bill-of-sale');
+
+  // Predefined field types for PYP - Vehicle 1
+  const predefinedFieldsVehicle1: PredefinedField[] = [
+    { id: 'vin', label: 'VIN (Vehicle 1)', defaultWidth: 300, defaultHeight: 30, placeholder: 'Enter vehicle identification number', icon: Hash, color: 'text-blue-600' },
+    { id: 'license_plate', label: 'License Plate (Vehicle 1)', defaultWidth: 150, defaultHeight: 30, placeholder: 'Enter license plate', icon: Car, color: 'text-green-600' },
+    { id: 'year', label: 'Year (Vehicle 1)', defaultWidth: 80, defaultHeight: 30, placeholder: 'YYYY', icon: Calendar, color: 'text-purple-600' },
+    { id: 'make', label: 'Make (Vehicle 1)', defaultWidth: 120, defaultHeight: 30, placeholder: 'Vehicle make', icon: Car, color: 'text-orange-600' },
+    { id: 'model', label: 'Model (Vehicle 1)', defaultWidth: 150, defaultHeight: 30, placeholder: 'Vehicle model', icon: Car, color: 'text-red-600' },
+    { id: 'mileage', label: 'Mileage (Vehicle 1)', defaultWidth: 100, defaultHeight: 30, placeholder: 'Miles', icon: Hash, color: 'text-cyan-600' },
+    { id: 'price', label: 'Price (Vehicle 1)', defaultWidth: 120, defaultHeight: 30, placeholder: '$0.00', icon: DollarSign, color: 'text-emerald-600' },
+    { id: 'date', label: 'Date (Vehicle 1)', defaultWidth: 120, defaultHeight: 30, placeholder: 'MM/DD/YYYY', icon: Calendar, color: 'text-indigo-600' },
     { id: 'buyer_name', label: 'Buyer Name', defaultWidth: 200, defaultHeight: 30, placeholder: 'Buyer full name', icon: User, color: 'text-pink-600' },
     { id: 'seller_name', label: 'Seller Name', defaultWidth: 200, defaultHeight: 30, placeholder: 'Seller full name', icon: User, color: 'text-teal-600' },
     { id: 'address', label: 'Address', defaultWidth: 250, defaultHeight: 60, placeholder: 'Street address, City, State ZIP', icon: MapPin, color: 'text-yellow-600' },
     { id: 'phone', label: 'Phone Number', defaultWidth: 150, defaultHeight: 30, placeholder: '(555) 123-4567', icon: Phone, color: 'text-violet-600' },
     { id: 'signature', label: 'Signature', defaultWidth: 200, defaultHeight: 50, placeholder: 'Signature line', icon: FileText, color: 'text-rose-600' }
   ];
+
+  // Predefined field types for PYP - Vehicle 2 (only for Bill of Sale)
+  const predefinedFieldsVehicle2: PredefinedField[] = [
+    { id: 'vin_2', label: 'VIN (Vehicle 2)', defaultWidth: 300, defaultHeight: 30, placeholder: 'Enter vehicle identification number', icon: Hash, color: 'text-blue-400' },
+    { id: 'license_plate_2', label: 'License Plate (Vehicle 2)', defaultWidth: 150, defaultHeight: 30, placeholder: 'Enter license plate', icon: Car, color: 'text-green-400' },
+    { id: 'year_2', label: 'Year (Vehicle 2)', defaultWidth: 80, defaultHeight: 30, placeholder: 'YYYY', icon: Calendar, color: 'text-purple-400' },
+    { id: 'make_2', label: 'Make (Vehicle 2)', defaultWidth: 120, defaultHeight: 30, placeholder: 'Vehicle make', icon: Car, color: 'text-orange-400' },
+    { id: 'model_2', label: 'Model (Vehicle 2)', defaultWidth: 150, defaultHeight: 30, placeholder: 'Vehicle model', icon: Car, color: 'text-red-400' },
+    { id: 'mileage_2', label: 'Mileage (Vehicle 2)', defaultWidth: 100, defaultHeight: 30, placeholder: 'Miles', icon: Hash, color: 'text-cyan-400' },
+    { id: 'price_2', label: 'Price (Vehicle 2)', defaultWidth: 120, defaultHeight: 30, placeholder: '$0.00', icon: DollarSign, color: 'text-emerald-400' },
+    { id: 'date_2', label: 'Date (Vehicle 2)', defaultWidth: 120, defaultHeight: 30, placeholder: 'MM/DD/YYYY', icon: Calendar, color: 'text-indigo-400' },
+  ];
+
+  // Combined predefined fields based on document type
+  const predefinedFields = isBillOfSale 
+    ? [...predefinedFieldsVehicle1, ...predefinedFieldsVehicle2]
+    : predefinedFieldsVehicle1;
 
   useEffect(() => {
     loadUploadedDocuments();
@@ -106,6 +131,124 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
       console.error('Failed to load selected PYP templates:', e);
     }
   }, []);
+
+  // Load vehicle data for auto-population (similar to SA recycling process)
+  useEffect(() => {
+    // Check for vehicle data in localStorage
+    const v1Str = localStorage.getItem('documents-vehicle-data-1');
+    const v2Str = localStorage.getItem('documents-vehicle-data-2');
+    
+    let v1: any = null;
+    let v2: any = null;
+    
+    try { v1 = v1Str ? JSON.parse(v1Str) : null; } catch (e) { console.error('Error parsing vehicle 1 data:', e); }
+    try { v2 = v2Str ? JSON.parse(v2Str) : null; } catch (e) { console.error('Error parsing vehicle 2 data:', e); }
+    
+    if (v1) {
+      console.log('Found Vehicle 1 data for PYP:', v1);
+      setVehicleData1(v1);
+    }
+    
+    if (v2) {
+      console.log('Found Vehicle 2 data for PYP:', v2);
+      setVehicleData2(v2);
+    }
+  }, []);
+
+  // Auto-populate vehicle fields when vehicle data or documents change
+  useEffect(() => {
+    if (!currentDocument || (!vehicleData1 && !vehicleData2)) return;
+    
+    const docId = currentDocument.id;
+    const existingFields = documentFields[docId] || [];
+    
+    // Auto-populate existing fields or create new ones if none exist for this document
+    let updatedFields = [...existingFields];
+    
+    // Populate Vehicle 1 fields
+    if (vehicleData1) {
+      console.log('Auto-populating Vehicle 1 fields for:', currentDocument.name);
+      updatedFields = updatedFields.map(field => {
+        const updatedField = { ...field };
+        switch (field.fieldType) {
+          case 'vin':
+            updatedField.content = vehicleData1.vehicleId || '';
+            break;
+          case 'year':
+            updatedField.content = vehicleData1.year || '';
+            break;
+          case 'make':
+            updatedField.content = vehicleData1.make || '';
+            break;
+          case 'model':
+            updatedField.content = vehicleData1.model || '';
+            break;
+          case 'license_plate':
+            updatedField.content = vehicleData1.licensePlate || '';
+            break;
+          case 'mileage':
+            updatedField.content = vehicleData1.mileage || '';
+            break;
+          case 'price':
+            updatedField.content = vehicleData1.salePrice || '';
+            break;
+          case 'date':
+            updatedField.content = vehicleData1.saleDate || '';
+            break;
+          case 'buyer_name':
+            const buyerName = [vehicleData1.buyerFirstName, vehicleData1.buyerLastName].filter(Boolean).join(' ');
+            updatedField.content = buyerName || '';
+            break;
+          case 'seller_name':
+            updatedField.content = vehicleData1.sellerName || '';
+            break;
+        }
+        return updatedField;
+      });
+    }
+    
+    // Populate Vehicle 2 fields (only for bill of sale documents)
+    if (vehicleData2 && isBillOfSale) {
+      console.log('Auto-populating Vehicle 2 fields for bill of sale');
+      updatedFields = updatedFields.map(field => {
+        const updatedField = { ...field };
+        switch (field.fieldType) {
+          case 'vin_2':
+            updatedField.content = vehicleData2.vehicleId || '';
+            break;
+          case 'year_2':
+            updatedField.content = vehicleData2.year || '';
+            break;
+          case 'make_2':
+            updatedField.content = vehicleData2.make || '';
+            break;
+          case 'model_2':
+            updatedField.content = vehicleData2.model || '';
+            break;
+          case 'license_plate_2':
+            updatedField.content = vehicleData2.licensePlate || '';
+            break;
+          case 'mileage_2':
+            updatedField.content = vehicleData2.mileage || '';
+            break;
+          case 'price_2':
+            updatedField.content = vehicleData2.salePrice || '';
+            break;
+          case 'date_2':
+            updatedField.content = vehicleData2.saleDate || '';
+            break;
+        }
+        return updatedField;
+      });
+    }
+    
+    // Update fields for this document
+    setDocumentFields(prev => ({
+      ...prev,
+      [docId]: updatedFields
+    }));
+    
+  }, [currentDocument, vehicleData1, vehicleData2, isBillOfSale]);
 
   // Load uploaded documents (PYP specific storage)
   const loadUploadedDocuments = async () => {
