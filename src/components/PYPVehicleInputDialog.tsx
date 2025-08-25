@@ -15,6 +15,7 @@ interface PYPVehicleInputDialogProps {
     make: string;
     model: string;
     vehicleId: string;
+    saleDate?: string;
   };
 }
 
@@ -32,11 +33,7 @@ export function PYPVehicleInputDialog({
     model: initialData?.model || '',
     licensePlate: '',
     mileage: '',
-    salePrice: '',
-    sellerName: '',
-    buyerFirstName: '',
-    buyerLastName: '',
-    saleDate: new Date().toISOString().split('T')[0] // Today's date in YYYY-MM-DD format
+    saleDate: initialData?.saleDate || new Date().toISOString().split('T')[0] // Use vehicle's sale date or today's date
   });
 
   const handleInputChange = (field: string, value: string) => {
@@ -63,10 +60,6 @@ export function PYPVehicleInputDialog({
       model: '',
       licensePlate: '',
       mileage: '',
-      salePrice: '',
-      sellerName: '',
-      buyerFirstName: '',
-      buyerLastName: '',
       saleDate: new Date().toISOString().split('T')[0]
     });
   };
@@ -149,60 +142,18 @@ export function PYPVehicleInputDialog({
             </div>
           </div>
 
-          {/* Sale Information */}
+          {/* Sale Date */}
           <div className="space-y-4">
             <h3 className="font-medium text-lg">Sale Information</h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="salePrice">Sale Price</Label>
-                <Input
-                  id="salePrice"
-                  value={formData.salePrice}
-                  onChange={(e) => handleInputChange('salePrice', e.target.value)}
-                  placeholder="$0.00"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="saleDate">Sale Date</Label>
-                <Input
-                  id="saleDate"
-                  type="date"
-                  value={formData.saleDate}
-                  onChange={(e) => handleInputChange('saleDate', e.target.value)}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="sellerName">Seller Name</Label>
-                <Input
-                  id="sellerName"
-                  value={formData.sellerName}
-                  onChange={(e) => handleInputChange('sellerName', e.target.value)}
-                  placeholder="Seller full name"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="buyerFirstName">Buyer First Name</Label>
-                <Input
-                  id="buyerFirstName"
-                  value={formData.buyerFirstName}
-                  onChange={(e) => handleInputChange('buyerFirstName', e.target.value)}
-                  placeholder="Buyer first name"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="buyerLastName">Buyer Last Name</Label>
-                <Input
-                  id="buyerLastName"
-                  value={formData.buyerLastName}
-                  onChange={(e) => handleInputChange('buyerLastName', e.target.value)}
-                  placeholder="Buyer last name"
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="saleDate">Sale Date</Label>
+              <Input
+                id="saleDate"
+                type="date"
+                value={formData.saleDate}
+                onChange={(e) => handleInputChange('saleDate', e.target.value)}
+              />
             </div>
           </div>
         </div>

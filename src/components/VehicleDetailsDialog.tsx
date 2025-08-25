@@ -1001,12 +1001,13 @@ export function VehicleDetailsDialog({
           }
           onNavigate && onNavigate('pyp-documents');
         }}
-        vehicleInfo={{
-          year: localVehicle.year,
-          make: localVehicle.make,
-          model: localVehicle.model,
-          vin: localVehicle.vehicleId
-        }}
+            vehicleInfo={{
+              year: localVehicle.year,
+              make: localVehicle.make,
+              model: localVehicle.model,
+              vin: localVehicle.vehicleId,
+              saleDate: localVehicle.saleDate
+            }}
       />
     </>
   );

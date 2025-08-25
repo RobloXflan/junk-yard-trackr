@@ -76,6 +76,7 @@ interface PYPTemplateSelectionDialogProps {
     make: string;
     model: string;
     vin: string;
+    saleDate?: string;
   };
 }
 
@@ -511,7 +512,8 @@ export function PYPTemplateSelectionDialog({
           year: vehicleInfo.year,
           make: vehicleInfo.make,
           model: vehicleInfo.model,
-          vehicleId: vehicleInfo.vin
+          vehicleId: vehicleInfo.vin,
+          saleDate: vehicleInfo.saleDate
         } : undefined}
       />
 
