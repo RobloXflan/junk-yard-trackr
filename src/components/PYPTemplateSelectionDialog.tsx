@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import { FileText, Printer, Upload, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useDropzone } from "react-dropzone";
 import { supabase } from "@/integrations/supabase/client";
+
 interface Template {
   id: string;
   name: string;
@@ -79,10 +81,23 @@ export function PYPTemplateSelectionDialog({
   onTemplatesSelected,
   vehicleInfo
 }: PYPTemplateSelectionDialogProps) {
-  const [selectedTemplates, setSelectedTemplates] = useState<string[]>(
-    // Pre-select required templates
-    PYP_TEMPLATES.filter(t => t.required).map(t => t.id)
-  );
+  // Persist and restore selected templates so they stay checked across sessions.
+  const [selectedTemplates, setSelectedTemplates] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem('pyp-selected-templates');
+      const saved = raw ? (JSON.parse(raw) as string[]) : null;
+      const requiredIds = PYP_TEMPLATES.filter(t => t.required).map(t => t.id);
+      if (Array.isArray(saved)) {
+        // Ensure required templates are always included
+        return Array.from(new Set([...saved, ...requiredIds]));
+      }
+      // Default: required templates pre-selected
+      return requiredIds;
+    } catch {
+      return PYP_TEMPLATES.filter(t => t.required).map(t => t.id);
+    }
+  });
+
   const [uploadedImages, setUploadedImages] = useState<Record<string, string>>({});
 
   const handleImageUpload = useCallback(async (templateId: string, files: File[]) => {
@@ -145,6 +160,14 @@ export function PYPTemplateSelectionDialog({
       localStorage.setItem('pyp-template-images', JSON.stringify(uploadedImages));
     } catch {}
   }, [uploadedImages]);
+
+  // Persist selected checkbox state so it doesn't reset
+  useEffect(() => {
+    try {
+      localStorage.setItem('pyp-selected-templates', JSON.stringify(selectedTemplates));
+    } catch {}
+  }, [selectedTemplates]);
+
   const handleRemoveImage = (templateId: string) => {
     setUploadedImages(prev => {
       const newImages = { ...prev };
@@ -179,6 +202,11 @@ export function PYPTemplateSelectionDialog({
       });
       return;
     }
+
+    // Save the chosen set (with image URLs) so the editor can load them immediately next time
+    try {
+      localStorage.setItem('selected-pyp-templates', JSON.stringify(selected));
+    } catch {}
 
     onTemplatesSelected(selected);
     onClose();
