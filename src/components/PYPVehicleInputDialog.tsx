@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -36,6 +36,21 @@ export function PYPVehicleInputDialog({
     mileage: '',
     saleDate: initialData?.saleDate || new Date().toISOString().split('T')[0] // Use vehicle's sale date or today's date
   });
+
+  useEffect(() => {
+    if (!open) return;
+    if (initialData) {
+      setFormData(prev => ({
+        ...prev,
+        vehicleId: initialData.vehicleId || prev.vehicleId,
+        year: initialData.year || prev.year,
+        make: initialData.make || prev.make,
+        model: initialData.model || prev.model,
+        licensePlate: (initialData.licensePlate || prev.licensePlate || '').toUpperCase(),
+        saleDate: initialData.saleDate ? initialData.saleDate.split('T')[0] : prev.saleDate,
+      }));
+    }
+  }, [initialData, open]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
