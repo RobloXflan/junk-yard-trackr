@@ -21,7 +21,7 @@ interface Template {
 const PYP_TEMPLATES: Template[] = [
   {
     id: "bill-of-sale",
-    name: "Bill of Sale",
+    name: "Statement_of_fax1",
     description: "Vehicle purchase agreement and transfer document",
     previewImage: "/api/placeholder/300/400",
     required: true
