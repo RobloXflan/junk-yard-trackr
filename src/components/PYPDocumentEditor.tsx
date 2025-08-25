@@ -3,10 +3,64 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { Trash2, Plus, Move, Type, Printer, Upload, Image, Car, Calendar, Hash, User, Phone, MapPin, DollarSign, FileText } from 'lucide-react';
+import { Trash2, Plus, Move, Type, Save, Printer, Upload, Image, Car, Calendar, Hash, User, Phone, MapPin, DollarSign, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import dmvFormImage from '@/assets/dmv-bill-of-sale.png';
+import { format } from 'date-fns';
+
+// DMV/NCIC Code mapping for vehicle makes
+const DMV_CODE_MAPPING: Record<string, string> = {
+  'acura': 'ACUR',
+  'audi': 'AUDI',
+  'bmw': 'BMW',
+  'buick': 'BUIC',
+  'cadillac': 'CADI',
+  'chevrolet': 'CHEV',
+  'chevy': 'CHEV',
+  'chrysler': 'CHRY',
+  'datsun': 'DATS',
+  'dodge': 'DODG',
+  'fiat': 'FIAT',
+  'ford': 'FORD',
+  'gmc': 'GMC',
+  'honda': 'HOND',
+  'hyundai': 'HYUN',
+  'infiniti': 'INFI',
+  'isuzu': 'ISU',
+  'jaguar': 'JAGU',
+  'jeep': 'JEEP',
+  'kia': 'KIA',
+  'land rover': 'LNDR',
+  'lexus': 'LEXS',
+  'lincoln': 'LINC',
+  'mazda': 'MAZD',
+  'mercedes-benz': 'MERZ',
+  'mercedes': 'MERZ',
+  'mercury': 'MERC',
+  'mini': 'MNNI',
+  'mini cooper': 'MNNI',
+  'mitsubishi': 'MITS',
+  'nissan': 'NISS',
+  'oldsmobile': 'OLDS',
+  'plymouth': 'PLYM',
+  'pontiac': 'PONT',
+  'porsche': 'PORS',
+  'saturn': 'SATR',
+  'subaru': 'SUBA',
+  'suzuki': 'SUZI',
+  'toyota': 'TOYT',
+  'volkswagen': 'VOLK',
+  'vw': 'VOLK',
+  'volvo': 'VOLV'
+};
+
+// Convert vehicle make to DMV/NCIC code
+const convertMakeToDMVCode = (make: string): string => {
+  if (!make) return '';
+  const dmvCode = DMV_CODE_MAPPING[make.toLowerCase().trim()];
+  return dmvCode || make; 
+};
 
 interface TextField {
   id: string;
@@ -30,6 +84,19 @@ interface PredefinedField {
   color: string;
 }
 
+interface DocumentTemplate {
+  id: string;
+  name: string;
+  imageUrl: string;
+  fields: TextField[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface PYPDocumentEditorProps {
+  onNavigate?: (page: string) => void;
+}
+
 interface UploadedDocument {
   id: string;
   name: string;
@@ -37,40 +104,31 @@ interface UploadedDocument {
   uploadedAt: Date;
 }
 
-interface PYPDocumentEditorProps {
-  onNavigate?: (page: string) => void;
-}
-
-// Separate PYP Document Editor - No saved templates functionality
 export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
-  const [documentFields, setDocumentFields] = useState<Record<string, TextField[]>>({});
+  const [fields, setFields] = useState<TextField[]>([]);
   const [selectedField, setSelectedField] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [templateName, setTemplateName] = useState('PYP Bill of Sale');
+  const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
   const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
-  const [currentDocumentIndex, setCurrentDocumentIndex] = useState(0);
+  const [currentDocumentUrl, setCurrentDocumentUrl] = useState(dmvFormImage);
   const [isUploading, setIsUploading] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 816, height: 1056 });
   
-  // Dual vehicle state management (for bill of sale documents)
+  // Dual vehicle state management
   const [vehicleData1, setVehicleData1] = useState<any>(null);
   const [vehicleData2, setVehicleData2] = useState<any>(null);
   const [currentVehicleSlot, setCurrentVehicleSlot] = useState<1 | 2>(1);
+  
+  // PYP Trip mode state
+  const [isInTripMode, setIsInTripMode] = useState(false);
   const [currentTripData, setCurrentTripData] = useState<any>(null);
 
-  // Get current document and its fields
-  const currentDocument = uploadedDocuments[currentDocumentIndex];
-  const currentDocumentUrl = currentDocument?.url || dmvFormImage;
-  const fields = documentFields[currentDocument?.id || 'default'] || [];
-
-  // Check if current document is bill of sale (supports dual vehicles)
-  const isBillOfSale = currentDocument?.name.toLowerCase().includes('bill of sale') || 
-                       currentDocument?.name.toLowerCase().includes('bill-of-sale');
-
-  // Predefined field types for PYP - Vehicle 1
+  // Predefined field types - Vehicle 1
   const predefinedFieldsVehicle1: PredefinedField[] = [
     { id: 'vin', label: 'VIN (Vehicle 1)', defaultWidth: 300, defaultHeight: 30, placeholder: 'Enter vehicle identification number', icon: Hash, color: 'text-blue-600' },
     { id: 'license_plate', label: 'License Plate (Vehicle 1)', defaultWidth: 150, defaultHeight: 30, placeholder: 'Enter license plate', icon: Car, color: 'text-green-600' },
@@ -87,7 +145,7 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
     { id: 'signature', label: 'Signature', defaultWidth: 200, defaultHeight: 50, placeholder: 'Signature line', icon: FileText, color: 'text-rose-600' }
   ];
 
-  // Predefined field types for PYP - Vehicle 2 (only for Bill of Sale)
+  // Predefined field types - Vehicle 2
   const predefinedFieldsVehicle2: PredefinedField[] = [
     { id: 'vin_2', label: 'VIN (Vehicle 2)', defaultWidth: 300, defaultHeight: 30, placeholder: 'Enter vehicle identification number', icon: Hash, color: 'text-blue-400' },
     { id: 'license_plate_2', label: 'License Plate (Vehicle 2)', defaultWidth: 150, defaultHeight: 30, placeholder: 'Enter license plate', icon: Car, color: 'text-green-400' },
@@ -99,20 +157,195 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
     { id: 'date_2', label: 'Date (Vehicle 2)', defaultWidth: 120, defaultHeight: 30, placeholder: 'MM/DD/YYYY', icon: Calendar, color: 'text-indigo-400' },
   ];
 
-  // Combined predefined fields based on document type
-  const predefinedFields = isBillOfSale 
-    ? [...predefinedFieldsVehicle1, ...predefinedFieldsVehicle2]
-    : predefinedFieldsVehicle1;
+  // Combined predefined fields for reference
+  const predefinedFields = [...predefinedFieldsVehicle1, ...predefinedFieldsVehicle2];
+
+  // Normalize and prefill fields with vehicle data
+  const normalizeAndPrefillFields = (templateFields: TextField[]): TextField[] => {
+    let normalizedFields = [...templateFields];
+    
+    // First, clear all known Vehicle 1 and Vehicle 2 field contents
+    const knownVehicleFieldTypes = [
+      'vin', 'year', 'make', 'model', 'license_plate', 'mileage', 'price', 'date', 
+      'seller_name', 'seller_address', 'seller_phone', 'buyer_name', 'buyer_address', 
+      'buyer_phone', 'sale_price', 'sale_date',
+      'vin_2', 'year_2', 'make_2', 'model_2', 'license_plate_2', 'mileage_2', 'price_2', 'date_2'
+    ];
+    
+    normalizedFields = normalizedFields.map(field => 
+      knownVehicleFieldTypes.includes(field.fieldType) ? { ...field, content: '' } : field
+    );
+    
+    // Get current vehicle data for PYP
+    const v1Str = localStorage.getItem('pyp-vehicle-data-1');
+    const v2Str = localStorage.getItem('pyp-vehicle-data-2');
+    
+    let v1: any = null;
+    let v2: any = null;
+    try { v1 = v1Str ? JSON.parse(v1Str) : null; } catch (e) { console.error('Error parsing vehicle 1 data:', e); }
+    try { v2 = v2Str ? JSON.parse(v2Str) : null; } catch (e) { console.error('Error parsing vehicle 2 data:', e); }
+    
+    // Prefill Vehicle 1 if present
+    if (v1) {
+      console.log('Pre-filling Vehicle 1 data:', v1);
+      setVehicleData1(v1);
+      
+      normalizedFields = normalizedFields.map(field => {
+        const updatedField = { ...field };
+        switch (field.fieldType) {
+          case 'vin':
+            updatedField.content = v1.vehicleId || '';
+            break;
+          case 'year':
+            updatedField.content = v1.year || '';
+            break;
+          case 'make':
+            updatedField.content = convertMakeToDMVCode(v1.make || '');
+            break;
+          case 'model':
+            updatedField.content = v1.model || '';
+            break;
+          case 'license_plate':
+            updatedField.content = v1.licensePlate || '';
+            break;
+          case 'mileage':
+            updatedField.content = v1.mileage || '';
+            break;
+          case 'price':
+            updatedField.content = v1.salePrice || '';
+            break;
+          case 'seller_name':
+            updatedField.content = v1.sellerName || '';
+            break;
+          case 'seller_address':
+            updatedField.content = v1.sellerAddress || '';
+            break;
+          case 'seller_phone':
+            updatedField.content = v1.sellerPhone || '';
+            break;
+          case 'buyer_name':
+            const buyerName = [v1.buyerFirstName, v1.buyerLastName].filter(Boolean).join(' ');
+            updatedField.content = buyerName || '';
+            break;
+          case 'buyer_address':
+            updatedField.content = v1.buyerAddress || '';
+            break;
+          case 'buyer_phone':
+            updatedField.content = v1.buyerPhone || '';
+            break;
+          case 'sale_price':
+            updatedField.content = v1.salePrice || '';
+            break;
+          case 'sale_date':
+            updatedField.content = v1.saleDate || '';
+            break;
+          case 'date':
+            updatedField.content = v1.saleDate || '';
+            break;
+        }
+        return updatedField;
+      });
+    }
+
+    // Only prefill Vehicle 2 in trip mode and when explicitly selected
+    if (v2) {
+      console.log('Pre-filling Vehicle 2 data:', v2);
+      setVehicleData2(v2);
+      
+      // Check if Vehicle 2 fields exist
+      const hasVehicle2Fields = normalizedFields.some(field => 
+        field.fieldType.endsWith('_2')
+      );
+      
+      if (!hasVehicle2Fields) {
+        console.log('No Vehicle 2 fields found, automatically adding them...');
+        const vehicle2Fields = addVehicle2FieldsAutomatically(normalizedFields, v2);
+        normalizedFields = [...normalizedFields, ...vehicle2Fields];
+        console.log('Added', vehicle2Fields.length, 'Vehicle 2 fields automatically');
+      } else {
+        // Pre-fill existing Vehicle 2 fields with compatibility mapping
+        normalizedFields = normalizedFields.map(field => {
+          const updatedField = { ...field };
+          
+          // Try exact fieldType match first, then compatibility patterns
+          let vehicle2FieldType = field.fieldType;
+          if (!vehicle2FieldType.endsWith('_2')) {
+            // Handle compatibility patterns like "VIN (Vehicle 2)", "Vehicle 2 VIN", etc.
+            if (field.label && (field.label.includes('Vehicle 2') || field.label.includes('(Vehicle 2)'))) {
+              if (field.label.toLowerCase().includes('vin')) vehicle2FieldType = 'vin_2';
+              else if (field.label.toLowerCase().includes('year')) vehicle2FieldType = 'year_2';
+              else if (field.label.toLowerCase().includes('make')) vehicle2FieldType = 'make_2';
+              else if (field.label.toLowerCase().includes('model')) vehicle2FieldType = 'model_2';
+              else if (field.label.toLowerCase().includes('license')) vehicle2FieldType = 'license_plate_2';
+              else if (field.label.toLowerCase().includes('mileage')) vehicle2FieldType = 'mileage_2';
+              else if (field.label.toLowerCase().includes('price')) vehicle2FieldType = 'price_2';
+              else if (field.label.toLowerCase().includes('date')) vehicle2FieldType = 'date_2';
+            }
+          }
+          
+          switch (vehicle2FieldType) {
+            case 'vin_2':
+              updatedField.content = v2.vehicleId || '';
+              console.log(`Filled ${field.label} with VIN:`, v2.vehicleId);
+              break;
+            case 'year_2':
+              updatedField.content = v2.year || '';
+              console.log(`Filled ${field.label} with year:`, v2.year);
+              break;
+            case 'make_2':
+              updatedField.content = convertMakeToDMVCode(v2.make || '');
+              console.log(`Filled ${field.label} with make:`, v2.make);
+              break;
+            case 'model_2':
+              updatedField.content = v2.model || '';
+              console.log(`Filled ${field.label} with model:`, v2.model);
+              break;
+            case 'license_plate_2':
+              updatedField.content = v2.licensePlate || '';
+              console.log(`Filled ${field.label} with license plate:`, v2.licensePlate);
+              break;
+            case 'mileage_2':
+              updatedField.content = v2.mileage || '';
+              console.log(`Filled ${field.label} with mileage:`, v2.mileage);
+              break;
+            case 'price_2':
+              updatedField.content = v2.salePrice || '';
+              console.log(`Filled ${field.label} with price:`, v2.salePrice);
+              break;
+            case 'date_2':
+              updatedField.content = v2.saleDate || '';
+              console.log(`Filled ${field.label} with date:`, v2.saleDate);
+              break;
+          }
+          return updatedField;
+        });
+      }
+    } else if (!v2) {
+      // Clear Vehicle 2 data when not in trip mode or no Vehicle 2 selected
+      setVehicleData2(null);
+      normalizedFields = normalizedFields.map(field =>
+        (field.fieldType.endsWith('_2') || (field.label && field.label.includes('Vehicle 2'))) ? { ...field, content: '' } : field
+      );
+    }
+    
+    return normalizedFields;
+  };
 
   useEffect(() => {
     const initializeEditor = async () => {
-      // Check for current PYP trip and auto-load data
+      // Check for PYP trip mode first
       const currentTripKey = localStorage.getItem('current-pyp-trip');
+      const autoPrint = localStorage.getItem('auto-print-trip');
       
       if (currentTripKey) {
-        console.log('Loading PYP trip data from:', currentTripKey);
-        const tripData = localStorage.getItem(currentTripKey);
+        console.log('Loading PYP trip:', currentTripKey);
+        setIsInTripMode(true);
         
+        // Clear any stale global vehicle data to avoid cross-trip contamination
+        localStorage.removeItem('pyp-vehicle-data-1');
+        localStorage.removeItem('pyp-vehicle-data-2');
+        
+        const tripData = localStorage.getItem(currentTripKey);
         if (tripData) {
           const parsedTripData = JSON.parse(tripData);
           setCurrentTripData(parsedTripData);
@@ -120,103 +353,46 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
           // Load vehicles from trip data
           if (parsedTripData.vehicle1) {
             setVehicleData1(parsedTripData.vehicle1);
-            localStorage.setItem('documents-vehicle-data-1', JSON.stringify(parsedTripData.vehicle1));
+            localStorage.setItem('pyp-vehicle-data-1', JSON.stringify(parsedTripData.vehicle1));
           }
           if (parsedTripData.vehicle2) {
             setVehicleData2(parsedTripData.vehicle2);
-            localStorage.setItem('documents-vehicle-data-2', JSON.stringify(parsedTripData.vehicle2));
+            localStorage.setItem('pyp-vehicle-data-2', JSON.stringify(parsedTripData.vehicle2));
           }
         }
-      } else {
-        // Check for vehicle data in localStorage (fallback)
-        const v1Str = localStorage.getItem('documents-vehicle-data-1');
-        const v2Str = localStorage.getItem('documents-vehicle-data-2');
         
-        let v1: any = null;
-        let v2: any = null;
-        
-        try { v1 = v1Str ? JSON.parse(v1Str) : null; } catch (e) { console.error('Error parsing vehicle 1 data:', e); }
-        try { v2 = v2Str ? JSON.parse(v2Str) : null; } catch (e) { console.error('Error parsing vehicle 2 data:', e); }
-        
-        if (v1) {
-          console.log('Found Vehicle 1 data for PYP:', v1);
-          setVehicleData1(v1);
-        }
-        
-        if (v2) {
-          console.log('Found Vehicle 2 data for PYP:', v2);
-          setVehicleData2(v2);
+        // Clean up navigation data
+        localStorage.removeItem('current-pyp-trip');
+        if (autoPrint) {
+          localStorage.removeItem('auto-print-trip');
         }
       }
       
-      // Load existing templates and documents
+      await loadTemplates();
       await loadUploadedDocuments();
+      await loadDefaultTemplate();
+      
+      // Auto print if requested
+      if (autoPrint && currentTripKey) {
+        setTimeout(() => {
+          handlePrint();
+        }, 1000);
+      }
     };
     
     initializeEditor();
   }, []);
 
-  // Load selected PYP templates and saved field positions
+  // Live update Vehicle 2 fields when vehicleData2 changes
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem('selected-pyp-templates');
-      if (!raw) return;
-      const templates: Array<{ name: string; uploadedImage?: string } | any> = JSON.parse(raw);
-      if (Array.isArray(templates) && templates.length) {
-        const docs = templates
-          .filter((t) => t && typeof t === 'object' && t.uploadedImage)
-          .map((t, idx) => ({
-            id: `pyp-local-${idx}-${Date.now()}`,
-            name: t.name || `Template ${idx + 1}.png`,
-            url: t.uploadedImage as string,
-            uploadedAt: new Date(),
-          }));
-        if (docs.length) {
-          setUploadedDocuments(docs);
-          setCurrentDocumentIndex(0);
-          
-          // Load saved field positions for each template
-          docs.forEach(doc => {
-            const savedFields = localStorage.getItem(`pyp-template-fields-${doc.name}`);
-            if (savedFields) {
-              try {
-                const parsedFields = JSON.parse(savedFields);
-                setDocumentFields(prev => ({
-                  ...prev,
-                  [doc.id]: parsedFields
-                }));
-              } catch (e) {
-                console.error('Error loading saved fields for', doc.name, e);
-              }
-            }
-          });
-          
-          toast.success(`Loaded ${docs.length} template${docs.length > 1 ? 's' : ''} with saved field positions`);
-        }
-      }
-    } catch (e) {
-      console.error('Failed to load selected PYP templates:', e);
-    }
-  }, []);
-
-  // Load vehicle data for auto-population (similar to SA recycling process)
-  useEffect(() => {
-    
-  }, []);
-    
-  // Live update Vehicle 2 fields when vehicleData2 changes (similar to SA recycling)
-  useEffect(() => {
-    if (!currentDocument || fields.length === 0) return; // Don't run during initial load
+    if (fields.length === 0) return; // Don't run during initial load
     
     console.log('vehicleData2 changed:', vehicleData2);
     
-    const docId = currentDocument.id;
-    
-    setDocumentFields(prevFields => {
-      const currentFields = prevFields[docId] || [];
+    setFields(currentFields => {
       let updatedFields = [...currentFields];
       
-      if (vehicleData2 && isBillOfSale) {
+      if (vehicleData2) {
         // Vehicle 2 was added - check if we need to add fields or just prefill existing ones
         const hasVehicle2Fields = updatedFields.some(field => 
           field.fieldType.endsWith('_2') || (field.label && field.label.includes('Vehicle 2'))
@@ -254,7 +430,7 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
                 updatedField.content = vehicleData2.year || '';
                 break;
               case 'make_2':
-                updatedField.content = vehicleData2.make || '';
+                updatedField.content = convertMakeToDMVCode(vehicleData2.make || '');
                 break;
               case 'model_2':
                 updatedField.content = vehicleData2.model || '';
@@ -272,122 +448,377 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
                 updatedField.content = vehicleData2.saleDate || '';
                 break;
             }
-            
             return updatedField;
           });
         }
+        
+        toast.success('Vehicle 2 data loaded and pre-filled');
       } else if (!vehicleData2) {
-        // Clear Vehicle 2 data when vehicleData2 is removed
-        updatedFields = updatedFields.map(field => 
+        // Vehicle 2 was removed - clear all Vehicle 2 fields
+        console.log('Clearing Vehicle 2 fields...');
+        updatedFields = updatedFields.map(field =>
           (field.fieldType.endsWith('_2') || (field.label && field.label.includes('Vehicle 2'))) ? { ...field, content: '' } : field
         );
       }
       
-      return {
-        ...prevFields,
-        [docId]: updatedFields
-      };
+      return updatedFields;
     });
-  }, [vehicleData2, currentDocument, isBillOfSale]);
+  }, [vehicleData2, isInTripMode]);
 
-  // Auto-populate vehicle fields when vehicle data or documents change
-  useEffect(() => {
-    if (!currentDocument || !vehicleData1) return;
-    
-    const docId = currentDocument.id;
-    const existingFields = documentFields[docId] || [];
-    
-    // Don't auto-populate if fields already exist and have content (preserve manual work)
-    const hasPopulatedFields = existingFields.some(field => field.content && field.content.trim() !== '');
-    if (hasPopulatedFields && existingFields.length > 0) {
-      console.log('Skipping auto-population - fields already have content');
-      return;
+  const loadDefaultTemplate = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('pyp_document_templates')
+        .select('*, pyp_template_fields(*)')
+        .eq('is_default', true)
+        .single();
+
+      if (!error && data) {
+        console.log('Loading default PYP template from database:', data);
+        
+        // Convert database fields to TextField format
+        const templateFields: TextField[] = data.pyp_template_fields.map((field: any) => ({
+          id: field.id,
+          x: field.x_position,
+          y: field.y_position,
+          width: field.width,
+          height: field.height,
+          content: '',
+          label: field.label,
+          fontSize: field.font_size || 14,
+          fieldType: field.field_type
+        }));
+        
+        // Normalize and prefill all fields
+        const normalizedFields = normalizeAndPrefillFields(templateFields);
+        
+        setFields(normalizedFields);
+        setCurrentDocumentUrl(data.document_url);
+        setTemplateName(data.name);
+        console.log('Loaded default PYP template from database with', normalizedFields.length, 'fields');
+        
+        // Show success message based on vehicles loaded
+        setTimeout(() => {
+          const v1Str = localStorage.getItem('pyp-vehicle-data-1');
+          const v2Str = localStorage.getItem('pyp-vehicle-data-2');
+          const hasV1 = !!v1Str;
+          const hasV2 = !!v2Str && isInTripMode;
+          
+          if (hasV1 && hasV2) {
+            toast.success("Both vehicles loaded - form fields have been pre-filled");
+          } else if (hasV1) {
+            toast.success("Vehicle 1 data loaded - form fields have been pre-filled");
+          } else if (hasV2) {
+            toast.success("Vehicle 2 data loaded - form fields have been pre-filled");
+          }
+        }, 100);
+        
+        return;
+      }
+    } catch (error) {
+      console.error('Error loading default template from database:', error);
     }
-    
-    // Auto-populate existing fields or create new ones if none exist for this document
-    let updatedFields = [...existingFields];
-    
-    // If no fields exist, try to load saved template fields first
-    if (updatedFields.length === 0) {
-      // First check for default PYP template
-      const defaultTemplate = getDefaultTemplateName();
-      let savedFields = null;
+
+    // Fallback: check localStorage for "pypdefault" template
+    const saved = localStorage.getItem('pyp-document-templates');
+    if (saved) {
+      const parsedTemplates = JSON.parse(saved);
+      const defaultTemplate = parsedTemplates.find((t: any) => t.name === 'pypdefault');
       
       if (defaultTemplate) {
-        savedFields = localStorage.getItem(`pyp-template-fields-${defaultTemplate}`);
-        if (savedFields) {
-          console.log('Loading default PYP template:', defaultTemplate);
-        }
-      }
-      
-      // Fallback to document-specific template
-      if (!savedFields) {
-        savedFields = localStorage.getItem(`pyp-template-fields-${currentDocument.name}`);
-        if (savedFields) {
-          console.log('Loading document-specific template for', currentDocument.name);
-        }
-      }
-      
-      if (savedFields) {
-        try {
-          updatedFields = JSON.parse(savedFields);
-        } catch (e) {
-          console.error('Error loading saved fields:', e);
-        }
+        console.log('Loading pypdefault template from localStorage:', defaultTemplate);
+        let templateFields = [...(defaultTemplate.fields || [])];
+        
+        // Apply the same normalization and prefill logic for localStorage fallback
+        templateFields = normalizeAndPrefillFields(templateFields);
+        
+        setFields(templateFields);
+        setCurrentDocumentUrl(defaultTemplate.imageUrl);
+        setTemplateName('pypdefault');
+        console.log('Loaded pypdefault template from localStorage with', templateFields.length, 'fields');
+        return;
       }
     }
     
-    // Populate Vehicle 1 fields
-    if (vehicleData1) {
-      console.log('Auto-populating Vehicle 1 fields for:', currentDocument.name);
-      updatedFields = updatedFields.map(field => {
-        const updatedField = { ...field };
-        switch (field.fieldType) {
-          case 'vin':
-            updatedField.content = vehicleData1.vehicleId || '';
-            break;
-          case 'year':
-            updatedField.content = vehicleData1.year || '';
-            break;
-          case 'make':
-            updatedField.content = vehicleData1.make || '';
-            break;
-          case 'model':
-            updatedField.content = vehicleData1.model || '';
-            break;
-          case 'license_plate':
-            updatedField.content = vehicleData1.licensePlate || '';
-            break;
-          case 'mileage':
-            updatedField.content = vehicleData1.mileage || '';
-            break;
-          case 'price':
-            updatedField.content = vehicleData1.salePrice || '';
-            break;
-          case 'date':
-            updatedField.content = vehicleData1.saleDate || '';
-            break;
-          case 'buyer_name':
-            const buyerName = [vehicleData1.buyerFirstName, vehicleData1.buyerLastName].filter(Boolean).join(' ');
-            updatedField.content = buyerName || '';
-            break;
-          case 'seller_name':
-            updatedField.content = vehicleData1.sellerName || '';
-            break;
-        }
-        return updatedField;
-      });
-    }
-    
-    // Update fields for this document
-    setDocumentFields(prev => ({
-      ...prev,
-      [docId]: updatedFields
-    }));
-    
-  }, [currentDocument, vehicleData1]);
+    // Final fallback: if no "pypdefault" template found, start with empty form
+    setCurrentDocumentUrl(dmvFormImage);
+    setFields([]);
+    setTemplateName('pypdefault');
+    console.log('No pypdefault template found, starting with empty form');
+  };
 
-  // Add Vehicle 2 fields automatically when needed (similar to SA recycling)
+  // Navigation helper functions
+  const handleGoBackToInventory = () => {
+    // Store current template data before navigating
+    const currentTemplateData = {
+      templateName,
+      fields,
+      currentDocumentUrl,
+      vehicleData1,
+      vehicleData2
+    };
+    localStorage.setItem('pyp-current-template', JSON.stringify(currentTemplateData));
+    
+    // Determine which vehicle slot to fill next
+    if (!vehicleData1) {
+      setCurrentVehicleSlot(1);
+      localStorage.setItem('pyp-next-vehicle-slot', '1');
+    } else if (!vehicleData2) {
+      setCurrentVehicleSlot(2);
+      localStorage.setItem('pyp-next-vehicle-slot', '2');
+    }
+    
+    // Navigate back to inventory using the proper navigation function
+    if (onNavigate) {
+      onNavigate('inventory');
+      toast.success('Returning to Vehicle Inventory - select a vehicle to add to the template');
+    } else {
+      // Fallback to window location if onNavigate is not available
+      window.location.href = '/';
+      toast.success('Returning to Vehicle Inventory - select a vehicle to add to the template');
+    }
+  };
+
+  const handleContinueWithOneVehicle = () => {
+    toast.success('Continuing with single vehicle template');
+  };
+
+  const loadTemplates = async () => {
+    console.log('Loading templates from both localStorage and Supabase...');
+    
+    // Load from localStorage first
+    const localTemplates: DocumentTemplate[] = [];
+    const saved = localStorage.getItem('pyp-document-templates');
+    if (saved) {
+      try {
+        const parsedTemplates = JSON.parse(saved);
+        const templatesWithDates = parsedTemplates.map((t: any) => ({
+          ...t,
+          createdAt: new Date(t.createdAt),
+          updatedAt: new Date(t.updatedAt)
+        }));
+        localTemplates.push(...templatesWithDates);
+      } catch (error) {
+        console.error('Error parsing localStorage templates:', error);
+      }
+    }
+
+    // Load from Supabase database
+    const supabaseTemplates: DocumentTemplate[] = [];
+    try {
+      const { data, error } = await supabase
+        .from('pyp_document_templates')
+        .select('*, pyp_template_fields(*)')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading templates from Supabase:', error);
+      } else if (data) {
+        // Convert database templates to DocumentTemplate format
+        for (const template of data) {
+          const templateFields: TextField[] = template.pyp_template_fields.map((field: any) => ({
+            id: field.id,
+            x: field.x_position,
+            y: field.y_position,
+            width: field.width,
+            height: field.height,
+            content: '',
+            label: field.label,
+            fontSize: field.font_size || 14,
+            fieldType: field.field_type
+          }));
+
+          supabaseTemplates.push({
+            id: template.id,
+            name: template.name,
+            imageUrl: template.document_url,
+            fields: templateFields,
+            createdAt: new Date(template.created_at),
+            updatedAt: new Date(template.updated_at)
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error accessing Supabase:', error);
+    }
+
+    // Merge templates (Supabase takes precedence for duplicates by name)
+    const allTemplates = [...localTemplates];
+    supabaseTemplates.forEach(supabaseTemplate => {
+      const existsLocally = localTemplates.some(local => local.name === supabaseTemplate.name);
+      if (!existsLocally) {
+        allTemplates.push(supabaseTemplate);
+      }
+    });
+
+    setTemplates(allTemplates);
+    console.log(`Templates loaded: ${localTemplates.length} from localStorage, ${supabaseTemplates.length} from Supabase`);
+  };
+
+  const loadUploadedDocuments = async () => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .list('pyp-templates/', {
+          limit: 100,
+          sortBy: { column: 'created_at', order: 'desc' }
+        });
+
+      if (error) {
+        console.error('Error loading documents:', error);
+        return;
+      }
+
+      const documents: UploadedDocument[] = data.map(file => ({
+        id: file.id,
+        name: file.name,
+        url: supabase.storage.from('documents').getPublicUrl(`pyp-templates/${file.name}`).data.publicUrl,
+        uploadedAt: new Date(file.created_at)
+      }));
+
+      setUploadedDocuments(documents);
+    } catch (error) {
+      console.error('Error loading uploaded documents:', error);
+    }
+  };
+
+  // Image optimization function
+  const optimizeImage = async (file: File): Promise<File> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = document.createElement('img');
+      
+      img.onload = () => {
+        // Calculate optimal dimensions (max 1920px width/height)
+        const maxDimension = 1920;
+        let { width, height } = img;
+        
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = (height * maxDimension) / width;
+            width = maxDimension;
+          } else {
+            width = (width * maxDimension) / height;
+            height = maxDimension;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw and compress
+        ctx?.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            const optimizedFile = new File([blob!], file.name, {
+              type: 'image/jpeg',
+              lastModified: Date.now(),
+            });
+            resolve(optimizedFile);
+          },
+          'image/jpeg',
+          0.85 // 85% quality for good balance
+        );
+      };
+      
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type - support only optimized image formats
+    const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    
+    if (!validImageTypes.includes(file.type)) {
+      toast.error('Please select a PNG, JPEG, or WebP image file for best results');
+      return;
+    }
+
+    // Validate file size (5MB limit for better performance)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast.error('Image size must be less than 5MB. Please compress your image and try again.');
+      return;
+    }
+
+    setIsUploading(true);
+    
+    try {
+      // Optimize image before upload
+      const optimizedFile = await optimizeImage(file);
+      
+      // Generate unique filename
+      const fileExt = optimizedFile.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const fileName = `pyp-document-${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      
+      // Upload to Supabase storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(`pyp-templates/${fileName}`, optimizedFile, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const publicUrl = supabase.storage
+        .from('documents')
+        .getPublicUrl(`pyp-templates/${fileName}`)
+        .data.publicUrl;
+
+      // Update current document
+      setCurrentDocumentUrl(publicUrl);
+      
+      // Reload uploaded documents
+      await loadUploadedDocuments();
+      
+      toast.success('Document uploaded and optimized successfully!');
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload document. Please try a different image.');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const saveTrip = () => {
+    if (!isInTripMode || !currentTripData) {
+      toast.error('Not in trip mode');
+      return;
+    }
+
+    const today = format(new Date(), 'yyyy-MM-dd');
+    const tripNumber = getCurrentTripNumber();
+    const tripKey = `pyp-trip-${today}-${tripNumber}`;
+    
+    const tripDataToSave = {
+      ...currentTripData,
+      vehicle1: vehicleData1,
+      vehicle2: vehicleData2,
+      savedAt: new Date().toISOString(),
+      templateFields: fields
+    };
+    
+    localStorage.setItem(tripKey, JSON.stringify(tripDataToSave));
+    
+    toast.success(`Trip ${tripNumber} saved successfully`);
+  };
+
+  const saveTripAndPrint = () => {
+    saveTrip();
+    setTimeout(() => {
+      handlePrint();
+    }, 500);
+  };
+
   const addVehicle2FieldsAutomatically = (existingFields: TextField[], vehicleData: any): TextField[] => {
     // Find the bottom-most Y position of existing fields to position Vehicle 2 fields below
     const maxY = existingFields.reduce((max, field) => 
@@ -427,7 +858,7 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
         y: startY + 40,
         width: 120,
         height: 30,
-        content: vehicleData.make || '',
+        content: convertMakeToDMVCode(vehicleData.make || ''),
         label: 'Make (Vehicle 2)',
         fontSize: 14,
         fieldType: 'make_2'
@@ -455,9 +886,20 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
         fieldType: 'license_plate_2'
       },
       {
-        id: `price_2_${Date.now() + 5}`,
+        id: `mileage_2_${Date.now() + 5}`,
         x: rightColumnX,
         y: startY + 80,
+        width: 100,
+        height: 30,
+        content: vehicleData.mileage || '',
+        label: 'Mileage (Vehicle 2)',
+        fontSize: 14,
+        fieldType: 'mileage_2'
+      },
+      {
+        id: `price_2_${Date.now() + 6}`,
+        x: leftColumnX,
+        y: startY + 120,
         width: 120,
         height: 30,
         content: vehicleData.salePrice || '',
@@ -466,8 +908,8 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
         fieldType: 'price_2'
       },
       {
-        id: `date_2_${Date.now() + 6}`,
-        x: leftColumnX,
+        id: `date_2_${Date.now() + 7}`,
+        x: rightColumnX,
         y: startY + 120,
         width: 120,
         height: 30,
@@ -481,308 +923,248 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
     return vehicle2Fields;
   };
 
-  // Save field positions for current template
-  const saveFieldPositions = () => {
-    if (!currentDocument) {
-      toast.error('No document selected');
-      return;
-    }
-    
-    const docFields = documentFields[currentDocument.id] || [];
-    const templateName = currentDocument.name;
-    
-    try {
-      localStorage.setItem(`pyp-template-fields-${templateName}`, JSON.stringify(docFields));
-      toast.success(`Field positions saved for ${templateName}`);
-    } catch (error) {
-      console.error('Error saving field positions:', error);
-      toast.error('Failed to save field positions');
-    }
+  const getCurrentTripNumber = () => {
+    // Extract trip number from localStorage or context
+    const currentTripKey = localStorage.getItem('current-pyp-trip') || '';
+    const matches = currentTripKey.match(/pyp-trip-\d{4}-\d{2}-\d{2}-(\d+)/);
+    return matches ? parseInt(matches[1]) : 1;
   };
 
-  // Save as default PYP template
-  const saveAsDefaultTemplate = () => {
-    if (!currentDocument) {
-      toast.error('No document selected');
-      return;
-    }
+  const saveTemplate = async () => {
+    console.log('Attempting to save template...');
+    console.log('Template name:', templateName);
+    console.log('Current document URL:', currentDocumentUrl);
+    console.log('Fields to save:', fields);
     
-    const docFields = documentFields[currentDocument.id] || [];
-    const templateName = currentDocument.name;
-    
-    try {
-      // Save the template fields
-      localStorage.setItem(`pyp-template-fields-${templateName}`, JSON.stringify(docFields));
-      // Mark this as the default PYP template
-      localStorage.setItem('pyp-default-template', templateName);
-      toast.success(`${templateName} set as default PYP template`);
-    } catch (error) {
-      console.error('Error saving default template:', error);
-      toast.error('Failed to save default template');
-    }
-  };
-
-  // Load field positions for current template
-  const loadFieldPositions = () => {
-    if (!currentDocument) {
-      toast.error('No document selected');
-      return;
-    }
-    
-    const templateName = currentDocument.name;
-    const savedFields = localStorage.getItem(`pyp-template-fields-${templateName}`);
-    
-    if (savedFields) {
-      try {
-        const parsedFields = JSON.parse(savedFields);
-        setDocumentFields(prev => ({
-          ...prev,
-          [currentDocument.id]: parsedFields
-        }));
-        toast.success(`Field positions loaded for ${templateName}`);
-      } catch (error) {
-        console.error('Error loading field positions:', error);
-        toast.error('Failed to load field positions');
-      }
-    } else {
-      toast.info(`No saved field positions found for ${templateName}`);
-    }
-  };
-
-  // Get current default template name
-  const getDefaultTemplateName = (): string | null => {
-    return localStorage.getItem('pyp-default-template');
-  };
-
-  // Check if current document is the default template
-  const isCurrentDocumentDefault = (): boolean => {
-    const defaultTemplate = getDefaultTemplateName();
-    return defaultTemplate === currentDocument?.name;
-  };
-  // Load uploaded documents (PYP specific storage)
-  const loadUploadedDocuments = async () => {
-    try {
-      const { data, error } = await supabase.storage
-        .from('documents')
-        .list('pyp-uploads/', {
-          limit: 100,
-          sortBy: { column: 'created_at', order: 'desc' }
-        });
-
-      if (error) throw error;
-
-      if (data) {
-        const documents: UploadedDocument[] = data
-          .filter(file => file.name !== '.emptyFolderPlaceholder')
-          .map(file => ({
-            id: file.id || file.name,
-            name: file.name,
-            url: supabase.storage.from('documents').getPublicUrl(`pyp-uploads/${file.name}`).data.publicUrl,
-            uploadedAt: new Date(file.created_at || Date.now())
-          }));
-
-        // Merge Supabase documents with any existing ones (e.g., from local selection)
-        setUploadedDocuments((prev) => {
-          const merged = [...documents];
-          for (const d of prev) {
-            if (!merged.some((m) => m.url === d.url)) merged.push(d);
-          }
-          // If no current document selected, default to first
-          if (currentDocumentIndex === 0 && merged.length > 0) {
-            setCurrentDocumentIndex(0);
-          }
-          return merged;
-        });
-      }
-    } catch (error) {
-      console.error('Error loading uploaded documents:', error);
-    }
-  };
-
-  // Handle file upload for PYP documents
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file (PNG, JPG, etc.)');
+    // Validation checks
+    if (!templateName.trim()) {
+      toast.error('Please enter a template name before saving.');
+      console.log('Save failed: No template name');
       return;
     }
 
-    setIsUploading(true);
+    if (!currentDocumentUrl) {
+      toast.error('Please upload a document image before saving the template.');
+      console.log('Save failed: No document image');
+      return;
+    }
+
+    if (fields.length === 0) {
+      toast.error('Please add at least one text field before saving the template.');
+      console.log('Save failed: No fields added');
+      return;
+    }
+
+    // Show saving feedback
+    const savingToast = toast.loading('Saving template to database...');
+
     try {
-      // Create optimized version
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = document.createElement('img') as HTMLImageElement;
+      // Strip vehicle contents from fields before saving to avoid baking stale data
+      const knownVehicleFieldTypes = [
+        'vin', 'year', 'make', 'model', 'license_plate', 'mileage', 'price', 'date', 
+        'seller_name', 'seller_address', 'seller_phone', 'buyer_name', 'buyer_address', 
+        'buyer_phone', 'sale_price', 'sale_date',
+        'vin_2', 'year_2', 'make_2', 'model_2', 'license_plate_2', 'mileage_2', 'price_2', 'date_2'
+      ];
       
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-        img.src = URL.createObjectURL(file);
-      });
-
-      // Set canvas size to 8.5x11 inches at 96 DPI (816x1056 pixels)
-      canvas.width = 816;
-      canvas.height = 1056;
-      
-      if (ctx) {
-        ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        const aspectRatio = img.width / img.height;
-        const canvasAspectRatio = canvas.width / canvas.height;
-        
-        let drawWidth, drawHeight, offsetX = 0, offsetY = 0;
-        
-        if (aspectRatio > canvasAspectRatio) {
-          drawWidth = canvas.width;
-          drawHeight = canvas.width / aspectRatio;
-          offsetY = (canvas.height - drawHeight) / 2;
-        } else {
-          drawHeight = canvas.height;
-          drawWidth = canvas.height * aspectRatio;
-          offsetX = (canvas.width - drawWidth) / 2;
+      const cleanedFields = fields.map(field => {
+        if (knownVehicleFieldTypes.includes(field.fieldType) || 
+            (field.label && field.label.includes('Vehicle'))) {
+          // Find the predefined field to get its placeholder, or use empty string
+          const predefinedField = predefinedFields.find(pf => pf.id === field.fieldType);
+          return { ...field, content: predefinedField?.placeholder || '' };
         }
-        
-        ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
-      }
-
-      // Convert to optimized file
-      const optimizedBlob = await new Promise<Blob | null>((resolve) => {
-        canvas.toBlob(resolve, 'image/jpeg', 0.85);
+        return field;
       });
+      
+      // Save to Supabase database
+      const { data: templateData, error: templateError } = await supabase
+        .from('pyp_document_templates')
+        .insert({
+          name: templateName.trim(),
+          document_url: currentDocumentUrl,
+          is_default: templateName.trim() === 'pypdefault'
+        })
+        .select()
+        .single();
 
-      if (!optimizedBlob) throw new Error('Failed to create optimized image');
+      if (templateError) throw templateError;
 
-      const optimizedFile = new File([optimizedBlob], file.name, { type: 'image/jpeg' });
-      const fileName = `${Date.now()}-${file.name}`;
+      // Save fields to database
+      const fieldsToInsert = cleanedFields.map(field => ({
+        template_id: templateData.id,
+        field_type: field.fieldType,
+        label: field.label,
+        x_position: field.x,
+        y_position: field.y,
+        width: field.width,
+        height: field.height,
+        font_size: field.fontSize
+      }));
 
-      // Upload to PYP specific folder in Supabase storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('documents')
-        .upload(`pyp-uploads/${fileName}`, optimizedFile, {
-          cacheControl: '3600',
-          upsert: false
-        });
+      const { error: fieldsError } = await supabase
+        .from('pyp_template_fields')
+        .insert(fieldsToInsert);
 
-      if (uploadError) throw uploadError;
+      if (fieldsError) throw fieldsError;
 
-      const publicUrl = supabase.storage
-        .from('documents')
-        .getPublicUrl(`pyp-uploads/${fileName}`)
-        .data.publicUrl;
-
-      // Add uploaded document and set as current
-      const newDoc: UploadedDocument = {
-        id: `upload-${Date.now()}`,
-        name: fileName,
-        url: publicUrl,
-        uploadedAt: new Date()
+      // Also save to localStorage as backup for fast loading
+      const template: DocumentTemplate = {
+        id: templateData.id,
+        name: templateName.trim(),
+        imageUrl: currentDocumentUrl,
+        fields: cleanedFields,
+        createdAt: new Date(),
+        updatedAt: new Date()
       };
+
+      const updatedTemplates = [...templates, template];
+      setTemplates(updatedTemplates);
+      localStorage.setItem('pyp-document-templates', JSON.stringify(updatedTemplates));
       
-      setUploadedDocuments(prev => {
-        const updated = [...prev, newDoc];
-        // Set as current document
-        setCurrentDocumentIndex(updated.length - 1);
-        return updated;
-      });
+      console.log('Template saved successfully to both Supabase and localStorage');
+      console.log('Updated templates list:', updatedTemplates);
       
-      toast.success('Document uploaded successfully!');
+      toast.dismiss(savingToast);
+      toast.success(`Template "${templateName}" saved successfully with ${fields.length} fields!`);
+      
+      // Reset the template name for next save
+      setTemplateName('');
     } catch (error) {
-      console.error('Error uploading file:', error);
-      toast.error('Failed to upload document');
-    } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+      console.error('Error saving template:', error);
+      toast.dismiss(savingToast);
+      toast.error('Failed to save template to database. Please try again.');
+    }
+  };
+
+  const deleteTemplate = async (templateId: string) => {
+    const templateToDelete = templates.find(t => t.id === templateId);
+    if (!templateToDelete) return;
+
+    if (window.confirm(`Are you sure you want to delete the template "${templateToDelete.name}"?`)) {
+      const deletingToast = toast.loading('Deleting template...');
+      
+      try {
+        // Delete from Supabase database
+        const { error: deleteError } = await supabase
+          .from('pyp_document_templates')
+          .delete()
+          .eq('id', templateId);
+
+        if (deleteError) {
+          console.error('Error deleting from Supabase:', deleteError);
+          // Continue with local deletion even if Supabase fails
+        }
+
+        // Delete from local state and localStorage
+        const updatedTemplates = templates.filter(t => t.id !== templateId);
+        setTemplates(updatedTemplates);
+        localStorage.setItem('pyp-document-templates', JSON.stringify(updatedTemplates));
+        
+        toast.dismiss(deletingToast);
+        toast.success(`Template "${templateToDelete.name}" deleted successfully!`);
+      } catch (error) {
+        console.error('Error deleting template:', error);
+        toast.dismiss(deletingToast);
+        toast.error('Failed to delete template. Please try again.');
       }
     }
   };
 
-  // Update fields for current document
-  const updateFieldsForCurrentDoc = (updater: (fields: TextField[]) => TextField[]) => {
-    const docId = currentDocument?.id || 'default';
-    setDocumentFields(prev => ({
-      ...prev,
-      [docId]: updater(prev[docId] || [])
-    }));
+  const clearCurrentDocument = () => {
+    if (window.confirm('Are you sure you want to clear the current document? This will remove the image and all text fields.')) {
+      setCurrentDocumentUrl('');
+      setFields([]);
+      setSelectedField(null);
+      toast.success('Document cleared successfully!');
+    }
   };
 
-  // Add text field
+  const deleteUploadedDocument = async (docId: string, fileName: string) => {
+    if (window.confirm(`Are you sure you want to delete "${fileName}"?`)) {
+      try {
+        const { error } = await supabase.storage
+          .from('documents')
+          .remove([`pyp-templates/${fileName}`]);
+
+        if (error) throw error;
+
+        await loadUploadedDocuments();
+        toast.success(`Document "${fileName}" deleted successfully!`);
+      } catch (error) {
+        console.error('Error deleting document:', error);
+        toast.error('Failed to delete document. Please try again.');
+      }
+    }
+  };
+
   const addTextField = () => {
     const newField: TextField = {
-      id: `field-${Date.now()}`,
+      id: Date.now().toString(),
       x: 100,
       y: 100,
       width: 200,
       height: 30,
-      content: '',
-      label: 'Text Field',
+      content: 'Enter text here',
+      label: `Field ${fields.length + 1}`,
       fontSize: 14,
-      fieldType: 'text'
+      fieldType: 'custom'
     };
-    updateFieldsForCurrentDoc(fields => [...fields, newField]);
+    setFields([...fields, newField]);
     setSelectedField(newField.id);
   };
 
-  // Add predefined field
-  const addPredefinedField = (fieldType: string) => {
-    const predefinedField = predefinedFields.find(f => f.id === fieldType);
-    if (!predefinedField) return;
-
+  const addPredefinedField = (fieldType: PredefinedField) => {
     const newField: TextField = {
-      id: `field-${Date.now()}`,
+      id: Date.now().toString(),
       x: 100,
       y: 100,
-      width: predefinedField.defaultWidth,
-      height: predefinedField.defaultHeight,
-      content: '',
-      label: predefinedField.label,
+      width: fieldType.defaultWidth,
+      height: fieldType.defaultHeight,
+      content: fieldType.placeholder,
+      label: fieldType.label,
       fontSize: 14,
-      fieldType: fieldType
+      fieldType: fieldType.id
     };
-    updateFieldsForCurrentDoc(fields => [...fields, newField]);
+    setFields([...fields, newField]);
     setSelectedField(newField.id);
+    toast.success(`Added ${fieldType.label} field`);
   };
 
-  // Delete field
   const deleteField = (fieldId: string) => {
-    updateFieldsForCurrentDoc(fields => fields.filter(f => f.id !== fieldId));
+    setFields(fields.filter(f => f.id !== fieldId));
     if (selectedField === fieldId) {
       setSelectedField(null);
     }
   };
 
-  // Update field content
   const updateField = (fieldId: string, updates: Partial<TextField>) => {
-    updateFieldsForCurrentDoc(fields => 
-      fields.map(field => 
-        field.id === fieldId ? { ...field, ...updates } : field
-      )
-    );
+    setFields(fields.map(f => f.id === fieldId ? { ...f, ...updates } : f));
   };
 
-  // Mouse event handlers for drag and resize
   const handleMouseDown = (e: React.MouseEvent, fieldId: string, action: 'drag' | 'resize') => {
     e.preventDefault();
+    e.stopPropagation();
     setSelectedField(fieldId);
     
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
-
+    console.log('Mouse down:', action, 'for field:', fieldId);
+    
     if (action === 'drag') {
       setIsDragging(true);
-      setDragStart({
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top
-      });
-    } else {
+    } else if (action === 'resize') {
       setIsResizing(true);
-      setDragStart({
-        x: e.clientX,
-        y: e.clientY
-      });
+      console.log('Starting resize');
+    }
+    
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (rect) {
+      const field = fields.find(f => f.id === fieldId);
+      if (field) {
+        setDragStart({
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top
+        });
+      }
     }
   };
 
@@ -792,28 +1174,31 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
 
+    const currentX = e.clientX - rect.left;
+    const currentY = e.clientY - rect.top;
+    const deltaX = currentX - dragStart.x;
+    const deltaY = currentY - dragStart.y;
+
+    const selectedFieldData = fields.find(f => f.id === selectedField);
+    if (!selectedFieldData) return;
+
     if (isDragging) {
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
-      
       updateField(selectedField, {
-        x: Math.max(0, Math.min(canvasSize.width - 50, mouseX - 10)),
-        y: Math.max(0, Math.min(canvasSize.height - 20, mouseY - 10))
+        x: Math.max(0, Math.min(canvasSize.width - selectedFieldData.width, selectedFieldData.x + deltaX)),
+        y: Math.max(0, Math.min(canvasSize.height - selectedFieldData.height, selectedFieldData.y + deltaY))
       });
     } else if (isResizing) {
-      const field = fields.find(f => f.id === selectedField);
-      if (field) {
-        const deltaX = e.clientX - dragStart.x;
-        const deltaY = e.clientY - dragStart.y;
-        
-        updateField(selectedField, {
-          width: Math.max(50, field.width + deltaX),
-          height: Math.max(20, field.height + deltaY)
-        });
-        
-        setDragStart({ x: e.clientX, y: e.clientY });
-      }
+      console.log('Resizing with delta:', deltaX, deltaY);
+      const newWidth = Math.max(50, selectedFieldData.width + deltaX);
+      const newHeight = Math.max(20, selectedFieldData.height + deltaY);
+      console.log('New dimensions:', newWidth, newHeight);
+      updateField(selectedField, {
+        width: newWidth,
+        height: newHeight
+      });
     }
+
+    setDragStart({ x: currentX, y: currentY });
   };
 
   const handleMouseUp = () => {
@@ -821,370 +1206,499 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
     setIsResizing(false);
   };
 
-  // Print all documents functionality
   const handlePrint = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    // Create print content for all documents
     const printContent = `
-      <!DOCTYPE html>
       <html>
         <head>
-          <title>PYP Documents</title>
+          <title>Print Document</title>
           <style>
-            @media print {
-              @page { margin: 0; size: 8.5in 11in; }
-              body { margin: 0; padding: 0; }
-              .document-page { page-break-after: always; }
-              .document-page:last-child { page-break-after: auto; }
+            * { box-sizing: border-box; }
+            body { 
+              margin: 0; 
+              padding: 0; 
+              font-family: Arial, sans-serif; 
+              background: white;
             }
-            body {
-              margin: 0;
-              padding: 0;
-              font-family: Arial, sans-serif;
-            }
-            .document-container {
-              position: relative;
-              width: 816px;
-              height: 1056px;
+            .document-container { 
+              position: relative; 
+              width: 8.5in; 
+              height: 11in; 
               margin: 0 auto;
-              background-size: contain;
-              background-repeat: no-repeat;
-              background-position: center;
+              border: 1px solid #ccc;
+              background: white;
             }
-            .field {
+            .document-bg { 
+              width: 100%; 
+              height: 100%; 
+              object-fit: fill;
               position: absolute;
+              top: 0;
+              left: 0;
+            }
+            .text-field { 
+              position: absolute; 
+              background: transparent; 
+              border: none; 
+              font-family: Arial, sans-serif;
+              color: black;
+              font-weight: bold;
+              z-index: 10;
               display: flex;
               align-items: center;
-              padding: 2px;
-              font-weight: bold;
-              color: black;
-              background: rgba(255, 255, 255, 0.8);
-              border: 1px solid #ccc;
-              box-sizing: border-box;
-              word-wrap: break-word;
-              overflow-wrap: break-word;
+              justify-content: center;
+              text-align: center;
+            }
+            @media print { 
+              body { margin: 0; padding: 0; }
+              .document-container { 
+                width: 8.5in; 
+                height: 11in;
+                border: none;
+                margin: 0;
+              }
+              .document-bg {
+                width: 100%;
+                height: 100%;
+              }
+              .text-field {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+              }
             }
           </style>
         </head>
         <body>
-          ${uploadedDocuments.map((doc, index) => {
-            const docFields = documentFields[doc.id] || [];
-            return `
-              <div class="document-page">
-                <div class="document-container" style="background-image: url('${doc.url}');">
-                  ${docFields.map(field => `
-                    <div class="field" style="
-                      left: ${field.x}px;
-                      top: ${field.y}px;
-                      width: ${field.width}px;
-                      height: ${field.height}px;
-                      font-size: ${field.fontSize}px;
-                    ">${field.content || field.label}</div>
-                  `).join('')}
-                </div>
-              </div>
-            `;
-          }).join('')}
+          <div class="document-container">
+            <img src="${currentDocumentUrl}" alt="Document" class="document-bg" onload="window.print()" />
+            ${fields.map(field => `
+              <div class="text-field" style="
+                left: ${field.x}px;
+                top: ${field.y}px;
+                width: ${field.width}px;
+                height: ${field.height}px;
+                font-size: ${field.fontSize}px;
+              ">${field.content || ''}</div>
+            `).join('')}
+          </div>
         </body>
       </html>
     `;
 
     printWindow.document.write(printContent);
     printWindow.document.close();
-    setTimeout(() => {
-      printWindow.print();
-    }, 250);
   };
 
   return (
-    <div className="h-screen flex bg-gray-50">
-      {/* Left Sidebar */}
-      <div className="w-80 bg-white border-r border-gray-200 flex flex-col overflow-hidden">
-        <div className="p-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">PYP Document Editor</h2>
-          
-          {/* Document Upload */}
-          <div className="space-y-2 mb-4">
-            <Button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading}
-              className="w-full"
-              variant="outline"
-            >
-              <Upload className="w-4 h-4 mr-2" />
-              {isUploading ? 'Uploading...' : 'Upload Document'}
-            </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileUpload}
-              style={{ display: 'none' }}
-            />
-          </div>
-
-          {/* Uploaded Documents */}
-          {uploadedDocuments.length > 0 && (
-            <div className="mb-4">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Uploaded Documents</h4>
-              <div className="space-y-1 max-h-32 overflow-y-auto">
-                 {uploadedDocuments.map((doc, index) => (
-                   <button
-                     key={doc.id}
-                     onClick={() => setCurrentDocumentIndex(index)}
-                     className={`w-full text-left px-2 py-1 rounded text-xs truncate transition-colors ${
-                       currentDocumentIndex === index
-                         ? 'bg-blue-100 text-blue-800'
-                         : 'hover:bg-gray-100 text-gray-600'
-                     }`}
-                     title={doc.name}
-                   >
-                     {doc.name}
-                   </button>
-                 ))}
-              </div>
-            </div>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">PYP Document Editor</h1>
+          <p className="text-muted-foreground">
+            Create and manage Pick Your Part document templates. Add and position text fields on your document template.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            onClick={() => fileInputRef.current?.click()} 
+            variant="outline" 
+            className="flex items-center gap-2"
+            disabled={isUploading}
+          >
+            <Upload className="h-4 w-4" />
+            {isUploading ? 'Optimizing...' : 'Upload Image'}
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            onChange={handleFileUpload}
+            accept="image/png,image/jpeg,image/jpg,image/webp"
+            className="hidden"
+          />
+          <Button onClick={addTextField} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Add Text Field
+          </Button>
+          <Button onClick={saveTemplate} variant="outline" className="flex items-center gap-2">
+            <Save className="h-4 w-4" />
+            Save Template
+          </Button>
+          <Button onClick={handlePrint} className="flex items-center gap-2">
+            <Printer className="h-4 w-4" />
+            Print
+          </Button>
+          {isInTripMode && (
+            <>
+              <Button onClick={saveTrip} variant="outline" className="flex items-center gap-2">
+                <Save className="h-4 w-4" />
+                Save Trip
+              </Button>
+              <Button onClick={saveTripAndPrint} className="flex items-center gap-2">
+                <Save className="h-4 w-4" />
+                <Printer className="h-4 w-4 ml-1" />
+                Save & Print
+              </Button>
+            </>
           )}
         </div>
+      </div>
 
-        {/* Field Library */}
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-2">Basic Fields</h3>
-              <Button
-                onClick={addTextField}
-                className="w-full mb-2"
-                variant="outline"
+      {/* Dual Vehicle Management Controls */}
+      {(templateName === 'pypdefault' || isInTripMode) && (
+        <Card className="p-4 bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <h3 className="font-semibold text-blue-900 dark:text-blue-100">Pick Your Part - Dual Vehicle Template</h3>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Car className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm">Vehicle 1:</span>
+                  <span className={`text-sm font-medium ${vehicleData1 ? 'text-green-600' : 'text-gray-500'}`}>
+                    {vehicleData1 ? `${vehicleData1.year} ${convertMakeToDMVCode(vehicleData1.make)} ${vehicleData1.model}` : 'Not loaded'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Car className="h-4 w-4 text-blue-400" />
+                  <span className="text-sm">Vehicle 2:</span>
+                  <span className={`text-sm font-medium ${vehicleData2 ? 'text-green-600' : 'text-gray-500'}`}>
+                    {vehicleData2 ? `${vehicleData2.year} ${convertMakeToDMVCode(vehicleData2.make)} ${vehicleData2.model}` : 'Not loaded'}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {!vehicleData2 && (
+                <Button 
+                  onClick={handleGoBackToInventory}
+                  variant="outline"
+                  size="sm"
+                  className="bg-blue-100 border-blue-300 text-blue-700 hover:bg-blue-200"
+                >
+                  Add Second Vehicle
+                </Button>
+              )}
+              <Button 
+                onClick={handleContinueWithOneVehicle}
+                variant="ghost"
                 size="sm"
+                className="text-blue-600 hover:text-blue-700"
               >
-                <Type className="w-4 h-4 mr-2" />
-                Add Text Field
+                Continue with One Vehicle
               </Button>
             </div>
+          </div>
+        </Card>
+      )}
 
-            <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-2">Vehicle Fields</h3>
-              <div className="grid grid-cols-1 gap-1">
-                {predefinedFields.map((field) => (
+      <div className="grid grid-cols-4 gap-6">
+        {/* Sidebar */}
+        <div className="col-span-1 space-y-4">
+          {/* Field Library */}
+          <Card className="p-4">
+            <h3 className="font-semibold mb-4 flex items-center gap-2">
+              <Type className="h-4 w-4" />
+              Field Library
+            </h3>
+            
+            {/* Vehicle 1 Fields */}
+            <div className="mb-6">
+              <h4 className="font-medium text-sm mb-3 text-blue-600">Vehicle 1 Fields</h4>
+              <div className="grid grid-cols-1 gap-2">
+                {predefinedFieldsVehicle1.map((fieldType) => (
                   <Button
-                    key={field.id}
-                    onClick={() => addPredefinedField(field.id)}
-                    className="w-full justify-start text-xs p-2"
+                    key={fieldType.id}
                     variant="outline"
                     size="sm"
+                    onClick={() => addPredefinedField(fieldType)}
+                    className="justify-start gap-2 h-auto py-2 px-3"
                   >
-                    <field.icon className={`w-3 h-3 mr-1 ${field.color}`} />
-                    {field.label}
+                    <fieldType.icon className={`h-4 w-4 ${fieldType.color}`} />
+                    <span className="text-sm">{fieldType.label}</span>
                   </Button>
                 ))}
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* Selected Field Properties */}
-        {selectedField && (
-          <div className="border-t border-gray-200 p-4">
-            {(() => {
-              const field = fields.find(f => f.id === selectedField);
-              if (!field) return null;
-
-              return (
-                <div className="space-y-3">
-                  <h3 className="text-sm font-medium text-gray-700">Field Properties</h3>
-                  
-                  <div>
-                    <label className="text-xs text-gray-600">Content</label>
-                    <Textarea
-                      value={field.content}
-                      onChange={(e) => updateField(field.id, { content: e.target.value })}
-                      placeholder={field.label}
-                      className="mt-1 text-sm"
-                      rows={3}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs text-gray-600">Label</label>
-                    <Input
-                      value={field.label}
-                      onChange={(e) => updateField(field.id, { label: e.target.value })}
-                      className="mt-1 text-sm"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs text-gray-600">Font Size</label>
-                    <Input
-                      type="number"
-                      value={field.fontSize}
-                      onChange={(e) => updateField(field.id, { fontSize: parseInt(e.target.value) || 14 })}
-                      className="mt-1 text-sm"
-                      min="8"
-                      max="72"
-                    />
-                  </div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={saveFieldPositions}
-                className="flex items-center gap-2"
-              >
-                <FileText className="w-4 h-4" />
-                Save Layout
-              </Button>
-              
-              <Button
-                variant="outline" 
-                size="sm"
-                onClick={saveAsDefaultTemplate}
-                className={`flex items-center gap-2 ${isCurrentDocumentDefault() ? 'bg-primary text-primary-foreground' : ''}`}
-              >
-                <Car className="w-4 h-4" />
-                {isCurrentDocumentDefault() ? 'Default Template ✓' : 'Set as Default'}
-              </Button>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={loadFieldPositions}
-                className="flex items-center gap-2"
-              >
-                <Upload className="w-4 h-4" />
-                Load Layout
-              </Button>
+            {/* Vehicle 2 Fields */}
+            <div>
+              <h4 className="font-medium text-sm mb-3 text-blue-400">Vehicle 2 Fields</h4>
+              <div className="grid grid-cols-1 gap-2">
+                {predefinedFieldsVehicle2.map((fieldType) => (
                   <Button
-                    onClick={() => deleteField(field.id)}
-                    variant="destructive"
+                    key={fieldType.id}
+                    variant="outline"
                     size="sm"
-                    className="w-full"
+                    onClick={() => addPredefinedField(fieldType)}
+                    className="justify-start gap-2 h-auto py-2 px-3"
                   >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete Field
+                    <fieldType.icon className={`h-4 w-4 ${fieldType.color}`} />
+                    <span className="text-sm">{fieldType.label}</span>
                   </Button>
-                </div>
-              );
-            })()}
-          </div>
-        )}
-      </div>
+                ))}
+              </div>
+            </div>
+          </Card>
 
-      {/* Main Canvas Area */}
-      <div className="flex-1 flex flex-col">
-        {/* Top Toolbar */}
-        <div className="bg-white border-b border-gray-200 p-4 flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            <h1 className="text-xl font-semibold text-gray-800">PYP Document Editor</h1>
-            
-            {/* Document Navigation */}
-            {uploadedDocuments.length > 1 && (
-              <div className="flex items-center space-x-2 bg-gray-50 px-3 py-1 rounded-lg">
-                <Button
-                  variant="outline"
+          {/* File Format Guide */}
+          <Card className="p-4">
+            <h3 className="font-semibold mb-4">File Format Guide</h3>
+            <div className="text-sm space-y-2 text-muted-foreground">
+              <p><strong>Recommended formats:</strong></p>
+              <ul className="list-disc list-inside space-y-1">
+                <li>PNG - Best for text documents</li>
+                <li>JPEG - Good for photos/scanned docs</li>
+                <li>WebP - Modern, efficient format</li>
+              </ul>
+              <p className="mt-3"><strong>Need to convert a PDF?</strong></p>
+              <p>Use online tools like pdf2png.com or your PDF viewer's export function to save as PNG.</p>
+            </div>
+          </Card>
+
+          {/* Field Properties */}
+          <Card className="p-4">
+            <h3 className="font-semibold mb-4">Template Properties</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">Template Name</label>
+                <Input
+                  value={templateName}
+                  onChange={(e) => setTemplateName(e.target.value)}
+                  placeholder="Enter template name"
+                />
+              </div>
+
+              {selectedField && (
+                <>
+                  <div className="border-t pt-4">
+                    <h4 className="font-medium mb-3 flex items-center gap-2">
+                      <Move className="h-4 w-4" />
+                      Selected Field
+                    </h4>
+                    {(() => {
+                      const field = fields.find(f => f.id === selectedField);
+                      if (!field) return null;
+                      
+                      const fieldTypeInfo = predefinedFields.find(pf => pf.id === field.fieldType);
+                      
+                      return (
+                        <div className="space-y-3">
+                          {fieldTypeInfo && (
+                            <div className="flex items-center gap-2 p-2 bg-muted/50 rounded">
+                              <fieldTypeInfo.icon className={`h-4 w-4 ${fieldTypeInfo.color}`} />
+                              <span className="text-sm font-medium">{fieldTypeInfo.label} Field</span>
+                            </div>
+                          )}
+                          <div>
+                            <label className="text-sm font-medium">Label</label>
+                            <Input
+                              value={field.label}
+                              onChange={(e) => updateField(field.id, { label: e.target.value })}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium">Font Size</label>
+                            <Input
+                              type="number"
+                              value={field.fontSize}
+                              onChange={(e) => updateField(field.id, { fontSize: parseInt(e.target.value) || 14 })}
+                              min="8"
+                              max="72"
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-sm font-medium">Width</label>
+                              <Input
+                                type="number"
+                                value={field.width}
+                                onChange={(e) => updateField(field.id, { width: parseInt(e.target.value) || 200 })}
+                                min="50"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium">Height</label>
+                              <Input
+                                type="number"
+                                value={field.height}
+                                onChange={(e) => updateField(field.id, { height: parseInt(e.target.value) || 30 })}
+                                min="20"
+                              />
+                            </div>
+                          </div>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => deleteField(field.id)}
+                            className="w-full flex items-center gap-2"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Delete Field
+                          </Button>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </>
+              )}
+            </div>
+          </Card>
+
+          {/* Templates */}
+          {templates.length > 0 && (
+            <Card className="p-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-semibold">Saved Templates</h3>
+                <Button 
+                  onClick={clearCurrentDocument} 
+                  variant="outline" 
                   size="sm"
-                  onClick={() => setCurrentDocumentIndex(Math.max(0, currentDocumentIndex - 1))}
-                  disabled={currentDocumentIndex === 0}
+                  className="text-destructive hover:text-destructive"
                 >
-                  Previous
-                </Button>
-                <span className="text-sm font-medium">
-                  {currentDocumentIndex + 1} of {uploadedDocuments.length}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentDocumentIndex(Math.min(uploadedDocuments.length - 1, currentDocumentIndex + 1))}
-                  disabled={currentDocumentIndex === uploadedDocuments.length - 1}
-                >
-                  Next
+                  <Trash2 className="h-3 w-3" />
                 </Button>
               </div>
-            )}
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <Button
-              onClick={handlePrint}
-              className="flex items-center space-x-2"
-            >
-              <Printer className="w-4 h-4" />
-              <span>Print All ({uploadedDocuments.length})</span>
-            </Button>
-          </div>
+              <div className="space-y-2">
+                {templates.map((template) => (
+                  <div key={template.id} className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        console.log('Loading template:', template.name, 'with imageUrl:', template.imageUrl);
+                        setFields(template.fields);
+                        setCurrentDocumentUrl(template.imageUrl);
+                        setTemplateName(template.name);
+                        toast.success(`Loaded template: ${template.name}`);
+                      }}
+                      className="flex-1 justify-start text-sm"
+                    >
+                      {template.name}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deleteTemplate(template.id)}
+                      className="text-destructive hover:text-destructive p-1"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Uploaded Documents */}
+          {uploadedDocuments.length > 0 && (
+            <Card className="p-4">
+              <h3 className="font-semibold mb-4">Uploaded Documents</h3>
+              <div className="space-y-2">
+                {uploadedDocuments.slice(0, 5).map((doc) => (
+                  <div key={doc.id} className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setCurrentDocumentUrl(doc.url);
+                        toast.success(`Loaded document: ${doc.name}`);
+                      }}
+                      className="flex-1 justify-start text-sm truncate"
+                    >
+                      {doc.name}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deleteUploadedDocument(doc.id, doc.name)}
+                      className="text-destructive hover:text-destructive p-1"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
         </div>
 
-        {/* Canvas Container */}
-        <div className="flex-1 overflow-auto bg-gray-100 p-8">
-          <div className="mx-auto" style={{ width: canvasSize.width, height: canvasSize.height }}>
-            <Card className="relative bg-white shadow-lg overflow-hidden" style={{ width: '100%', height: '100%' }}>
-              <div
-                ref={canvasRef}
-                className="relative w-full h-full cursor-crosshair"
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseUp}
-                style={{
-                  backgroundImage: `url(${currentDocumentUrl})`,
-                  backgroundSize: 'contain',
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'center',
-                }}
-              >
-                {fields.map((field) => (
+        {/* Document Canvas */}
+        <div className="col-span-3">
+          <Card className="p-4">
+            <div
+              ref={canvasRef}
+              className="relative bg-white border rounded-lg overflow-hidden"
+              style={{ width: canvasSize.width, height: canvasSize.height }}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+            >
+              <img
+                src={currentDocumentUrl}
+                alt="Document Template"
+                className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+                draggable={false}
+              />
+              
+              {fields.map((field) => {
+                const fieldTypeInfo = predefinedFields.find(pf => pf.id === field.fieldType);
+                return (
                   <div
                     key={field.id}
-                     className={`absolute border-2 bg-white/80 backdrop-blur-sm cursor-move flex items-center px-1 ${
-                       selectedField === field.id
-                         ? 'border-primary shadow-lg'
-                         : 'border-gray-300 hover:border-gray-400'
-                     }`}
+                    className={`absolute border-2 bg-white/80 cursor-move ${
+                      selectedField === field.id 
+                        ? 'border-primary shadow-lg' 
+                        : 'border-gray-300 hover:border-gray-400'
+                    }`}
                     style={{
                       left: field.x,
                       top: field.y,
                       width: field.width,
                       height: field.height,
-                      fontSize: field.fontSize,
                     }}
                     onMouseDown={(e) => handleMouseDown(e, field.id, 'drag')}
-                    onClick={() => setSelectedField(field.id)}
-                   >
-                     <input
-                       type="text"
-                       value={field.content}
-                       onChange={(e) => updateField(field.id, { content: e.target.value })}
-                       className="w-full h-full bg-transparent border-none outline-none resize-none p-1 text-black"
-                       style={{ fontSize: field.fontSize }}
-                       placeholder={`Enter ${field.label.toLowerCase()}`}
-                     />
+                  >
+                    <Textarea
+                      value={field.content}
+                      onChange={(e) => updateField(field.id, { content: e.target.value })}
+                      className="w-full h-full border-none bg-transparent resize-none p-1 text-sm"
+                      style={{ fontSize: field.fontSize }}
+                      onMouseDown={(e) => e.stopPropagation()}
+                    />
                     
-                     {selectedField === field.id && (
-                       <>
-                         <div
-                           className="absolute -top-2 -right-2 w-6 h-6 bg-primary border-2 border-white rounded-full cursor-se-resize flex items-center justify-center"
-                           onMouseDown={(e) => {
-                             e.preventDefault();
-                             e.stopPropagation();
-                             handleMouseDown(e, field.id, 'resize');
-                           }}
-                         >
-                           <div className="w-2 h-2 bg-white rounded-full"></div>
-                         </div>
-                         <div
-                           className="absolute -top-6 left-0 bg-primary text-primary-foreground text-xs px-2 py-1 rounded whitespace-nowrap"
-                         >
-                           {field.label}
-                         </div>
-                       </>
-                     )}
+                    {selectedField === field.id && (
+                      <>
+                        <div
+                          className="absolute -top-2 -right-2 w-6 h-6 bg-primary border-2 border-white rounded-full cursor-se-resize flex items-center justify-center"
+                          onMouseDown={(e) => {
+                            console.log('Resize handle clicked');
+                            handleMouseDown(e, field.id, 'resize');
+                          }}
+                        >
+                          <div className="w-2 h-2 bg-white rounded-full"></div>
+                        </div>
+                        {fieldTypeInfo && (
+                          <div className="absolute -top-6 -left-2 flex items-center gap-1 px-2 py-1 bg-primary text-primary-foreground text-xs rounded">
+                            <fieldTypeInfo.icon className="h-3 w-3" />
+                            <span>{fieldTypeInfo.label}</span>
+                          </div>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="absolute -top-8 -right-2 h-6 w-6 p-0"
+                          onClick={() => deleteField(field.id)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </>
+                    )}
                   </div>
-                ))}
-              </div>
-            </Card>
-          </div>
+                );
+              })}
+            </div>
+          </Card>
         </div>
       </div>
     </div>
