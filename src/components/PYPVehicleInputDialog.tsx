@@ -16,6 +16,7 @@ interface PYPVehicleInputDialogProps {
     model: string;
     vehicleId: string;
     saleDate?: string;
+    licensePlate?: string;
   };
 }
 
@@ -31,7 +32,7 @@ export function PYPVehicleInputDialog({
     year: initialData?.year || '',
     make: initialData?.make || '',
     model: initialData?.model || '',
-    licensePlate: '',
+    licensePlate: initialData?.licensePlate || '',
     mileage: '',
     saleDate: initialData?.saleDate || new Date().toISOString().split('T')[0] // Use vehicle's sale date or today's date
   });
@@ -125,7 +126,7 @@ export function PYPVehicleInputDialog({
                 <Input
                   id="licensePlate"
                   value={formData.licensePlate}
-                  onChange={(e) => handleInputChange('licensePlate', e.target.value)}
+                  onChange={(e) => handleInputChange('licensePlate', e.target.value.toUpperCase())}
                   placeholder="License plate"
                 />
               </div>
