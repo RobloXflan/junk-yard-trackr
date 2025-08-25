@@ -84,6 +84,16 @@ export function PYPTemplateSelectionDialog({
   // Persist and restore selected templates so they stay checked across sessions.
   const [selectedTemplates, setSelectedTemplates] = useState<string[]>(() => {
     try {
+      // First try to load standard configuration
+      const standardRaw = localStorage.getItem('pyp-standard-templates');
+      if (standardRaw) {
+        const standard = JSON.parse(standardRaw);
+        if (standard && Array.isArray(standard.templates)) {
+          return standard.templates;
+        }
+      }
+      
+      // Fallback to regular saved templates
       const raw = localStorage.getItem('pyp-selected-templates');
       const saved = raw ? (JSON.parse(raw) as string[]) : null;
       const requiredIds = PYP_TEMPLATES.filter(t => t.required).map(t => t.id);
@@ -150,6 +160,17 @@ export function PYPTemplateSelectionDialog({
   // Persist uploaded images locally so they remain when reopening
   useEffect(() => {
     try {
+      // First try to load standard configuration images
+      const standardRaw = localStorage.getItem('pyp-standard-templates');
+      if (standardRaw) {
+        const standard = JSON.parse(standardRaw);
+        if (standard && standard.images) {
+          setUploadedImages(standard.images);
+          return;
+        }
+      }
+      
+      // Fallback to regular saved images
       const raw = localStorage.getItem('pyp-template-images');
       if (raw) setUploadedImages(JSON.parse(raw));
     } catch {}
@@ -358,6 +379,26 @@ export function PYPTemplateSelectionDialog({
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onClose}>
             Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              // Save current configuration as standard
+              try {
+                const standardConfig = {
+                  templates: selectedTemplates,
+                  images: uploadedImages,
+                  savedAt: new Date().toISOString()
+                };
+                localStorage.setItem('pyp-standard-templates', JSON.stringify(standardConfig));
+                toast({ title: "Standard saved", description: "This configuration is now the default for all PYP vehicles." });
+              } catch (e) {
+                console.error('Failed to save standard:', e);
+              }
+            }}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            Save as Standard
           </Button>
           <Button 
             onClick={handleProceed}
