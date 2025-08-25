@@ -144,18 +144,33 @@ class VehicleStore {
 
   async loadVehicles() {
     try {
-      console.log('Loading vehicles from Supabase...');
-      const { data, error } = await supabase
-        .from('vehicles')
-        .select('*')
-        .order('created_at', { ascending: false });
+      console.log('Loading vehicles from Supabase (with pagination)...');
 
-      if (error) {
-        console.error('Error loading vehicles:', error);
-        throw error;
+      const pageSize = 1000; // Supabase returns max 1000 rows per request
+      let from = 0;
+      let allData: any[] = [];
+
+      while (true) {
+        const { data, error } = await supabase
+          .from('vehicles')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .range(from, from + pageSize - 1);
+
+        if (error) {
+          console.error('Error loading vehicles:', error);
+          throw error;
+        }
+
+        const batch = data || [];
+        allData = allData.concat(batch);
+        console.log(`Fetched vehicles ${from} - ${from + batch.length - 1} (batch size: ${batch.length})`);
+
+        if (batch.length < pageSize) break; // last page
+        from += pageSize;
       }
 
-      this.vehicles = (data || []).map(vehicle => {
+      this.vehicles = allData.map(vehicle => {
         console.log('Processing vehicle:', vehicle.id, 'documents:', vehicle.documents, 'car_images:', vehicle.car_images);
         
         const processedVehicle = {
