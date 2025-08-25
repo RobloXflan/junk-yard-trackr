@@ -1077,11 +1077,11 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
                 {fields.map((field) => (
                   <div
                     key={field.id}
-                    className={`absolute border-2 bg-white bg-opacity-75 cursor-move flex items-center px-1 ${
-                      selectedField === field.id
-                        ? 'border-blue-500 shadow-lg'
-                        : 'border-gray-300 hover:border-gray-400'
-                    }`}
+                     className={`absolute border-2 bg-white/80 backdrop-blur-sm cursor-move flex items-center px-1 ${
+                       selectedField === field.id
+                         ? 'border-primary shadow-lg'
+                         : 'border-gray-300 hover:border-gray-400'
+                     }`}
                     style={{
                       left: field.x,
                       top: field.y,
@@ -1091,24 +1091,35 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
                     }}
                     onMouseDown={(e) => handleMouseDown(e, field.id, 'drag')}
                     onClick={() => setSelectedField(field.id)}
-                  >
-                    <span className="truncate font-medium text-black">
-                      {field.content || field.label}
-                    </span>
+                   >
+                     <input
+                       type="text"
+                       value={field.content}
+                       onChange={(e) => updateField(field.id, { content: e.target.value })}
+                       className="w-full h-full bg-transparent border-none outline-none resize-none p-1 text-black"
+                       style={{ fontSize: field.fontSize }}
+                       placeholder={`Enter ${field.label.toLowerCase()}`}
+                     />
                     
-                    {selectedField === field.id && (
-                      <>
-                        <div
-                          className="absolute -right-1 -bottom-1 w-3 h-3 bg-blue-500 cursor-se-resize"
-                          onMouseDown={(e) => handleMouseDown(e, field.id, 'resize')}
-                        />
-                        <div
-                          className="absolute -top-6 left-0 bg-blue-500 text-white text-xs px-2 py-1 rounded whitespace-nowrap"
-                        >
-                          {field.label}
-                        </div>
-                      </>
-                    )}
+                     {selectedField === field.id && (
+                       <>
+                         <div
+                           className="absolute -top-2 -right-2 w-6 h-6 bg-primary border-2 border-white rounded-full cursor-se-resize flex items-center justify-center"
+                           onMouseDown={(e) => {
+                             e.preventDefault();
+                             e.stopPropagation();
+                             handleMouseDown(e, field.id, 'resize');
+                           }}
+                         >
+                           <div className="w-2 h-2 bg-white rounded-full"></div>
+                         </div>
+                         <div
+                           className="absolute -top-6 left-0 bg-primary text-primary-foreground text-xs px-2 py-1 rounded whitespace-nowrap"
+                         >
+                           {field.label}
+                         </div>
+                       </>
+                     )}
                   </div>
                 ))}
               </div>
