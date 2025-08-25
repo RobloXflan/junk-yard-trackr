@@ -241,34 +241,19 @@ export function PYPTemplateSelectionDialog({
       localStorage.setItem('selected-pyp-templates', JSON.stringify(selected));
     } catch {}
 
-    // Start the vehicle selection process
-    setShowVehicleDetails(true);
-  };
-
-  // Handle vehicle details submission (first vehicle)
-  const handleVehicleDetailsSubmit = (vehicleData: any) => {
-    setCurrentVehicleData(vehicleData);
-    setShowVehicleDetails(false);
+    // Start with trip -> slot -> vehicle details (matches SA flow)
     setShowTripSelection(true);
   };
 
-  // Handle trip selection
-  const handleTripSelected = (tripNumber: number) => {
-    setSelectedTripNumber(tripNumber);
-    setShowTripSelection(false);
-    setShowSlotSelection(true);
-  };
+  // Handle vehicle details submission for the currently selected trip and slot
+  const handleVehicleDetailsSubmit = (vehicleData: any) => {
+    setCurrentVehicleData(vehicleData);
+    setShowVehicleDetails(false);
 
-  // Handle slot selection
-  const handleSlotSelected = (slot: 1 | 2) => {
-    setSelectedSlot(slot);
-    setShowSlotSelection(false);
-    
-    // Save the vehicle to the selected trip and slot
+    // Save the vehicle to the previously chosen trip and slot
     const today = format(new Date(), 'yyyy-MM-dd');
     const tripKey = `pyp-trip-${today}-${selectedTripNumber}`;
-    
-    // Get existing trip data
+
     let tripData: any = {};
     try {
       const existing = localStorage.getItem(tripKey);
@@ -278,50 +263,64 @@ export function PYPTemplateSelectionDialog({
     } catch (e) {
       console.error('Error loading trip data:', e);
     }
-    
-    // Add the vehicle to the selected slot
-    if (slot === 1) {
-      tripData.vehicle1 = currentVehicleData;
+
+    if (selectedSlot === 1) {
+      tripData.vehicle1 = vehicleData;
     } else {
-      tripData.vehicle2 = currentVehicleData;
+      tripData.vehicle2 = vehicleData;
     }
-    
-    // Add timestamp
+
     tripData.savedAt = new Date().toISOString();
-    
-    // Save trip data
     localStorage.setItem(tripKey, JSON.stringify(tripData));
-    
-    // Set vehicle data for document editor
-    localStorage.setItem(`documents-vehicle-data-${slot}`, JSON.stringify(currentVehicleData));
-    
-    // Check if we need to ask for a second vehicle (for bill of sale)
+
+    // Persist vehicle data for the document editor
+    localStorage.setItem(`documents-vehicle-data-${selectedSlot}`, JSON.stringify(vehicleData));
+
+    // Mark current trip for the editor
+    localStorage.setItem('current-pyp-trip', tripKey);
+
+    // If Bill of Sale is selected and the other slot is empty, offer to add a second vehicle now
     const hasBillOfSale = selectedTemplates.includes('bill-of-sale');
-    if (hasBillOfSale && !tripData.vehicle2) {
-      // Ask if they want to add a second vehicle
-      const addSecondVehicle = confirm('This trip includes a Bill of Sale document which supports 2 vehicles. Would you like to add a second vehicle?');
-      if (addSecondVehicle) {
-        setShowVehicleDetails(true);
-        setSelectedSlot(2);
-        return;
+    if (hasBillOfSale) {
+      const otherSlot: 1 | 2 = selectedSlot === 1 ? 2 : 1;
+      const otherFilled = otherSlot === 1 ? !!tripData.vehicle1 : !!tripData.vehicle2;
+      if (!otherFilled) {
+        const addSecond = confirm('Bill of Sale supports 2 vehicles. Add second vehicle now?');
+        if (addSecond) {
+          setSelectedSlot(otherSlot);
+          setShowVehicleDetails(true);
+          return;
+        }
       }
     }
-    
-    // Set current trip for the PYP editor
-    localStorage.setItem('current-pyp-trip', tripKey);
-    
+
     const selected = PYP_TEMPLATES.filter(t => selectedTemplates.includes(t.id)).map(template => ({
       ...template,
       uploadedImage: uploadedImages[template.id]
     }));
-    
+
     toast({
-      title: "Trip Created",
-      description: `Vehicle added to PYP Trip ${selectedTripNumber}, Slot ${slot}`,
+      title: "Trip Updated",
+      description: `Vehicle added to PYP Trip ${selectedTripNumber}, Slot ${selectedSlot}`,
     });
-    
+
     onTemplatesSelected(selected);
     onClose();
+  };
+
+  // Handle trip selection
+  const handleTripSelected = (tripNumber: number) => {
+    setSelectedTripNumber(tripNumber);
+    setShowTripSelection(false);
+    setShowSlotSelection(true);
+  };
+
+  // Handle slot selection -> then collect vehicle details
+  const handleSlotSelected = (slot: 1 | 2) => {
+    setSelectedSlot(slot);
+    setShowSlotSelection(false);
+    // Now prompt for vehicle details for this slot
+    setShowVehicleDetails(true);
   };
 
   // Template upload component
