@@ -611,7 +611,7 @@ export function VehicleDetailsDialog({
               </div>
             )}
 
-            {/* Pick Your Part Papers Button */}
+            {/* Pick Your Part Create Documents Button */}
             {selectedStatus === 'pick-your-part' && (
               <div className="flex justify-center">
                 <Button 
@@ -620,7 +620,7 @@ export function VehicleDetailsDialog({
                   onClick={() => setShowPypTemplateSelection(true)}
                 >
                   <FileText className="w-4 h-4" />
-                  PYP Papers
+                  Create Documents
                 </Button>
               </div>
             )}
