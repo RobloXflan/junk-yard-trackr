@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -525,6 +525,80 @@ export type Database = {
             columns: ["vehicle_id"]
             isOneToOne: false
             referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pyp_document_templates: {
+        Row: {
+          created_at: string
+          document_url: string
+          id: string
+          is_default: boolean | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          document_url: string
+          id?: string
+          is_default?: boolean | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          document_url?: string
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      pyp_template_fields: {
+        Row: {
+          created_at: string
+          field_type: string
+          font_size: number | null
+          height: number
+          id: string
+          label: string
+          template_id: string
+          width: number
+          x_position: number
+          y_position: number
+        }
+        Insert: {
+          created_at?: string
+          field_type: string
+          font_size?: number | null
+          height: number
+          id?: string
+          label: string
+          template_id: string
+          width: number
+          x_position: number
+          y_position: number
+        }
+        Update: {
+          created_at?: string
+          field_type?: string
+          font_size?: number | null
+          height?: number
+          id?: string
+          label?: string
+          template_id?: string
+          width?: number
+          x_position?: number
+          y_position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pyp_template_fields_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "pyp_document_templates"
             referencedColumns: ["id"]
           },
         ]
