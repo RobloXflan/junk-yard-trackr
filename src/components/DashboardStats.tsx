@@ -4,13 +4,20 @@ import { Car, DollarSign, FileText, TrendingUp } from "lucide-react";
 import { useVehicleStore } from "@/hooks/useVehicleStore";
 
 export function DashboardStats() {
-  const { getTotalVehicles, getTotalRevenue, getPendingDMV, getAverageProfit, getVehiclesAddedToday } = useVehicleStore();
+  const { vehicles } = useVehicleStore();
   
-  const totalVehicles = getTotalVehicles();
-  const totalRevenue = getTotalRevenue();
-  const pendingDMV = getPendingDMV();
-  const avgProfit = getAverageProfit();
-  const vehiclesAddedToday = getVehiclesAddedToday();
+  // Calculate stats reactively from vehicles array
+  const totalVehicles = vehicles.length;
+  const totalRevenue = vehicles
+    .filter(v => v.salePrice)
+    .reduce((sum, v) => sum + parseFloat(v.salePrice || '0'), 0);
+  const pendingDMV = vehicles.filter(v => !v.titlePresent && v.status === 'yard').length;
+  
+  const today = new Date().toDateString();
+  const vehiclesAddedToday = vehicles.filter(vehicle => {
+    const vehicleDate = new Date(vehicle.createdAt).toDateString();
+    return vehicleDate === today;
+  }).length;
 
   const stats = [
     {
