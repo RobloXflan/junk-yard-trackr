@@ -21,28 +21,28 @@ interface Template {
 const PYP_TEMPLATES: Template[] = [
   {
     id: "bill-of-sale",
-    name: "Statement_of_fax1",
+    name: "Bill of Sale",
     description: "Vehicle purchase agreement and transfer document",
     previewImage: "/api/placeholder/300/400",
     required: true
   },
   {
     id: "title-transfer",
-    name: "Title Transfer",
+    name: "Statement_of_fax1",
     description: "Official vehicle title transfer form",
     previewImage: "/api/placeholder/300/400", 
     required: true
   },
   {
     id: "inventory-receipt",
-    name: "Inventory Receipt",
+    name: "Statement_of_fax2",
     description: "Parts inventory and condition report",
     previewImage: "/api/placeholder/300/400",
     required: true
   },
   {
     id: "parts-manifest",
-    name: "Parts Manifest",
+    name: "Statement_of_erasure",
     description: "Detailed parts listing and valuation",
     previewImage: "/api/placeholder/300/400",
     required: false
