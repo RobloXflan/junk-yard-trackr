@@ -133,7 +133,27 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
     statement_of_erasure: ''
   });
   
-  // Dual vehicle state management
+  // Persist and restore document-type image mappings
+  const persistDocumentTypeImages = (images: Record<DocumentType, string>) => {
+    try {
+      localStorage.setItem('pyp-document-type-images', JSON.stringify(images));
+    } catch (e) {
+      console.error('Failed to persist PYP document images', e);
+    }
+  };
+
+  const loadSavedDocumentTypeImages = (): Record<DocumentType, string> | null => {
+    try {
+      const raw = localStorage.getItem('pyp-document-type-images');
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (e) {
+      console.error('Error parsing saved PYP document images', e);
+      return null;
+    }
+  };
+  
+
   const [vehicleData1, setVehicleData1] = useState<any>(null);
   const [vehicleData2, setVehicleData2] = useState<any>(null);
   const [currentVehicleSlot, setCurrentVehicleSlot] = useState<1 | 2>(1);
@@ -382,9 +402,26 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
         }
       }
       
+      // Load saved document images first
+      const savedImages = loadSavedDocumentTypeImages();
+      if (savedImages) {
+        setDocumentTypeImages((prev) => {
+          const next = { ...prev, ...savedImages } as Record<DocumentType, string>;
+          const savedUrl = next[currentDocumentType];
+          if (savedUrl) setCurrentDocumentUrl(savedUrl);
+          return next;
+        });
+      }
+
       await loadTemplates();
       await loadUploadedDocuments();
       await loadDefaultTemplate();
+
+      // Ensure saved image preference wins after default template load
+      const savedImagesAfter = loadSavedDocumentTypeImages();
+      if (savedImagesAfter && savedImagesAfter[currentDocumentType]) {
+        setCurrentDocumentUrl(savedImagesAfter[currentDocumentType]);
+      }
       
       // Auto print if requested
       if (autoPrint && currentTripKey) {
@@ -834,10 +871,11 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
         .getPublicUrl(filePath);
 
       const newUrl = data.publicUrl;
-      setDocumentTypeImages(prev => ({
-        ...prev,
-        [docType]: newUrl
-      }));
+      setDocumentTypeImages(prev => {
+        const next = { ...prev, [docType]: newUrl } as Record<DocumentType, string>;
+        persistDocumentTypeImages(next);
+        return next;
+      });
       
       setCurrentDocumentUrl(newUrl);
       toast.success(`${docType.replace(/_/g, ' ')} image uploaded successfully!`);
@@ -897,6 +935,11 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
 
       // Update current document
       setCurrentDocumentUrl(publicUrl);
+      setDocumentTypeImages(prev => {
+        const next = { ...prev, [currentDocumentType]: publicUrl } as Record<DocumentType, string>;
+        persistDocumentTypeImages(next);
+        return next;
+      });
       
       // Reload uploaded documents
       await loadUploadedDocuments();
