@@ -152,8 +152,35 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
       return null;
     }
   };
-  
 
+  // Persist and restore field positions per document type
+  const persistDocumentTypeFields = (docType: DocumentType, fieldData: TextField[]) => {
+    try {
+      const key = `pyp-fields-${docType}`;
+      localStorage.setItem(key, JSON.stringify(fieldData));
+    } catch (e) {
+      console.error(`Failed to persist fields for ${docType}`, e);
+    }
+  };
+
+  const loadSavedDocumentTypeFields = (docType: DocumentType): TextField[] | null => {
+    try {
+      const key = `pyp-fields-${docType}`;
+      const raw = localStorage.getItem(key);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (e) {
+      console.error(`Error parsing saved fields for ${docType}`, e);
+      return null;
+    }
+  };
+  // Persist fields whenever they change (but not during initial load)
+  useEffect(() => {
+    if (fields.length > 0) { // Only persist if we have fields to save
+      persistDocumentTypeFields(currentDocumentType, fields);
+    }
+  }, [fields, currentDocumentType]);
+  
   const [vehicleData1, setVehicleData1] = useState<any>(null);
   const [vehicleData2, setVehicleData2] = useState<any>(null);
   const [currentVehicleSlot, setCurrentVehicleSlot] = useState<1 | 2>(1);
@@ -421,6 +448,13 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
       const savedImagesAfter = loadSavedDocumentTypeImages();
       if (savedImagesAfter && savedImagesAfter[currentDocumentType]) {
         setCurrentDocumentUrl(savedImagesAfter[currentDocumentType]);
+      }
+      
+      // Load saved fields for current document type (this overrides template fields)
+      const savedFields = loadSavedDocumentTypeFields(currentDocumentType);
+      if (savedFields && savedFields.length > 0) {
+        console.log('Loading saved fields for', currentDocumentType, ':', savedFields);
+        setFields(savedFields);
       }
       
       // Auto print if requested
@@ -1577,7 +1611,11 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
                   const newType = e.target.value as DocumentType;
                   setCurrentDocumentType(newType);
                   setCurrentDocumentUrl(documentTypeImages[newType] || dmvFormImage);
-                  setFields([]); // Clear fields when switching document types
+                  
+                  // Load saved fields for this document type or start with empty
+                  const savedFields = loadSavedDocumentTypeFields(newType);
+                  setFields(savedFields || []); 
+                  
                   setTemplateName(getDefaultTemplateName(newType));
                 }}
                 className="w-full p-2 border rounded-md bg-background"
