@@ -153,6 +153,32 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
     }
   };
 
+  // Also persist a base64 data URL fallback per document type (survives refresh/offline)
+  const persistDocumentTypeImageData = (images: Record<DocumentType, string>) => {
+    try {
+      localStorage.setItem('pyp-document-type-image-data', JSON.stringify(images));
+    } catch (e) {
+      console.error('Failed to persist PYP document image data', e);
+    }
+  };
+
+  const loadSavedDocumentTypeImageData = (): Record<DocumentType, string> | null => {
+    try {
+      const raw = localStorage.getItem('pyp-document-type-image-data');
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (e) {
+      console.error('Error parsing saved PYP document image data', e);
+      return null;
+    }
+  };
+
+  const fileToDataURL = (file: File): Promise<string> => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
   // Persist and restore field positions per document type
   const persistDocumentTypeFields = (docType: DocumentType, fieldData: TextField[]) => {
     try {
@@ -429,11 +455,14 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
         }
       }
       
-      // Load saved document images first
+      // Load saved document images (URLs) and base64 fallbacks first
       const savedImages = loadSavedDocumentTypeImages();
-      if (savedImages) {
+      const savedImageData = loadSavedDocumentTypeImageData();
+      if (savedImages || savedImageData) {
         setDocumentTypeImages((prev) => {
-          const next = { ...prev, ...savedImages } as Record<DocumentType, string>;
+          const next = { ...prev } as Record<DocumentType, string>;
+          if (savedImages) Object.assign(next, savedImages);
+          if (savedImageData) Object.assign(next, savedImageData);
           const savedUrl = next[currentDocumentType];
           if (savedUrl) setCurrentDocumentUrl(savedUrl);
           return next;
@@ -446,8 +475,10 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
 
       // Ensure saved image preference wins after default template load
       const savedImagesAfter = loadSavedDocumentTypeImages();
-      if (savedImagesAfter && savedImagesAfter[currentDocumentType]) {
-        setCurrentDocumentUrl(savedImagesAfter[currentDocumentType]);
+      const savedImageDataAfter = loadSavedDocumentTypeImageData();
+      const finalUrl = (savedImageDataAfter && savedImageDataAfter[currentDocumentType]) || (savedImagesAfter && savedImagesAfter[currentDocumentType]);
+      if (finalUrl) {
+        setCurrentDocumentUrl(finalUrl);
       }
       
       // Load saved fields for current document type (this overrides template fields)
@@ -474,8 +505,10 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
     if (imageUrl) {
       setCurrentDocumentUrl(imageUrl);
     } else {
-      // Use default image for bill of sale or empty for others
-      setCurrentDocumentUrl(currentDocumentType === 'bill_of_sale' ? dmvFormImage : '');
+      // Try base64 fallback stored locally, then default
+      const savedData = loadSavedDocumentTypeImageData();
+      const dataUrl = savedData?.[currentDocumentType];
+      setCurrentDocumentUrl(dataUrl || (currentDocumentType === 'bill_of_sale' ? dmvFormImage : ''));
     }
   }, [currentDocumentType, documentTypeImages]);
 
