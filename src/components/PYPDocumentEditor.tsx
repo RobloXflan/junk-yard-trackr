@@ -102,6 +102,7 @@ interface UploadedDocument {
   name: string;
   url: string;
   uploadedAt: Date;
+  folder?: string;
 }
 
 export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
@@ -657,26 +658,67 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
 
   const loadUploadedDocuments = async () => {
     try {
-      const { data, error } = await supabase.storage
+      // First get all folders in pyp-templates
+      const { data: folders, error: foldersError } = await supabase.storage
         .from('documents')
         .list('pyp-templates/', {
           limit: 100,
           sortBy: { column: 'created_at', order: 'desc' }
         });
 
-      if (error) {
-        console.error('Error loading documents:', error);
+      if (foldersError) {
+        console.error('Error loading document folders:', foldersError);
         return;
       }
 
-      const documents: UploadedDocument[] = data.map(file => ({
+      const allDocuments: UploadedDocument[] = [];
+      
+      // Load files from each subfolder
+      for (const folder of folders) {
+        if (folder.name && folder.metadata === null) { // It's a folder
+          try {
+            const { data: files, error: filesError } = await supabase.storage
+              .from('documents')
+              .list(`pyp-templates/${folder.name}/`, {
+                limit: 100,
+                sortBy: { column: 'created_at', order: 'desc' }
+              });
+
+            if (filesError) {
+              console.error(`Error loading files from ${folder.name}:`, filesError);
+              continue;
+            }
+
+            const folderDocuments: UploadedDocument[] = files
+              .filter(file => file.metadata !== null) // Only actual files, not folders
+              .map(file => ({
+                id: file.id,
+                name: file.name,
+                url: supabase.storage.from('documents').getPublicUrl(`pyp-templates/${folder.name}/${file.name}`).data.publicUrl,
+                uploadedAt: new Date(file.created_at),
+                folder: folder.name
+              }));
+
+            allDocuments.push(...folderDocuments);
+          } catch (error) {
+            console.error(`Error processing folder ${folder.name}:`, error);
+          }
+        }
+      }
+
+      // Also check for files directly in pyp-templates root
+      const rootFiles = folders.filter(item => item.metadata !== null);
+      const rootDocuments: UploadedDocument[] = rootFiles.map(file => ({
         id: file.id,
         name: file.name,
         url: supabase.storage.from('documents').getPublicUrl(`pyp-templates/${file.name}`).data.publicUrl,
         uploadedAt: new Date(file.created_at)
       }));
 
-      setUploadedDocuments(documents);
+      allDocuments.push(...rootDocuments);
+
+      console.log(`Loaded ${allDocuments.length} documents from PYP templates folders`);
+      setUploadedDocuments(allDocuments);
     } catch (error) {
       console.error('Error loading uploaded documents:', error);
     }
@@ -1080,12 +1122,13 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
     }
   };
 
-  const deleteUploadedDocument = async (docId: string, fileName: string) => {
+  const deleteUploadedDocument = async (docId: string, filePath: string) => {
+    const fileName = filePath.includes('/') ? filePath.split('/').pop() : filePath;
     if (window.confirm(`Are you sure you want to delete "${fileName}"?`)) {
       try {
         const { error } = await supabase.storage
           .from('documents')
-          .remove([`pyp-templates/${fileName}`]);
+          .remove([`pyp-templates/${filePath}`]);
 
         if (error) throw error;
 
@@ -1606,12 +1649,19 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
                       }}
                       className="flex-1 justify-start text-sm truncate"
                     >
-                      {doc.name}
+                      <div className="flex flex-col items-start">
+                        <span>{doc.name}</span>
+                        {doc.folder && (
+                          <span className="text-xs text-muted-foreground">
+                            {doc.folder.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                          </span>
+                        )}
+                      </div>
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => deleteUploadedDocument(doc.id, doc.name)}
+                      onClick={() => deleteUploadedDocument(doc.id, doc.folder ? `${doc.folder}/${doc.name}` : doc.name)}
                       className="text-destructive hover:text-destructive p-1"
                     >
                       <Trash2 className="h-3 w-3" />
