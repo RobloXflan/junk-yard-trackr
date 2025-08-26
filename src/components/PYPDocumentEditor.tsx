@@ -84,6 +84,9 @@ interface PredefinedField {
   color: string;
 }
 
+// Document types for PYP templates
+type DocumentType = 'bill_of_sale' | 'statement_of_fax1' | 'statement_of_fax2' | 'statement_of_erasure';
+
 interface DocumentTemplate {
   id: string;
   name: string;
@@ -91,6 +94,7 @@ interface DocumentTemplate {
   fields: TextField[];
   createdAt: Date;
   updatedAt: Date;
+  documentType: DocumentType;
 }
 
 interface PYPDocumentEditorProps {
@@ -111,7 +115,7 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [templateName, setTemplateName] = useState('PYP Bill of Sale');
+  const [templateName, setTemplateName] = useState('Bill of Sale Template');
   const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
   const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
   const [currentDocumentUrl, setCurrentDocumentUrl] = useState(dmvFormImage);
@@ -119,6 +123,15 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 816, height: 1056 });
+  
+  // Document type management
+  const [currentDocumentType, setCurrentDocumentType] = useState<DocumentType>('bill_of_sale');
+  const [documentTypeImages, setDocumentTypeImages] = useState<Record<DocumentType, string>>({
+    bill_of_sale: dmvFormImage,
+    statement_of_fax1: '',
+    statement_of_fax2: '',
+    statement_of_erasure: ''
+  });
   
   // Dual vehicle state management
   const [vehicleData1, setVehicleData1] = useState<any>(null);
@@ -384,6 +397,17 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
     initializeEditor();
   }, []);
 
+  // Update document URL when document type changes
+  useEffect(() => {
+    const imageUrl = documentTypeImages[currentDocumentType];
+    if (imageUrl) {
+      setCurrentDocumentUrl(imageUrl);
+    } else {
+      // Use default image for bill of sale or empty for others
+      setCurrentDocumentUrl(currentDocumentType === 'bill_of_sale' ? dmvFormImage : '');
+    }
+  }, [currentDocumentType, documentTypeImages]);
+
   // Live update Vehicle 2 fields when vehicleData2 changes
   useEffect(() => {
     if (fields.length === 0) return; // Don't run during initial load
@@ -596,7 +620,8 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
         const templatesWithDates = parsedTemplates.map((t: any) => ({
           ...t,
           createdAt: new Date(t.createdAt),
-          updatedAt: new Date(t.updatedAt)
+          updatedAt: new Date(t.updatedAt),
+          documentType: t.documentType || 'bill_of_sale' // Default for existing templates without documentType
         }));
         localTemplates.push(...templatesWithDates);
       } catch (error) {
@@ -635,7 +660,8 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
             imageUrl: template.document_url,
             fields: templateFields,
             createdAt: new Date(template.created_at),
-            updatedAt: new Date(template.updated_at)
+            updatedAt: new Date(template.updated_at),
+            documentType: 'bill_of_sale' // Default for existing templates
           });
         }
       }
@@ -766,6 +792,62 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
       
       img.src = URL.createObjectURL(file);
     });
+  };
+
+  // Get default template name for document type
+  const getDefaultTemplateName = (docType: DocumentType): string => {
+    const names = {
+      bill_of_sale: 'Bill of Sale Template',
+      statement_of_fax1: 'Statement of Fax 1 Template',
+      statement_of_fax2: 'Statement of Fax 2 Template',
+      statement_of_erasure: 'Statement of Erasure Template'
+    };
+    return names[docType];
+  };
+
+  // Handle document type specific image uploads
+  const handleDocumentTypeImageUpload = async (event: any, docType: DocumentType) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!validImageTypes.includes(file.type)) {
+      toast.error('Please select a PNG, JPEG, or WebP image file');
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const optimizedFile = await optimizeImage(file);
+      const fileName = `${docType}_template_${Date.now()}.jpg`;
+      const filePath = `pyp-templates/${docType}/${fileName}`;
+
+      const { error } = await supabase.storage
+        .from('documents')
+        .upload(filePath, optimizedFile);
+
+      if (error) throw error;
+
+      const { data } = supabase.storage
+        .from('documents')
+        .getPublicUrl(filePath);
+
+      const newUrl = data.publicUrl;
+      setDocumentTypeImages(prev => ({
+        ...prev,
+        [docType]: newUrl
+      }));
+      
+      setCurrentDocumentUrl(newUrl);
+      toast.success(`${docType.replace(/_/g, ' ')} image uploaded successfully!`);
+      
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload image');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1057,7 +1139,8 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
         imageUrl: currentDocumentUrl,
         fields: cleanedFields,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        documentType: currentDocumentType
       };
 
       const updatedTemplates = [...templates, template];
@@ -1438,6 +1521,54 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
       <div className="grid grid-cols-4 gap-6">
         {/* Sidebar */}
         <div className="col-span-1 space-y-4">
+          {/* Document Type Selector */}
+          <Card className="p-4">
+            <h3 className="font-semibold mb-4 flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Document Type
+            </h3>
+            <div className="space-y-3">
+              <select
+                value={currentDocumentType}
+                onChange={(e) => {
+                  const newType = e.target.value as DocumentType;
+                  setCurrentDocumentType(newType);
+                  setCurrentDocumentUrl(documentTypeImages[newType] || dmvFormImage);
+                  setFields([]); // Clear fields when switching document types
+                  setTemplateName(getDefaultTemplateName(newType));
+                }}
+                className="w-full p-2 border rounded-md bg-background"
+              >
+                <option value="bill_of_sale">Bill of Sale</option>
+                <option value="statement_of_fax1">Statement of Fax 1</option>
+                <option value="statement_of_fax2">Statement of Fax 2</option>
+                <option value="statement_of_erasure">Statement of Erasure</option>
+              </select>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Upload Document Image</label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/*';
+                    input.onchange = (e) => handleDocumentTypeImageUpload(e, currentDocumentType);
+                    input.click();
+                  }}
+                  className="w-full justify-start"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload Image for {currentDocumentType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                </Button>
+                {documentTypeImages[currentDocumentType] && (
+                  <p className="text-xs text-green-600">✓ Image uploaded</p>
+                )}
+              </div>
+            </div>
+          </Card>
+
           {/* Field Library */}
           <Card className="p-4">
             <h3 className="font-semibold mb-4 flex items-center gap-2">
@@ -1589,10 +1720,12 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
           </Card>
 
           {/* Templates */}
-          {templates.length > 0 && (
+          {templates.filter(t => t.documentType === currentDocumentType).length > 0 && (
             <Card className="p-4">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-semibold">Saved Templates</h3>
+                <h3 className="font-semibold">
+                  Saved Templates ({currentDocumentType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())})
+                </h3>
                 <Button 
                   onClick={clearCurrentDocument} 
                   variant="outline" 
@@ -1603,7 +1736,9 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
                 </Button>
               </div>
               <div className="space-y-2">
-                {templates.map((template) => (
+                {templates
+                  .filter(t => t.documentType === currentDocumentType)
+                  .map((template) => (
                   <div key={template.id} className="flex items-center gap-2">
                     <Button
                       variant="ghost"
@@ -1613,6 +1748,11 @@ export function PYPDocumentEditor({ onNavigate }: PYPDocumentEditorProps) {
                         setFields(template.fields);
                         setCurrentDocumentUrl(template.imageUrl);
                         setTemplateName(template.name);
+                        setCurrentDocumentType(template.documentType);
+                        setDocumentTypeImages(prev => ({
+                          ...prev,
+                          [template.documentType]: template.imageUrl
+                        }));
                         toast.success(`Loaded template: ${template.name}`);
                       }}
                       className="flex-1 justify-start text-sm"
