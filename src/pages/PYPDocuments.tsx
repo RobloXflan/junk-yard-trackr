@@ -1,6 +1,5 @@
 import { useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Construction } from "lucide-react";
+import { PYPDocumentEditor } from "@/components/PYPDocumentEditor";
 
 interface PYPDocumentsProps {
   onNavigate?: (page: string) => void;
@@ -38,15 +37,7 @@ export function PYPDocuments({ onNavigate }: PYPDocumentsProps) {
         </div>
       </div>
 
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-20">
-          <Construction className="w-20 h-20 text-muted-foreground mb-6" />
-          <h3 className="text-2xl font-semibold mb-4">Working on it!</h3>
-          <p className="text-muted-foreground text-center max-w-md text-lg">
-            This feature is currently under development. Check back soon for Pick Your Part document management functionality.
-          </p>
-        </CardContent>
-      </Card>
+      <PYPDocumentEditor onNavigate={onNavigate} />
     </div>
   );
 }
