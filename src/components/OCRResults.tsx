@@ -45,10 +45,10 @@ export function OCRResults({ extractedData, onApplyData, onClose }: OCRResultsPr
   const hasAnyData = extractedData.vehicleId || extractedData.licensePlate || extractedData.year || extractedData.make || extractedData.model;
 
   return (
-    <Card className="border-blue-200 bg-blue-50">
+    <Card className="border-primary/20 bg-primary/10">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-slate-800">
-          <FileText className="w-5 h-5 text-blue-600" />
+        <CardTitle className="flex items-center gap-2 text-foreground">
+          <FileText className="w-5 h-5 text-primary" />
           Scanned Information
         </CardTitle>
       </CardHeader>

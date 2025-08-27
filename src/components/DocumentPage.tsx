@@ -98,7 +98,7 @@ export function DocumentPage({ page, isSelected, onSelect, onPreview }: Document
           </p>
           
           {page.assignedVehicleInfo && (
-            <p className="text-xs text-blue-600 truncate">
+            <p className="text-xs text-primary truncate">
               {page.assignedVehicleInfo}
             </p>
           )}
