@@ -66,6 +66,16 @@ const mainMenuItems = [
     icon: FileText,
   },
   {
+    title: "Workers",
+    page: "workers",
+    icon: Users,
+  },
+  {
+    title: "Fleet Tracking",
+    page: "fleet-tracking",
+    icon: Car,
+  },
+  {
     title: "Print",
     page: "print",
     icon: Printer,
