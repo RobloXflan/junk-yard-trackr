@@ -82,7 +82,7 @@ export const ViewOnlyInventory = ({ onLogout, username }: ViewOnlyInventoryProps
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case "yard":
-        return "bg-blue-100 text-blue-800";
+        return "bg-primary/10 text-primary";
       case "sold":
         return "bg-green-100 text-green-800";
       case "pending":
@@ -97,7 +97,7 @@ export const ViewOnlyInventory = ({ onLogout, username }: ViewOnlyInventoryProps
       case "title":
         return "bg-green-100 text-green-800";
       case "registered-owner":
-        return "bg-blue-100 text-blue-800";
+        return "bg-primary/10 text-primary";
       case "lien-sale":
         return "bg-yellow-100 text-yellow-800";
       case "no-paperwork":

@@ -286,13 +286,13 @@ export function ZipcodeProximityChecker({ className = "" }: ZipcodeProximityChec
                 {activeWorkers.map((worker) => (
                   <div 
                     key={worker.id}
-                    className="p-3 border rounded-lg bg-blue-50 border-blue-200 space-y-2"
+                    className="p-3 border rounded-lg bg-primary/10 border-primary/20 space-y-2"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Truck className="w-4 h-4 text-blue-600" />
+                        <Truck className="w-4 h-4 text-primary" />
                         <span className="font-medium">Truck #{worker.truck_number}</span>
-                        <Badge variant="outline" className="bg-blue-100 text-blue-800">
+                        <Badge variant="outline" className="bg-primary/10 text-primary">
                           {worker.driver_name}
                         </Badge>
                       </div>

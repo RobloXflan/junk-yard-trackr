@@ -191,7 +191,7 @@ export function ProximityMap({ zipcodeCoordinates, nearbyAppointments, activeWor
               <span>Your searched zipcode</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+              <div className="w-3 h-3 bg-primary rounded-full"></div>
               <span>Active workers ({activeWorkers.length})</span>
             </div>
             <div className="flex items-center gap-2">

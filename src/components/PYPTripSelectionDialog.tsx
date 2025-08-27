@@ -90,12 +90,12 @@ export function PYPTripSelectionDialog({
                       
                       <div className="flex items-center gap-2 text-sm">
                         <div className={`px-2 py-1 rounded-md text-xs ${
-                          tripStatus.vehicle1 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
+                          tripStatus.vehicle1 ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-500'
                         }`}>
                           Slot 1: {tripStatus.vehicle1 ? 'Filled' : 'Available'}
                         </div>
                         <div className={`px-2 py-1 rounded-md text-xs ${
-                          tripStatus.vehicle2 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
+                          tripStatus.vehicle2 ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-500'
                         }`}>
                           Slot 2: {tripStatus.vehicle2 ? 'Filled' : 'Available'}
                         </div>

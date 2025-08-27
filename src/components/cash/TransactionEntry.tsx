@@ -284,7 +284,7 @@ export function TransactionEntry({ selectedDate }: TransactionEntryProps) {
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Transaction:</span>
                 <span className={`font-medium ${
-                  transactionType === 'starting_balance' ? 'text-blue-600' : 
+                  transactionType === 'starting_balance' ? 'text-primary' : 
                   transactionType === 'turn_in' ? 'text-red-600' : 'text-green-600'
                 }`}>
                   {transactionType === 'starting_balance' ? 'Set to' : 

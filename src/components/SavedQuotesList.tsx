@@ -130,9 +130,9 @@ export function SavedQuotesList() {
       </div>
 
       {showNewQuoteForm && (
-        <Card className="border-blue-200 bg-blue-50">
+        <Card className="border-primary/20 bg-primary/10">
           <CardHeader>
-            <CardTitle className="text-blue-800">Create New Quote</CardTitle>
+            <CardTitle className="text-primary">Create New Quote</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
