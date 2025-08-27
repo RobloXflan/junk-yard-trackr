@@ -66,16 +66,6 @@ const mainMenuItems = [
     icon: FileText,
   },
   {
-    title: "Workers",
-    page: "workers",
-    icon: Users,
-  },
-  {
-    title: "Fleet Tracking",
-    page: "fleet-tracking",
-    icon: Car,
-  },
-  {
     title: "Print",
     page: "print",
     icon: Printer,
@@ -130,22 +120,22 @@ export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
   };
 
   return (
-    <Sidebar className="border-r border-slate-200 bg-white">
-      <SidebarHeader className="p-3 sm:p-4 border-b border-slate-200">
+    <Sidebar className="border-r border-border bg-background">
+      <SidebarHeader className="p-3 sm:p-4 border-b border-border">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <Car className="w-5 h-5 text-white" />
+            <Car className="w-5 h-5 text-primary-foreground" />
           </div>
           <div>
-            <h2 className="text-base sm:text-lg font-bold text-slate-800">JunkCar Pro</h2>
-            <p className="text-xs text-slate-500">Admin Dashboard</p>
+            <h2 className="text-base sm:text-lg font-bold text-foreground">JunkCar Pro</h2>
+            <p className="text-xs text-muted-foreground">Admin Dashboard</p>
           </div>
         </div>
       </SidebarHeader>
       
-      <SidebarContent className="bg-white">
+      <SidebarContent className="bg-background">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-slate-600 font-medium">
+          <SidebarGroupLabel className="text-muted-foreground font-medium">
             Main Menu
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -173,7 +163,7 @@ export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel className="text-slate-600 font-medium">
+          <SidebarGroupLabel className="text-muted-foreground font-medium">
             Admin Menu
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -201,8 +191,8 @@ export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
         </SidebarGroup>
       </SidebarContent>
       
-      <SidebarFooter className="p-3 sm:p-4 border-t border-slate-200 bg-white">
-        <div className="text-xs text-slate-400">
+      <SidebarFooter className="p-3 sm:p-4 border-t border-border bg-background">
+        <div className="text-xs text-muted-foreground">
           © 2024 JunkCar Pro
         </div>
       </SidebarFooter>
