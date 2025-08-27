@@ -90,7 +90,7 @@ export function ChocoXflanPendingReleases() {
                     <Button
                       size="sm"
                       onClick={handleRelease}
-                      className="bg-blue-600 hover:bg-blue-700"
+                      className="bg-primary hover:bg-primary/90"
                     >
                       <ExternalLink className="w-4 h-4 mr-1" />
                       Release
