@@ -63,9 +63,9 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-				success: 'hsl(34 197 94)',
-				warning: 'hsl(245 158 11)',
-				info: 'hsl(59 130 246)'
+				success: 'hsl(142 76% 36%)',
+				warning: 'hsl(38 92% 50%)',
+				info: 'hsl(214 100% 50%)'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
