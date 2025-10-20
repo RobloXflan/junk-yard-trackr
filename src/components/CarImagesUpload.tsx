@@ -309,7 +309,7 @@ export function CarImagesUpload({ vehicleId, currentImages, onImagesUpdate, disa
                     </div>
                   )}
                   
-                  <div className="text-sm text-muted-foreground p-4 bg-accent rounded-lg">
+                  <div className="text-sm text-muted-foreground p-4 bg-blue-50 rounded-lg">
                     <strong>{pendingImages.length > 0 ? 'Upload Preview:' : 'View-Only Preview:'}</strong> 
                     {pendingImages.length > 0 ? 
                       ' This is how your images will appear to view-only accounts after upload. The first image will be the main thumbnail.' :
@@ -350,7 +350,7 @@ export function CarImagesUpload({ vehicleId, currentImages, onImagesUpdate, disa
                     />
                   </div>
                   {index === 0 && (
-                    <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded">
+                    <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded">
                       Main Thumbnail
                     </div>
                   )}
@@ -430,7 +430,7 @@ export function CarImagesUpload({ vehicleId, currentImages, onImagesUpdate, disa
                   />
                 </div>
                 {index === 0 && currentImages.length > 1 && (
-                  <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded">
+                  <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded">
                     Header Image
                   </div>
                 )}

@@ -26,7 +26,7 @@ export function ViewOnlyVehicleDialog({ vehicle, open, onOpenChange }: ViewOnlyV
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'yard': return 'bg-primary';
+      case 'yard': return 'bg-blue-500';
       case 'sold': return 'bg-green-500';
       case 'pick-your-part': return 'bg-orange-500';
       case 'sa-recycling': return 'bg-purple-500';

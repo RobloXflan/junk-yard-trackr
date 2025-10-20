@@ -452,7 +452,7 @@ export function WorkerCashEntry() {
           <div className="space-y-4 border-t pt-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <MapPin className="w-5 h-5 text-primary" />
+                <MapPin className="w-5 h-5 text-blue-600" />
                 <Label htmlFor="gps-tracking" className="text-base font-medium">
                   Activar Rastreo GPS
                 </Label>
@@ -466,7 +466,7 @@ export function WorkerCashEntry() {
             </div>
 
             {enableGpsTracking && (
-              <div className="space-y-4 p-4 bg-primary/10 rounded-md border border-primary/20">
+              <div className="space-y-4 p-4 bg-blue-50 rounded-md border border-blue-200">
                 {!isTracking ? (
                   <>
                     <div className="space-y-2">
@@ -525,7 +525,7 @@ export function WorkerCashEntry() {
                     </div>
                     
                     <div className="flex items-center justify-center space-x-2">
-                      <Clock className="w-4 h-4 text-primary" />
+                      <Clock className="w-4 h-4 text-blue-600" />
                       <span className="text-lg font-mono">{formatTime(timeRemaining)}</span>
                     </div>
                     

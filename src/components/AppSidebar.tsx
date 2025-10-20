@@ -66,6 +66,16 @@ const mainMenuItems = [
     icon: FileText,
   },
   {
+    title: "Workers",
+    page: "workers",
+    icon: Users,
+  },
+  {
+    title: "Fleet Tracking",
+    page: "fleet-tracking",
+    icon: Car,
+  },
+  {
     title: "Print",
     page: "print",
     icon: Printer,
@@ -120,22 +130,22 @@ export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
   };
 
   return (
-    <Sidebar className="border-r border-border bg-background">
-      <SidebarHeader className="p-3 sm:p-4 border-b border-border">
+    <Sidebar className="border-r border-slate-200 bg-white">
+      <SidebarHeader className="p-3 sm:p-4 border-b border-slate-200">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <Car className="w-5 h-5 text-primary-foreground" />
+          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+            <Car className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h2 className="text-base sm:text-lg font-bold text-foreground">JunkCar Pro</h2>
-            <p className="text-xs text-muted-foreground">Admin Dashboard</p>
+            <h2 className="text-base sm:text-lg font-bold text-slate-800">JunkCar Pro</h2>
+            <p className="text-xs text-slate-500">Admin Dashboard</p>
           </div>
         </div>
       </SidebarHeader>
       
-      <SidebarContent className="bg-background">
+      <SidebarContent className="bg-white">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-muted-foreground font-medium">
+          <SidebarGroupLabel className="text-slate-600 font-medium">
             Main Menu
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -145,10 +155,10 @@ export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
                   <SidebarMenuButton 
                     onClick={() => handleNavigation(item.page)}
                     isActive={currentPage === item.page}
-                    className={`hover:bg-accent cursor-pointer py-3 px-3 touch-manipulation ${
+                    className={`hover:bg-slate-100 cursor-pointer py-3 px-3 touch-manipulation ${
                       currentPage === item.page 
-                        ? 'bg-accent text-primary border-r-2 border-primary' 
-                        : 'text-foreground'
+                        ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' 
+                        : 'text-slate-700'
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -163,7 +173,7 @@ export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel className="text-muted-foreground font-medium">
+          <SidebarGroupLabel className="text-slate-600 font-medium">
             Admin Menu
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -173,10 +183,10 @@ export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
                   <SidebarMenuButton 
                     onClick={() => handleNavigation(item.page, item.locked)}
                     isActive={currentPage === item.page}
-                    className={`hover:bg-accent cursor-pointer py-3 px-3 touch-manipulation ${
+                    className={`hover:bg-slate-100 cursor-pointer py-3 px-3 touch-manipulation ${
                       currentPage === item.page 
-                        ? 'bg-accent text-primary border-r-2 border-primary' 
-                        : 'text-foreground'
+                        ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' 
+                        : 'text-slate-700'
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -191,8 +201,8 @@ export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
         </SidebarGroup>
       </SidebarContent>
       
-      <SidebarFooter className="p-3 sm:p-4 border-t border-border bg-background">
-        <div className="text-xs text-muted-foreground">
+      <SidebarFooter className="p-3 sm:p-4 border-t border-slate-200 bg-white">
+        <div className="text-xs text-slate-400">
           © 2024 JunkCar Pro
         </div>
       </SidebarFooter>

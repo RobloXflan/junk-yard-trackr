@@ -382,7 +382,7 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
       <CardContent className="space-y-6">
         {/* Voice Assistant */}
         {showVoiceAssistant && (
-          <div className="p-4 border rounded-lg bg-accent">
+          <div className="p-4 border rounded-lg bg-blue-50">
             <VoiceAssistant 
               appointmentNoteId={currentAppointmentId}
               onDataExtracted={handleVoiceDataExtracted}
@@ -510,12 +510,12 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
 
         {/* Price Estimate Display */}
         {priceEstimate && (
-          <Card className="bg-accent border-border">
+          <Card className="bg-blue-50 border-blue-200">
             <CardContent className="pt-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <DollarSign className="w-5 h-5 text-primary" />
-                  <span className="text-lg font-semibold text-foreground">
+                  <DollarSign className="w-5 h-5 text-blue-600" />
+                  <span className="text-lg font-semibold text-blue-800">
                     Estimated Price: ${priceEstimate.estimatedPrice.toLocaleString()}
                   </span>
                 </div>
@@ -523,7 +523,7 @@ export function AppointmentNotepad({ vehicleData, onVehicleDataChange, prefillDa
                   <Badge className={getConfidenceColor(priceEstimate.confidence)}>
                     {priceEstimate.confidence} Confidence
                   </Badge>
-                  <span className="text-sm text-primary">
+                  <span className="text-sm text-blue-600">
                     {priceEstimate.dataPoints} data point{priceEstimate.dataPoints !== 1 ? 's' : ''}
                   </span>
                 </div>

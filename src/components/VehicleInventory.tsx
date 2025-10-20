@@ -395,7 +395,7 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
                         className={`border-2 ${
                           vehicle.status === 'sa-recycling' ? 'border-purple-500' :
                           vehicle.status === 'pick-your-part' ? 'border-orange-500' :
-                          vehicle.status === 'sold' ? 'border-primary' :
+                          vehicle.status === 'sold' ? 'border-blue-500' :
                           'border-muted'
                         }`}
                       >

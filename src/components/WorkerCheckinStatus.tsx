@@ -168,9 +168,9 @@ export function WorkerCheckinStatus() {
         
         {/* Stats Summary */}
         <div className="grid grid-cols-4 gap-4 mt-4">
-          <div className="text-center p-3 bg-primary/10 rounded-lg">
-            <div className="text-2xl font-bold text-primary">{todayStats.total}</div>
-            <div className="text-sm text-primary">Total Workers</div>
+          <div className="text-center p-3 bg-blue-50 rounded-lg">
+            <div className="text-2xl font-bold text-blue-600">{todayStats.total}</div>
+            <div className="text-sm text-blue-600">Total Workers</div>
           </div>
           <div className="text-center p-3 bg-gray-50 rounded-lg">
             <div className="text-2xl font-bold text-gray-600">{todayStats.reported}</div>

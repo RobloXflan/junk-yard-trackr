@@ -144,7 +144,7 @@ export function PageThumbnailGallery({
                 </p>
                 
                 {page.assignedVehicleInfo && (
-                  <p className="text-xs text-primary truncate">
+                  <p className="text-xs text-blue-600 truncate">
                     Vehicle: {page.assignedVehicleInfo}
                   </p>
                 )}

@@ -341,7 +341,7 @@ export function VehiclePricingTool({ vehicleData, onVehicleDataChange }: Vehicle
   const getMatchTypeColor = (matchType: string) => {
     switch (matchType) {
       case 'exact': return 'bg-green-100 text-green-800';
-      case 'model': return 'bg-primary/10 text-primary';
+      case 'model': return 'bg-blue-100 text-blue-800';
       case 'make_year': return 'bg-yellow-100 text-yellow-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -495,7 +495,7 @@ export function VehiclePricingTool({ vehicleData, onVehicleDataChange }: Vehicle
                     <div className="text-sm text-green-600">
                       Based on {priceEstimate.dataPoints} similar vehicle{priceEstimate.dataPoints !== 1 ? 's' : ''} from inventory and saved quotes
                       {priceEstimate.removedOutliers > 0 && (
-                        <div className="text-xs text-primary mt-1">
+                        <div className="text-xs text-blue-600 mt-1">
                           Filtered out {priceEstimate.removedOutliers} extreme value{priceEstimate.removedOutliers !== 1 ? 's' : ''} for better accuracy
                         </div>
                       )}
