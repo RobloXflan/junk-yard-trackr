@@ -32,6 +32,39 @@ export function DailyWorkerCashFlow({ selectedDate }: DailyWorkerCashFlowProps) 
     fetchWorkerCashFlows();
   }, [selectedDate]);
 
+  // Set up real-time subscription for cash transactions and worker checkins
+  useEffect(() => {
+    const channel = supabase
+      .channel('worker-cash-flow-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'cash_transactions'
+        },
+        () => {
+          fetchWorkerCashFlows();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'worker_checkins'
+        },
+        () => {
+          fetchWorkerCashFlows();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedDate]);
+
   const fetchWorkerCashFlows = async () => {
     setLoading(true);
     try {

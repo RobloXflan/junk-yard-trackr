@@ -42,6 +42,39 @@ export function CashDashboard({ selectedDate, onDateChange }: CashDashboardProps
     fetchDashboardData();
   }, [selectedDate]);
 
+  // Set up real-time subscription for cash transactions and worker checkins
+  useEffect(() => {
+    const channel = supabase
+      .channel('cash-dashboard-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'cash_transactions'
+        },
+        () => {
+          fetchDashboardData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'worker_checkins'
+        },
+        () => {
+          fetchDashboardData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedDate]);
+
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
