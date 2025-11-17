@@ -63,6 +63,53 @@ export function useBuyers() {
     }
   };
 
+  const updateBuyer = async (id: string, buyerData: Partial<Omit<Buyer, 'id' | 'created_at' | 'updated_at'>>) => {
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('buyers')
+        .update(buyerData)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating buyer:', error);
+        throw error;
+      }
+
+      setBuyers(prev => prev.map(buyer => buyer.id === id ? data : buyer));
+      return data;
+    } catch (error) {
+      console.error('Failed to update buyer:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const deleteBuyer = async (id: string) => {
+    try {
+      setIsLoading(true);
+      const { error } = await supabase
+        .from('buyers')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error deleting buyer:', error);
+        throw error;
+      }
+
+      setBuyers(prev => prev.filter(buyer => buyer.id !== id));
+    } catch (error) {
+      console.error('Failed to delete buyer:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadBuyers();
   }, []);
@@ -71,6 +118,8 @@ export function useBuyers() {
     buyers,
     isLoading,
     loadBuyers,
-    addBuyer
+    addBuyer,
+    updateBuyer,
+    deleteBuyer
   };
 }
