@@ -66,95 +66,129 @@ export class ClientPDFProcessor {
       // Process each page
       const pages: ProcessedPage[] = [];
       for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-        const page = await pdf.getPage(pageNum);
-        
-        // Render full size
-        const viewport = page.getViewport({ scale: 2.0 });
-        const canvas = document.createElement('canvas');
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        const context = canvas.getContext('2d');
-        
-        if (!context) throw new Error('Could not get canvas context');
+        try {
+          console.log(`Processing page ${pageNum}/${totalPages}...`);
+          const page = await pdf.getPage(pageNum);
+          
+          // Render full size
+          const viewport = page.getViewport({ scale: 2.0 });
+          const canvas = document.createElement('canvas');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          const context = canvas.getContext('2d');
+          
+          if (!context) throw new Error('Could not get canvas context');
 
-        await page.render({ canvasContext: context, viewport }).promise;
-        
-        // Convert to blob
-        const fullBlob = await new Promise<Blob>((resolve) => {
-          canvas.toBlob((blob) => resolve(blob!), 'image/jpeg', 0.9);
-        });
+          await page.render({ canvasContext: context, viewport }).promise;
+          
+          // Convert to blob
+          const fullBlob = await new Promise<Blob>((resolve, reject) => {
+            canvas.toBlob((blob) => {
+              if (blob) resolve(blob);
+              else reject(new Error('Failed to create full image blob'));
+            }, 'image/jpeg', 0.9);
+          });
 
-        // Create thumbnail
-        const thumbViewport = page.getViewport({ scale: 0.3 });
-        const thumbCanvas = document.createElement('canvas');
-        thumbCanvas.width = thumbViewport.width;
-        thumbCanvas.height = thumbViewport.height;
-        const thumbContext = thumbCanvas.getContext('2d');
-        
-        if (!thumbContext) throw new Error('Could not get thumbnail canvas context');
+          console.log(`Created full image for page ${pageNum}, size: ${fullBlob.size} bytes`);
 
-        await page.render({ canvasContext: thumbContext, viewport: thumbViewport }).promise;
-        
-        const thumbBlob = await new Promise<Blob>((resolve) => {
-          thumbCanvas.toBlob((blob) => resolve(blob!), 'image/jpeg', 0.7);
-        });
+          // Create thumbnail
+          const thumbViewport = page.getViewport({ scale: 0.3 });
+          const thumbCanvas = document.createElement('canvas');
+          thumbCanvas.width = thumbViewport.width;
+          thumbCanvas.height = thumbViewport.height;
+          const thumbContext = thumbCanvas.getContext('2d');
+          
+          if (!thumbContext) throw new Error('Could not get thumbnail canvas context');
 
-        // Upload to storage
-        const pageId = crypto.randomUUID();
-        const timestamp = Date.now();
-        const fullPath = `${batchId}/page_${pageNum}_${timestamp}.jpg`;
-        const thumbPath = `${batchId}/thumb_${pageNum}_${timestamp}.jpg`;
+          await page.render({ canvasContext: thumbContext, viewport: thumbViewport }).promise;
+          
+          const thumbBlob = await new Promise<Blob>((resolve, reject) => {
+            thumbCanvas.toBlob((blob) => {
+              if (blob) resolve(blob);
+              else reject(new Error('Failed to create thumbnail blob'));
+            }, 'image/jpeg', 0.7);
+          });
 
-        const { error: fullError } = await supabase.storage
-          .from('pdf-documents')
-          .upload(fullPath, fullBlob);
+          console.log(`Created thumbnail for page ${pageNum}, size: ${thumbBlob.size} bytes`);
 
-        const { error: thumbError } = await supabase.storage
-          .from('pdf-documents')
-          .upload(thumbPath, thumbBlob);
+          // Upload to storage
+          const pageId = `page_${batchId}_${pageNum}`;
+          const timestamp = Date.now();
+          const fullPath = `${batchId}/page_${pageNum}_${timestamp}.jpg`;
+          const thumbPath = `${batchId}/thumb_${pageNum}_${timestamp}.jpg`;
 
-        if (fullError) throw fullError;
-        if (thumbError) throw thumbError;
+          console.log(`Uploading full image to: ${fullPath}`);
+          const { error: fullError } = await supabase.storage
+            .from('pdf-documents')
+            .upload(fullPath, fullBlob);
 
-        // Get public URLs
-        const { data: fullData } = supabase.storage
-          .from('pdf-documents')
-          .getPublicUrl(fullPath);
+          if (fullError) {
+            console.error('Full image upload error:', fullError);
+            throw fullError;
+          }
 
-        const { data: thumbData } = supabase.storage
-          .from('pdf-documents')
-          .getPublicUrl(thumbPath);
+          console.log(`Uploading thumbnail to: ${thumbPath}`);
+          const { error: thumbError } = await supabase.storage
+            .from('pdf-documents')
+            .upload(thumbPath, thumbBlob);
 
-        // Create page record
-        const { error: pageError } = await supabase
-          .from('pdf_pages')
-          .insert({
+          if (thumbError) {
+            console.error('Thumbnail upload error:', thumbError);
+            throw thumbError;
+          }
+
+          // Get public URLs
+          const { data: fullData } = supabase.storage
+            .from('pdf-documents')
+            .getPublicUrl(fullPath);
+
+          const { data: thumbData } = supabase.storage
+            .from('pdf-documents')
+            .getPublicUrl(thumbPath);
+
+          console.log(`Creating page record for page ${pageNum}`);
+          // Create page record
+          const { error: pageError } = await supabase
+            .from('pdf_pages')
+            .insert({
+              id: pageId,
+              batch_id: batchId,
+              page_number: pageNum,
+              full_page_url: fullData.publicUrl,
+              thumbnail_url: thumbData.publicUrl,
+              status: 'unassigned'
+            });
+
+          if (pageError) {
+            console.error('Page record creation error:', pageError);
+            throw pageError;
+          }
+
+          pages.push({
             id: pageId,
-            batch_id: batchId,
-            page_number: pageNum,
-            full_page_url: fullData.publicUrl,
-            thumbnail_url: thumbData.publicUrl,
+            pageNumber: pageNum,
+            thumbnailUrl: thumbData.publicUrl,
+            fullPageUrl: fullData.publicUrl,
+            batchId,
             status: 'unassigned'
           });
 
-        if (pageError) throw pageError;
+          // Update progress
+          await supabase
+            .from('pdf_batches')
+            .update({ processed_pages: pageNum })
+            .eq('id', batchId);
 
-        pages.push({
-          id: pageId,
-          pageNumber: pageNum,
-          thumbnailUrl: thumbData.publicUrl,
-          fullPageUrl: fullData.publicUrl,
-          batchId,
-          status: 'unassigned'
-        });
-
-        // Update progress
-        await supabase
-          .from('pdf_batches')
-          .update({ processed_pages: pageNum })
-          .eq('id', batchId);
-
-        console.log(`✅ Processed page ${pageNum}/${totalPages}`);
+          console.log(`✅ Processed page ${pageNum}/${totalPages}`);
+        } catch (pageError) {
+          console.error(`❌ Failed to process page ${pageNum}:`, pageError);
+          // Mark batch as failed
+          await supabase
+            .from('pdf_batches')
+            .update({ status: 'failed' })
+            .eq('id', batchId);
+          throw new Error(`Failed to process page ${pageNum}: ${pageError instanceof Error ? pageError.message : 'Unknown error'}`);
+        }
       }
 
       // Mark batch as complete
