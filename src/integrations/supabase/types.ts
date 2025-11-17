@@ -380,6 +380,279 @@ export type Database = {
           },
         ]
       }
+      part_requests: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          max_price: number | null
+          part_name: string
+          status: string | null
+          updated_at: string
+          user_id: string
+          vehicle_make: string | null
+          vehicle_model: string | null
+          vehicle_year: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          max_price?: number | null
+          part_name: string
+          status?: string | null
+          updated_at?: string
+          user_id: string
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          vehicle_year?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          max_price?: number | null
+          part_name?: string
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          vehicle_year?: string | null
+        }
+        Relationships: []
+      }
+      parts_listings: {
+        Row: {
+          city: string | null
+          condition: string | null
+          created_at: string
+          description: string | null
+          id: string
+          images: Json | null
+          latitude: number | null
+          longitude: number | null
+          part_name: string
+          price: number | null
+          state: string | null
+          status: string | null
+          updated_at: string
+          user_id: string
+          vehicle_id: string | null
+          zipcode: string | null
+        }
+        Insert: {
+          city?: string | null
+          condition?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          images?: Json | null
+          latitude?: number | null
+          longitude?: number | null
+          part_name: string
+          price?: number | null
+          state?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id: string
+          vehicle_id?: string | null
+          zipcode?: string | null
+        }
+        Update: {
+          city?: string | null
+          condition?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          images?: Json | null
+          latitude?: number | null
+          longitude?: number | null
+          part_name?: string
+          price?: number | null
+          state?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+          vehicle_id?: string | null
+          zipcode?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parts_listings_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "partsmart_yard_vehicles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parts_listings_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partsmart_profiles: {
+        Row: {
+          created_at: string
+          full_name: string | null
+          id: string
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      partsmart_user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["partsmart_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["partsmart_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["partsmart_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      partvehicles: {
+        Row: {
+          bill_of_sale: boolean | null
+          buyer_address: string | null
+          buyer_city: string | null
+          buyer_first_name: string | null
+          buyer_last_name: string | null
+          buyer_name: string | null
+          buyer_state: string | null
+          buyer_zip: string | null
+          car_images: Json | null
+          created_at: string
+          destination: string | null
+          documents: Json | null
+          featured: boolean | null
+          id: string
+          is_released: boolean | null
+          license_plate: string | null
+          make: string
+          model: string
+          notes: string | null
+          original_vehicle_id: string
+          paperwork: string | null
+          paperwork_other: string | null
+          pick_your_part_date: string | null
+          purchase_date: string | null
+          purchase_price: string | null
+          sa_recycling_date: string | null
+          sale_date: string | null
+          sale_price: string | null
+          seller_name: string | null
+          status: string | null
+          title_present: boolean | null
+          updated_at: string
+          vehicle_id: string
+          year: string
+        }
+        Insert: {
+          bill_of_sale?: boolean | null
+          buyer_address?: string | null
+          buyer_city?: string | null
+          buyer_first_name?: string | null
+          buyer_last_name?: string | null
+          buyer_name?: string | null
+          buyer_state?: string | null
+          buyer_zip?: string | null
+          car_images?: Json | null
+          created_at?: string
+          destination?: string | null
+          documents?: Json | null
+          featured?: boolean | null
+          id?: string
+          is_released?: boolean | null
+          license_plate?: string | null
+          make: string
+          model: string
+          notes?: string | null
+          original_vehicle_id: string
+          paperwork?: string | null
+          paperwork_other?: string | null
+          pick_your_part_date?: string | null
+          purchase_date?: string | null
+          purchase_price?: string | null
+          sa_recycling_date?: string | null
+          sale_date?: string | null
+          sale_price?: string | null
+          seller_name?: string | null
+          status?: string | null
+          title_present?: boolean | null
+          updated_at?: string
+          vehicle_id: string
+          year: string
+        }
+        Update: {
+          bill_of_sale?: boolean | null
+          buyer_address?: string | null
+          buyer_city?: string | null
+          buyer_first_name?: string | null
+          buyer_last_name?: string | null
+          buyer_name?: string | null
+          buyer_state?: string | null
+          buyer_zip?: string | null
+          car_images?: Json | null
+          created_at?: string
+          destination?: string | null
+          documents?: Json | null
+          featured?: boolean | null
+          id?: string
+          is_released?: boolean | null
+          license_plate?: string | null
+          make?: string
+          model?: string
+          notes?: string | null
+          original_vehicle_id?: string
+          paperwork?: string | null
+          paperwork_other?: string | null
+          pick_your_part_date?: string | null
+          purchase_date?: string | null
+          purchase_price?: string | null
+          sa_recycling_date?: string | null
+          sale_date?: string | null
+          sale_price?: string | null
+          seller_name?: string | null
+          status?: string | null
+          title_present?: boolean | null
+          updated_at?: string
+          vehicle_id?: string
+          year?: string
+        }
+        Relationships: []
+      }
       pdf_batches: {
         Row: {
           created_at: string
@@ -458,6 +731,13 @@ export type Database = {
             foreignKeyName: "pdf_pages_assigned_vehicle_id_fkey"
             columns: ["assigned_vehicle_id"]
             isOneToOne: false
+            referencedRelation: "partsmart_yard_vehicles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdf_pages_assigned_vehicle_id_fkey"
+            columns: ["assigned_vehicle_id"]
+            isOneToOne: false
             referencedRelation: "vehicles"
             referencedColumns: ["id"]
           },
@@ -520,6 +800,13 @@ export type Database = {
           vehicle_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "pending_intakes_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "partsmart_yard_vehicles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "pending_intakes_vehicle_id_fkey"
             columns: ["vehicle_id"]
@@ -1022,13 +1309,55 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      partsmart_yard_vehicles: {
+        Row: {
+          car_images: Json | null
+          created_at: string | null
+          id: string | null
+          license_plate: string | null
+          make: string | null
+          model: string | null
+          status: string | null
+          vehicle_id: string | null
+          year: string | null
+        }
+        Insert: {
+          car_images?: Json | null
+          created_at?: string | null
+          id?: string | null
+          license_plate?: string | null
+          make?: string | null
+          model?: string | null
+          status?: string | null
+          vehicle_id?: string | null
+          year?: string | null
+        }
+        Update: {
+          car_images?: Json | null
+          created_at?: string | null
+          id?: string | null
+          license_plate?: string | null
+          make?: string | null
+          model?: string | null
+          status?: string | null
+          vehicle_id?: string | null
+          year?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      [_ in never]: never
+      partsmart_has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["partsmart_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      test_custom_auth_emails: { Args: never; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      partsmart_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1155,6 +1484,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      partsmart_role: ["admin", "user"],
+    },
   },
 } as const
