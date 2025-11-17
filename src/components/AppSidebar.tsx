@@ -63,6 +63,7 @@ const mainMenuItems: MenuItem[] = [
     title: "SA Trips",
     page: "sa-trips",
     icon: Truck,
+    hidden: true, // Hidden but still functional
   },
   {
     title: "Workers",
