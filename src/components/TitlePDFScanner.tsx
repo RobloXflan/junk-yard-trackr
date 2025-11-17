@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ServerPDFUploadZone } from './ServerPDFUploadZone';
 import { PDFPageGallery } from './PDFPageGallery';
-import { PDFProcessingService } from '@/services/pdfProcessingService';
+import { ClientPDFProcessor } from '@/services/clientPdfProcessor';
 
 interface ExtractedData {
   vin?: string;
@@ -42,7 +42,7 @@ export function TitlePDFScanner({ onDataExtracted }: TitlePDFScannerProps) {
     setExtractedData([]);
 
     try {
-      const batch = await PDFProcessingService.processPDF(file);
+      const batch = await ClientPDFProcessor.processPDF(file);
       
       // Fetch the processed pages
       const { data: pagesData, error } = await supabase
