@@ -14,7 +14,15 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-const mainMenuItems = [
+interface MenuItem {
+  title: string;
+  page: string;
+  icon: any;
+  hidden?: boolean;
+  locked?: boolean;
+}
+
+const mainMenuItems: MenuItem[] = [
   {
     title: "Dashboard",
     page: "dashboard",
@@ -44,6 +52,7 @@ const mainMenuItems = [
     title: "Quotes",
     page: "quotes",
     icon: FileText,
+    hidden: true, // Hidden but still functional
   },
   {
     title: "Appointments",
@@ -54,16 +63,6 @@ const mainMenuItems = [
     title: "SA Trips",
     page: "sa-trips",
     icon: Truck,
-  },
-  {
-    title: "Pick Your Part Trips", 
-    page: "pyp-trips",
-    icon: Truck,
-  },
-  {
-    title: "PYP Documents",
-    page: "pyp-documents",
-    icon: FileText,
   },
   {
     title: "Workers",
@@ -82,7 +81,7 @@ const mainMenuItems = [
   },
 ];
 
-const adminMenuItems = [
+const adminMenuItems: MenuItem[] = [
   {
     title: "Business Purchases",
     page: "business-purchases",
@@ -145,7 +144,7 @@ export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainMenuItems.map((item) => (
+              {mainMenuItems.filter(item => !item.hidden).map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton 
                     onClick={() => handleNavigation(item.page)}
