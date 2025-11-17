@@ -33,6 +33,8 @@ import { Documents } from "@/pages/Documents";
 import { PYPDocuments } from "@/pages/PYPDocuments";
 import { SATrips } from "@/pages/SATrips";
 import { PYPTrips } from "@/pages/PYPTrips";
+import Support from "@/pages/Support";
+import SupportAdmin from "@/pages/SupportAdmin";
 
 const queryClient = new QueryClient();
 
@@ -100,6 +102,10 @@ const App = () => {
         return <PublicInventory />;
       case 'documents':
         return <Documents onNavigate={setCurrentPage} />;
+      case 'support':
+        return <Support />;
+      case 'support-admin':
+        return <SupportAdmin />;
       case 'pyp-documents':
         return <PYPDocuments onNavigate={setCurrentPage} />;
       case 'sa-trips':
