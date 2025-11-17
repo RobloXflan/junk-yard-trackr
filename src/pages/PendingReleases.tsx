@@ -279,33 +279,69 @@ export function PendingReleases() {
                     </div>
                   )}
 
-                  {/* Buyer Address */}
-                  {(vehicle.buyerAddress || vehicle.buyerCity || vehicle.buyerState || vehicle.buyerZip) && (
+                  {/* Buyer Address - Separate Fields */}
+                  {vehicle.buyerAddress && (
                     <div className="flex items-center justify-between p-2 bg-muted rounded">
                       <div className="flex items-center gap-2">
                         <MapPin className="w-4 h-4 text-muted-foreground" />
                         <span className="text-sm font-medium">Address:</span>
-                        <span className="text-sm">
-                          {[
-                            vehicle.buyerAddress,
-                            vehicle.buyerCity,
-                            vehicle.buyerState,
-                            vehicle.buyerZip
-                          ].filter(Boolean).join(', ')}
-                        </span>
+                        <span className="text-sm">{vehicle.buyerAddress}</span>
                       </div>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => {
-                          const fullAddress = [
-                            vehicle.buyerAddress,
-                            vehicle.buyerCity,
-                            vehicle.buyerState,
-                            vehicle.buyerZip
-                          ].filter(Boolean).join(', ');
-                          copyToClipboard(fullAddress, "Buyer Address");
-                        }}
+                        onClick={() => copyToClipboard(vehicle.buyerAddress || "", "Address")}
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+
+                  {vehicle.buyerCity && (
+                    <div className="flex items-center justify-between p-2 bg-muted rounded">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">City:</span>
+                        <span className="text-sm">{vehicle.buyerCity}</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => copyToClipboard(vehicle.buyerCity || "", "City")}
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+
+                  {vehicle.buyerState && (
+                    <div className="flex items-center justify-between p-2 bg-muted rounded">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">State:</span>
+                        <span className="text-sm">{vehicle.buyerState}</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => copyToClipboard(vehicle.buyerState || "", "State")}
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+
+                  {vehicle.buyerZip && (
+                    <div className="flex items-center justify-between p-2 bg-muted rounded">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">Zip Code:</span>
+                        <span className="text-sm">{vehicle.buyerZip}</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => copyToClipboard(vehicle.buyerZip || "", "Zip Code")}
                       >
                         <Copy className="w-4 h-4" />
                       </Button>
