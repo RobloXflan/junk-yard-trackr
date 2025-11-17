@@ -1,8 +1,8 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import { supabase } from '@/integrations/supabase/client';
 
-// Configure pdf.js worker - use CDN directly
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js';
+// Configure pdf.js worker - use matching CDN version
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.3.31/build/pdf.worker.min.mjs';
 
 interface ProcessedPage {
   id: string;
