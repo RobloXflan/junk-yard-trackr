@@ -10,7 +10,6 @@ import { toast } from "@/hooks/use-toast";
 import { MessageSquare } from "lucide-react";
 
 export default function Support() {
-  const [userName, setUserName] = useState("");
   const [category, setCategory] = useState("general");
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -18,10 +17,10 @@ export default function Support() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!userName.trim() || !message.trim()) {
+    if (!message.trim()) {
       toast({
         title: "Missing Information",
-        description: "Please fill in your name and message.",
+        description: "Please enter your message.",
         variant: "destructive",
       });
       return;
@@ -33,7 +32,7 @@ export default function Support() {
       const { error } = await supabase
         .from("support_messages")
         .insert({
-          user_name: userName.trim(),
+          user_name: "Anonymous",
           category: category,
           message: message.trim(),
           status: "open"
@@ -47,7 +46,6 @@ export default function Support() {
       });
 
       // Reset form
-      setUserName("");
       setCategory("general");
       setMessage("");
     } catch (error) {
@@ -76,17 +74,6 @@ export default function Support() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="userName">Your Name</Label>
-              <Input
-                id="userName"
-                placeholder="Enter your name"
-                value={userName}
-                onChange={(e) => setUserName(e.target.value)}
-                required
-              />
-            </div>
-
             <div className="space-y-2">
               <Label htmlFor="category">Category</Label>
               <Select value={category} onValueChange={setCategory}>
