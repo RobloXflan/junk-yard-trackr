@@ -132,7 +132,7 @@ export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
             <Car className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h2 className="text-base sm:text-lg font-bold text-slate-800">JunkCar Pro</h2>
+            <h2 className="text-base sm:text-lg font-bold text-slate-800">America's Auto Towing LLC</h2>
             <p className="text-xs text-slate-500">Admin Dashboard</p>
           </div>
         </div>
