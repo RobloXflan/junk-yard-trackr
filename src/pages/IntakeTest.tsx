@@ -1,4 +1,4 @@
-import { VehicleIntakeForm } from "@/components/VehicleIntakeForm";
+import { VehicleIntakeFormTest } from "@/components/VehicleIntakeFormTest";
 
 export function IntakeTest() {
   return (
@@ -6,11 +6,11 @@ export function IntakeTest() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Vehicle Intake (Test Version)</h1>
         <p className="text-black">
-          Test version - Changes here won't affect the main intake
+          Test version with AI Title Scanner - Changes here won't affect the main intake
         </p>
       </div>
 
-      <VehicleIntakeForm />
+      <VehicleIntakeFormTest />
     </div>
   );
 }
