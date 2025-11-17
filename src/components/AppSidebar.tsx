@@ -60,7 +60,7 @@ const mainMenuItems: MenuItem[] = [{
 }];
 const adminMenuItems: MenuItem[] = [{
   title: "Vehicle Intake (Test)",
-  page: "intake",
+  page: "intake-test",
   icon: ClipboardList,
   locked: true
 }, {
