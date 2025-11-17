@@ -46,6 +46,7 @@ export function TitlePDFScanner({ onDataExtracted }: TitlePDFScannerProps) {
       return;
     }
 
+    console.log("Starting PDF scan...", file.name);
     setIsScanning(true);
     setExtractedData([]);
 
@@ -53,17 +54,26 @@ export function TitlePDFScanner({ onDataExtracted }: TitlePDFScannerProps) {
       const formData = new FormData();
       formData.append("pdf", file);
 
+      console.log("Calling scan-title-pdf function...");
+
       const { data, error } = await supabase.functions.invoke("scan-title-pdf", {
         body: formData,
       });
 
-      if (error) throw error;
+      console.log("Function response:", { data, error });
+
+      if (error) {
+        console.error("Function error:", error);
+        throw error;
+      }
 
       if (data.error) {
+        console.error("Data error:", data.error);
         throw new Error(data.error);
       }
 
       const results = data.data || [];
+      console.log("Extracted results:", results);
       setExtractedData(results);
 
       if (results.length === 0) {
