@@ -1,6 +1,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Car, DollarSign, FileText, TrendingUp } from "lucide-react";
+import { Car, DollarSign, TrendingUp } from "lucide-react";
 import { useVehicleStore } from "@/hooks/useVehicleStore";
 
 export function DashboardStats() {
@@ -11,7 +11,6 @@ export function DashboardStats() {
   const totalRevenue = vehicles
     .filter(v => v.salePrice)
     .reduce((sum, v) => sum + parseFloat(v.salePrice || '0'), 0);
-  const pendingDMV = vehicles.filter(v => !v.titlePresent && v.status === 'yard').length;
   
   const today = new Date().toDateString();
   const vehiclesAddedToday = vehicles.filter(vehicle => {
@@ -35,13 +34,6 @@ export function DashboardStats() {
       color: "text-success",
     },
     {
-      title: "Pending DMV",
-      value: pendingDMV.toString(),
-      change: pendingDMV === 0 ? "No pending documents" : `${pendingDMV} vehicle${pendingDMV !== 1 ? 's' : ''} need paperwork`,
-      icon: FileText,
-      color: "text-warning",
-    },
-    {
       title: "Added Today",
       value: vehiclesAddedToday.toString(),
       change: vehiclesAddedToday === 0 ? "No vehicles added today" : `${vehiclesAddedToday} vehicle${vehiclesAddedToday !== 1 ? 's' : ''} added today`,
@@ -51,7 +43,7 @@ export function DashboardStats() {
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
       {stats.map((stat, index) => (
         <Card key={index} className="shadow-business hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
