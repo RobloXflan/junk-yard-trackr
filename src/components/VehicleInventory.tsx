@@ -33,7 +33,7 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<Vehicle['status'] | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<Vehicle['status'] | 'all' | 'not-accounted'>('all');
   const [monthFilter, setMonthFilter] = useState<string>('all');
   const { vehicles, updateVehicleStatus, refreshVehicles, isLoading } = useVehicleStore();
 
@@ -48,7 +48,15 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
 
   const filteredVehicles = vehicles.filter((vehicle) => {
     // Apply status filter first
-    if (statusFilter !== 'all' && vehicle.status !== statusFilter) {
+    if (statusFilter === 'not-accounted') {
+      if (vehicle.status !== 'yard' || !vehicle.purchaseDate || new Date(vehicle.purchaseDate) >= new Date('2025-07-05')) {
+        return false;
+      }
+    } else if (statusFilter === 'yard') {
+      if (vehicle.status !== 'yard' || (vehicle.purchaseDate && new Date(vehicle.purchaseDate) < new Date('2025-07-05'))) {
+        return false;
+      }
+    } else if (statusFilter !== 'all' && vehicle.status !== statusFilter) {
       return false;
     }
 
@@ -89,7 +97,8 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
 
   const statusCounts = {
     all: vehicles.length,
-    yard: vehicles.filter(v => v.status === 'yard').length,
+    yard: vehicles.filter(v => v.status === 'yard' && (!v.purchaseDate || new Date(v.purchaseDate) >= new Date('2025-07-05'))).length,
+    'not-accounted': vehicles.filter(v => v.status === 'yard' && v.purchaseDate && new Date(v.purchaseDate) < new Date('2025-07-05')).length,
     sold: vehicles.filter(v => v.status === 'sold').length,
     'pick-your-part': vehicles.filter(v => v.status === 'pick-your-part').length,
     'sa-recycling': vehicles.filter(v => v.status === 'sa-recycling').length,
@@ -225,6 +234,16 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
               </Badge>
             </Button>
             <Button
+              variant={statusFilter === 'not-accounted' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('not-accounted')}
+              className="flex items-center gap-2"
+            >
+              Not Accounted
+              <Badge variant="secondary" className="ml-1">
+                {statusCounts['not-accounted']}
+              </Badge>
+            </Button>
+            <Button
               variant={statusFilter === 'sold' ? 'default' : 'outline'}
               onClick={() => setStatusFilter('sold')}
               className="flex items-center gap-2"
@@ -264,7 +283,9 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
           <CardTitle>
             Vehicles ({statusFilter === 'all' ? 
               (searchTerm || monthFilter !== 'all' ? `${filteredVehicles.length} of ${vehicles.length}` : vehicles.length) :
-              `${filteredVehicles.length} ${statusFilter === 'yard' ? 'In Yard' : 
+              `${filteredVehicles.length} ${
+                statusFilter === 'yard' ? 'In Yard' : 
+                statusFilter === 'not-accounted' ? 'Not Accounted' :
                 statusFilter === 'sold' ? 'Sold' :
                 statusFilter === 'pick-your-part' ? 'Pick Your Part' :
                 'SA Recycling'} vehicles`
@@ -295,7 +316,9 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
               <h3 className="text-lg font-semibold mb-2">No vehicles found</h3>
               <p className="text-muted-foreground mb-4">
                 {statusFilter !== 'all' ? 
-                  `No vehicles with status "${statusFilter === 'yard' ? 'In Yard' : 
+                  `No vehicles with status "${
+                    statusFilter === 'yard' ? 'In Yard' : 
+                    statusFilter === 'not-accounted' ? 'Not Accounted' :
                     statusFilter === 'sold' ? 'Sold' :
                     statusFilter === 'pick-your-part' ? 'Pick Your Part' :
                     'SA Recycling'}" found.` :
