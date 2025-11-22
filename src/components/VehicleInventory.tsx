@@ -396,10 +396,12 @@ export function VehicleInventory({ onNavigate }: VehicleInventoryProps) {
                           vehicle.status === 'sa-recycling' ? 'border-purple-500' :
                           vehicle.status === 'pick-your-part' ? 'border-orange-500' :
                           vehicle.status === 'sold' ? 'border-blue-500' :
+                          vehicle.status === 'yard' && vehicle.purchaseDate && new Date(vehicle.purchaseDate) < new Date('2025-07-05') ? 'border-yellow-500' :
                           'border-muted'
                         }`}
                       >
-                        {vehicle.status === 'yard' ? 'In Yard' : 
+                        {vehicle.status === 'yard' && vehicle.purchaseDate && new Date(vehicle.purchaseDate) < new Date('2025-07-05') ? 'Not Accounted' :
+                         vehicle.status === 'yard' ? 'In Yard' : 
                          vehicle.status === 'sold' ? 'Sold' :
                          vehicle.status === 'pick-your-part' ? 'Pick Your Part' :
                          vehicle.status === 'sa-recycling' ? 'SA Recycling' :
