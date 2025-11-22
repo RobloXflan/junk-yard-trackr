@@ -6,7 +6,7 @@ import { useVehicleStore } from "@/hooks/useVehicleStore";
 export function PendingReleasesStats() {
   const { vehicles } = useVehicleStore();
   
-  const soldVehicles = vehicles.filter(v => v.status === 'sold');
+  const soldVehicles = vehicles.filter(v => v.status === 'sold' && !v.isReleased);
   const totalSoldValue = soldVehicles.reduce((sum, v) => sum + parseFloat(v.salePrice || '0'), 0);
   const avgDaysToSell = soldVehicles.length > 0 ? Math.round(
     soldVehicles.reduce((sum, v) => {
