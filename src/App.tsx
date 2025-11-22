@@ -6,7 +6,6 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Dashboard } from "@/pages/Dashboard";
 import { Intake } from "@/pages/Intake";
-import { IntakeTest } from "@/pages/IntakeTest";
 import { InventoryOptimized } from "@/pages/InventoryOptimized";
 import { PendingReleases } from "@/pages/PendingReleases";
 import { Released } from "@/pages/Released";
@@ -71,8 +70,6 @@ const App = () => {
         return <Dashboard />;
       case 'intake':
         return <Intake />;
-      case 'intake-test':
-        return <IntakeTest />;
       case 'inventory':
         return <InventoryOptimized onNavigate={setCurrentPage} />;
       case 'pending-releases':
