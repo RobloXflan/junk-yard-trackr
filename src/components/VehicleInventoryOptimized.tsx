@@ -55,12 +55,13 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loadingDocuments, setLoadingDocuments] = useState(false);
   const [editingPaperworkId, setEditingPaperworkId] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<Vehicle['status'] | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<Vehicle['status'] | 'all' | 'not-accounted'>('all');
   const [statusSpecificVehicles, setStatusSpecificVehicles] = useState<Vehicle[]>([]);
   const [statusSpecificLoading, setStatusSpecificLoading] = useState(false);
   const [actualStatusCounts, setActualStatusCounts] = useState({
     all: 0,
     yard: 0,
+    'not-accounted': 0,
     sold: 0,
     'pick-your-part': 0,
     'sa-recycling': 0,
@@ -181,20 +182,113 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
     }
   };
 
+  const loadNotAccountedVehicles = async () => {
+    setStatusSpecificLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('vehicles')
+        .select(`
+          id,
+          year,
+          make,
+          model,
+          vehicle_id,
+          license_plate,
+          seller_name,
+          purchase_date,
+          purchase_price,
+          title_present,
+          bill_of_sale,
+          destination,
+          buyer_name,
+          buyer_first_name,
+          buyer_last_name,
+          buyer_address,
+          buyer_city,
+          buyer_state,
+          buyer_zip,
+          sale_date,
+          sale_price,
+          notes,
+          paperwork,
+          paperwork_other,
+          status,
+          is_released,
+          car_images,
+          sa_recycling_date,
+          pick_your_part_date,
+          created_at,
+          updated_at
+        `)
+        .eq('status', 'yard')
+        .lt('purchase_date', '2025-07-05')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const transformedVehicles: Vehicle[] = (data || []).map(vehicle => ({
+        id: vehicle.id,
+        year: vehicle.year || '',
+        make: vehicle.make || '',
+        model: vehicle.model || '',
+        vehicleId: vehicle.vehicle_id || '',
+        licensePlate: vehicle.license_plate || undefined,
+        sellerName: vehicle.seller_name || undefined,
+        purchaseDate: vehicle.purchase_date || undefined,
+        purchasePrice: vehicle.purchase_price || undefined,
+        titlePresent: Boolean(vehicle.title_present),
+        billOfSale: Boolean(vehicle.bill_of_sale),
+        destination: vehicle.destination || undefined,
+        buyerName: vehicle.buyer_name || undefined,
+        buyerFirstName: vehicle.buyer_first_name || undefined,
+        buyerLastName: vehicle.buyer_last_name || undefined,
+        buyerAddress: vehicle.buyer_address || undefined,
+        buyerCity: vehicle.buyer_city || undefined,
+        buyerState: vehicle.buyer_state || undefined,
+        buyerZip: vehicle.buyer_zip || undefined,
+        saleDate: vehicle.sale_date || undefined,
+        salePrice: vehicle.sale_price || undefined,
+        notes: vehicle.notes || undefined,
+        paperwork: vehicle.paperwork || undefined,
+        paperworkOther: vehicle.paperwork_other || undefined,
+        status: (vehicle.status as Vehicle['status']) || 'yard',
+        isReleased: Boolean(vehicle.is_released),
+        carImages: deserializeCarImages(vehicle.car_images),
+        saRecyclingDate: vehicle.sa_recycling_date || undefined,
+        pickYourPartDate: vehicle.pick_your_part_date || undefined,
+        createdAt: vehicle.created_at,
+        documents: []
+      }));
+
+      setStatusSpecificVehicles(transformedVehicles);
+    } catch (error) {
+      console.error('Error loading not accounted vehicles:', error);
+      setStatusSpecificVehicles([]);
+    } finally {
+      setStatusSpecificLoading(false);
+    }
+  };
+
   // Load actual status counts from database
   const loadStatusCounts = async () => {
     try {
-      const [allResult, yardResult, soldResult, pypResult, saResult] = await Promise.all([
+      const cutoffDate = '2025-07-05';
+      const [allResult, yardResult, yardNotAccountedResult, soldResult, pypResult, saResult] = await Promise.all([
         supabase.from('vehicles').select('id', { count: 'exact', head: true }),
         supabase.from('vehicles').select('id', { count: 'exact', head: true }).eq('status', 'yard'),
+        supabase.from('vehicles').select('id', { count: 'exact', head: true }).eq('status', 'yard').lt('purchase_date', cutoffDate),
         supabase.from('vehicles').select('id', { count: 'exact', head: true }).eq('status', 'sold'),
         supabase.from('vehicles').select('id', { count: 'exact', head: true }).eq('status', 'pick-your-part'),
         supabase.from('vehicles').select('id', { count: 'exact', head: true }).eq('status', 'sa-recycling'),
       ]);
 
+      const notAccountedCount = yardNotAccountedResult.count || 0;
+      const yardCount = (yardResult.count || 0) - notAccountedCount;
+
       setActualStatusCounts({
         all: allResult.count || 0,
-        yard: yardResult.count || 0,
+        yard: yardCount,
+        'not-accounted': notAccountedCount,
         sold: soldResult.count || 0,
         'pick-your-part': pypResult.count || 0,
         'sa-recycling': saResult.count || 0,
@@ -218,17 +312,30 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
 
   // Load status-specific vehicles when filter changes
   useEffect(() => {
-    if (statusFilter !== 'all' && statusFilter !== 'yard') {
-      loadAllVehiclesForStatus(statusFilter);
+    if (statusFilter === 'sold' || statusFilter === 'pick-your-part' || statusFilter === 'sa-recycling') {
+      loadAllVehiclesForStatus(statusFilter as Vehicle['status']);
+    } else if (statusFilter === 'not-accounted') {
+      loadNotAccountedVehicles();
     } else {
       setStatusSpecificVehicles([]);
     }
   }, [statusFilter]);
 
   // Use status-specific vehicles when available, otherwise filter from paginated results
-  const filteredVehicles = (statusFilter !== 'all' && statusFilter !== 'yard' && statusSpecificVehicles.length > 0)
+  const filteredVehicles = (statusFilter !== 'all' && statusFilter !== 'yard' && statusFilter !== 'not-accounted' && statusSpecificVehicles.length > 0)
     ? statusSpecificVehicles
     : vehicles.filter((vehicle) => {
+        if (statusFilter === 'yard') {
+          if (vehicle.status !== 'yard') return false;
+          if (vehicle.purchaseDate && vehicle.purchaseDate < '2025-07-05') return false;
+          return true;
+        }
+        if (statusFilter === 'not-accounted') {
+          if (vehicle.status !== 'yard') return false;
+          if (!vehicle.purchaseDate) return false;
+          if (vehicle.purchaseDate >= '2025-07-05') return false;
+          return true;
+        }
         if (statusFilter !== 'all' && vehicle.status !== statusFilter) {
           return false;
         }
@@ -406,6 +513,16 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
               </Badge>
             </Button>
             <Button
+              variant={statusFilter === 'not-accounted' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('not-accounted')}
+              className="flex items-center gap-2"
+            >
+              Not Accounted
+              <Badge variant="secondary" className="ml-1">
+                {statusCounts['not-accounted']}
+              </Badge>
+            </Button>
+            <Button
               variant={statusFilter === 'sold' ? 'default' : 'outline'}
               onClick={() => setStatusFilter('sold')}
               className="flex items-center gap-2"
@@ -446,6 +563,7 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
             Vehicles ({statusFilter === 'all' ? 
               (isSearching ? filteredVehicles.length : `${filteredVehicles.length}${totalCount > filteredVehicles.length ? ` of ${totalCount}` : ''}`) :
               `${filteredVehicles.length} ${statusFilter === 'yard' ? 'In Yard' : 
+                statusFilter === 'not-accounted' ? 'Not Accounted' :
                 statusFilter === 'sold' ? 'Sold' :
                 statusFilter === 'pick-your-part' ? 'Pick Your Part' :
                 'SA Recycling'} vehicles`
@@ -478,6 +596,7 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
               <p className="text-muted-foreground mb-4">
                 {statusFilter !== 'all' ? 
                   `No vehicles with status "${statusFilter === 'yard' ? 'In Yard' : 
+                    statusFilter === 'not-accounted' ? 'Not Accounted' :
                     statusFilter === 'sold' ? 'Sold' :
                     statusFilter === 'pick-your-part' ? 'Pick Your Part' :
                     'SA Recycling'}" found.` :
@@ -592,10 +711,12 @@ export function VehicleInventoryOptimized({ onNavigate }: VehicleInventoryOptimi
                             vehicle.status === 'sa-recycling' ? 'border-purple-500' :
                             vehicle.status === 'pick-your-part' ? 'border-orange-500' :
                             vehicle.status === 'sold' ? 'border-blue-500' :
+                            (vehicle.status === 'yard' && vehicle.purchaseDate && vehicle.purchaseDate < '2025-07-05') ? 'border-yellow-500' :
                             'border-muted'
                           }`}
                         >
-                          {vehicle.status === 'yard' ? 'In Yard' : 
+                          {vehicle.status === 'yard' && vehicle.purchaseDate && vehicle.purchaseDate < '2025-07-05' ? 'Not Accounted' :
+                           vehicle.status === 'yard' ? 'In Yard' : 
                            vehicle.status === 'sold' ? 'Sold' :
                            vehicle.status === 'pick-your-part' ? 'Pick Your Part' :
                            vehicle.status === 'sa-recycling' ? 'SA Recycling' :
