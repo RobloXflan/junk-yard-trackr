@@ -172,11 +172,16 @@ export function Released() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Released Vehicles</h1>
-        <p className="text-muted-foreground">
-          Vehicles that have been released and processed ({releasedVehicles.length} total)
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Released Vehicles</h1>
+          <p className="text-muted-foreground">
+            Vehicles that have been released and processed
+          </p>
+        </div>
+        <Badge className="text-lg px-4 py-2 bg-green-100 text-green-800">
+          {releasedVehicles.length} Vehicles
+        </Badge>
       </div>
 
       {releasedVehicles.length === 0 ? (
