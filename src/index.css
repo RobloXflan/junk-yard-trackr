@@ -147,10 +147,44 @@
 
 /* Print styles */
 @media print {
-  body * {
-    visibility: hidden;
+  /* Hide non-printable elements */
+  .print\\:hidden {
+    display: none !important;
   }
   
+  /* Show print-only elements */
+  .hidden.print\\:block {
+    display: block !important;
+  }
+  
+  /* Reset backgrounds for printing */
+  body {
+    background: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  /* Tax report specific styles */
+  .print\\:break-before-page {
+    break-before: page;
+  }
+  
+  .print\\:break-inside-avoid {
+    break-inside: avoid;
+  }
+  
+  /* Card styling for print */
+  .print\\:border {
+    border: 1px solid #e5e7eb !important;
+  }
+  
+  /* Ensure proper page sizing */
+  @page {
+    size: letter;
+    margin: 0.5in;
+  }
+  
+  /* Document-specific print styles */
   .print-document, .print-document * {
     visibility: visible;
   }
@@ -166,11 +200,5 @@
   /* Hide everything except the document when printing */
   .print-document ~ * {
     display: none !important;
-  }
-  
-  /* Ensure proper page sizing */
-  @page {
-    size: letter;
-    margin: 0.5in;
   }
 }
