@@ -1,4 +1,4 @@
-import { Car, BarChart3, Upload, Clock, Settings, CheckCircle, FileText, TrendingUp, ShoppingCart, ScanLine, Calendar, Printer, Users, Truck, MessageSquare, ShieldAlert } from "lucide-react";
+import { Car, BarChart3, Upload, Clock, Settings, CheckCircle, FileText, TrendingUp, ShoppingCart, ScanLine, Calendar, Printer, Users, Truck, MessageSquare, ShieldAlert, Calculator } from "lucide-react";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, useSidebar } from "@/components/ui/sidebar";
 interface MenuItem {
   title: string;
@@ -62,6 +62,11 @@ const adminMenuItems: MenuItem[] = [{
   title: "Business Purchases",
   page: "business-purchases",
   icon: ShoppingCart,
+  locked: true
+}, {
+  title: "Tax Reports",
+  page: "tax-reports",
+  icon: Calculator,
   locked: true
 }, {
   title: "Metrics",

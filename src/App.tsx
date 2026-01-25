@@ -35,6 +35,8 @@ import { SATrips } from "@/pages/SATrips";
 import { PYPTrips } from "@/pages/PYPTrips";
 import Support from "@/pages/Support";
 import SupportAdmin from "@/pages/SupportAdmin";
+import { TaxReports } from "@/pages/TaxReports";
+import { TaxView } from "@/pages/TaxView";
 
 const queryClient = new QueryClient();
 
@@ -50,6 +52,7 @@ const App = () => {
   const isWorkerCash = window.location.pathname === "/worker-cash";
   const isWorkerCheckin = window.location.pathname === "/worker-checkin";
   const isDriverTracking = window.location.pathname === "/driver-tracking";
+  const isTaxView = window.location.pathname === "/tax-view";
 
   const handleAuthentication = (type: UserType, user?: string) => {
     setUserType(type);
@@ -112,6 +115,8 @@ const App = () => {
         return <SATrips />;
       case 'pyp-trips':
         return <PYPTrips />;
+      case 'tax-reports':
+        return <TaxReports />;
       default:
         return <Dashboard />;
     }
@@ -161,6 +166,18 @@ const App = () => {
           <Toaster />
           <Sonner />
           <MobileDriverTracking />
+        </TooltipProvider>
+      </QueryClientProvider>
+    );
+  }
+
+  if (isTaxView) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <TaxView />
         </TooltipProvider>
       </QueryClientProvider>
     );
