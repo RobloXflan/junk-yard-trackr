@@ -72,16 +72,30 @@ export function TaxReports() {
       if (purchaseError) throw purchaseError;
       setPurchases(purchaseData || []);
 
-      // Load vehicles purchased in selected year
-      const { data: vehicleData, error: vehicleError } = await supabase
-        .from('vehicles')
-        .select('*')
-        .gte('purchase_date', startDate)
-        .lte('purchase_date', endDate)
-        .order('purchase_date', { ascending: true });
+      // Load vehicles purchased in selected year with pagination to avoid 1000 row limit
+      let allVehicles: any[] = [];
+      let from = 0;
+      const pageSize = 1000;
+      
+      while (true) {
+        const { data: vehicleData, error: vehicleError } = await supabase
+          .from('vehicles')
+          .select('*')
+          .gte('purchase_date', startDate)
+          .lte('purchase_date', endDate)
+          .order('purchase_date', { ascending: true })
+          .range(from, from + pageSize - 1);
 
-      if (vehicleError) throw vehicleError;
-      setVehicles(vehicleData || []);
+        if (vehicleError) throw vehicleError;
+        
+        const batch = vehicleData || [];
+        allVehicles = allVehicles.concat(batch);
+        
+        if (batch.length < pageSize) break;
+        from += pageSize;
+      }
+      
+      setVehicles(allVehicles);
     } catch (error) {
       console.error('Error loading tax data:', error);
       toast({
