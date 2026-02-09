@@ -72,21 +72,16 @@ export function TaxReports() {
       if (purchaseError) throw purchaseError;
       setPurchases(purchaseData || []);
 
-      // Load vehicles (purchased or sold in selected year)
+      // Load vehicles purchased in selected year
       const { data: vehicleData, error: vehicleError } = await supabase
         .from('vehicles')
         .select('*')
-        .order('created_at', { ascending: false });
+        .gte('purchase_date', startDate)
+        .lte('purchase_date', endDate)
+        .order('purchase_date', { ascending: true });
 
       if (vehicleError) throw vehicleError;
-
-      // Filter vehicles by purchase year only
-      const filteredVehicles = (vehicleData || []).filter((v: Vehicle) => {
-        const purchaseYear = v.purchase_date ? new Date(v.purchase_date).getFullYear().toString() : null;
-        return purchaseYear === selectedYear;
-      });
-
-      setVehicles(filteredVehicles);
+      setVehicles(vehicleData || []);
     } catch (error) {
       console.error('Error loading tax data:', error);
       toast({

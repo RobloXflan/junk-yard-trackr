@@ -78,16 +78,12 @@ export function TaxView() {
       const { data: vehicleData, error: vehicleError } = await supabase
         .from('vehicles')
         .select('*')
+        .gte('purchase_date', startDate)
+        .lte('purchase_date', endDate)
         .order('purchase_date', { ascending: true });
 
       if (vehicleError) throw vehicleError;
-
-      const filteredVehicles = (vehicleData || []).filter((v: Vehicle) => {
-        const purchaseYear = v.purchase_date ? new Date(v.purchase_date).getFullYear().toString() : null;
-        return purchaseYear === year;
-      });
-
-      setVehicles(filteredVehicles);
+      setVehicles(vehicleData || []);
     } catch (error) {
       console.error('Error loading tax data:', error);
     } finally {
