@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileText, Car, Receipt, Printer, DollarSign, TrendingUp, TrendingDown, Building2 } from "lucide-react";
+import { FileText, Car, Receipt, Printer, Building2 } from "lucide-react";
 import { format } from "date-fns";
 
 interface BusinessPurchase {
@@ -81,11 +81,10 @@ export function TaxView() {
 
       if (vehicleError) throw vehicleError;
 
-      // Filter vehicles by year
+      // Filter vehicles by purchase year only
       const filteredVehicles = (vehicleData || []).filter((v: Vehicle) => {
         const purchaseYear = v.purchase_date ? new Date(v.purchase_date).getFullYear().toString() : null;
-        const saleYear = v.sale_date ? new Date(v.sale_date).getFullYear().toString() : null;
-        return purchaseYear === year || saleYear === year;
+        return purchaseYear === year;
       });
 
       setVehicles(filteredVehicles);
@@ -110,26 +109,15 @@ export function TaxView() {
 
   const vehicleSummary = useMemo(() => {
     let totalPurchases = 0;
-    let totalSales = 0;
-    let totalProfit = 0;
-    let soldCount = 0;
 
     vehicles.forEach(v => {
       const purchasePrice = parseFloat(v.purchase_price || '0') || 0;
-      const salePrice = parseFloat(v.sale_price || '0') || 0;
-
       if (v.purchase_date && new Date(v.purchase_date).getFullYear().toString() === year) {
         totalPurchases += purchasePrice;
       }
-
-      if (v.sale_date && new Date(v.sale_date).getFullYear().toString() === year) {
-        totalSales += salePrice;
-        totalProfit += salePrice - purchasePrice;
-        soldCount++;
-      }
     });
 
-    return { totalPurchases, totalSales, totalProfit, soldCount };
+    return { totalPurchases };
   }, [vehicles, year]);
 
   const formatCurrency = (amount: number) => {
@@ -200,7 +188,7 @@ export function TaxView() {
 
       <main className="max-w-6xl mx-auto p-4 md:p-8 space-y-8 print:p-4">
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 print:grid-cols-4 print:gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 print:grid-cols-2 print:gap-2">
           <Card className="bg-blue-50 border-blue-200 print:border">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-blue-800 flex items-center gap-2">
@@ -214,19 +202,6 @@ export function TaxView() {
             </CardContent>
           </Card>
 
-          <Card className="bg-green-50 border-green-200 print:border">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-green-800 flex items-center gap-2">
-                <DollarSign className="w-4 h-4" />
-                Vehicle Sales
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-900">{formatCurrency(vehicleSummary.totalSales)}</div>
-              <p className="text-xs text-green-700">{vehicleSummary.soldCount} vehicles sold</p>
-            </CardContent>
-          </Card>
-
           <Card className="bg-orange-50 border-orange-200 print:border">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-orange-800 flex items-center gap-2">
@@ -237,23 +212,6 @@ export function TaxView() {
             <CardContent>
               <div className="text-2xl font-bold text-orange-900">{formatCurrency(vehicleSummary.totalPurchases)}</div>
               <p className="text-xs text-orange-700">{vehicles.length} vehicles</p>
-            </CardContent>
-          </Card>
-
-          <Card className={`print:border ${vehicleSummary.totalProfit >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
-            <CardHeader className="pb-2">
-              <CardTitle className={`text-sm font-medium flex items-center gap-2 ${vehicleSummary.totalProfit >= 0 ? 'text-emerald-800' : 'text-red-800'}`}>
-                {vehicleSummary.totalProfit >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                Net Profit/Loss
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className={`text-2xl font-bold ${vehicleSummary.totalProfit >= 0 ? 'text-emerald-900' : 'text-red-900'}`}>
-                {formatCurrency(vehicleSummary.totalProfit)}
-              </div>
-              <p className={`text-xs ${vehicleSummary.totalProfit >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
-                From vehicle sales
-              </p>
             </CardContent>
           </Card>
         </div>
@@ -368,8 +326,6 @@ export function TaxView() {
             <div className="space-y-4">
               {vehicles.map(vehicle => {
                 const purchasePrice = parseFloat(vehicle.purchase_price || '0') || 0;
-                const salePrice = parseFloat(vehicle.sale_price || '0') || 0;
-                const profit = vehicle.sale_date ? salePrice - purchasePrice : 0;
                 const documents = Array.isArray(vehicle.documents) ? vehicle.documents : [];
                 const images = Array.isArray(vehicle.car_images) ? vehicle.car_images : [];
 
@@ -412,33 +368,14 @@ export function TaxView() {
                             </Badge>
                           </div>
                           
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm mt-3">
-                            <div className="bg-slate-50 rounded p-2">
+                          <div className="text-sm mt-3">
+                            <div className="bg-slate-50 rounded p-2 inline-block">
                               <div className="text-slate-500">Purchased</div>
                               <div className="font-medium">
                                 {vehicle.purchase_date ? format(new Date(vehicle.purchase_date), 'MMM d, yyyy') : 'N/A'}
                               </div>
                               <div className="font-bold text-orange-600">{formatCurrency(purchasePrice)}</div>
                             </div>
-                            
-                            {vehicle.sale_date && (
-                              <>
-                                <div className="bg-slate-50 rounded p-2">
-                                  <div className="text-slate-500">Sold</div>
-                                  <div className="font-medium">
-                                    {format(new Date(vehicle.sale_date), 'MMM d, yyyy')}
-                                  </div>
-                                  <div className="font-bold text-green-600">{formatCurrency(salePrice)}</div>
-                                </div>
-                                
-                                <div className={`rounded p-2 ${profit >= 0 ? 'bg-emerald-50' : 'bg-red-50'}`}>
-                                  <div className={profit >= 0 ? 'text-emerald-700' : 'text-red-700'}>Profit/Loss</div>
-                                  <div className={`font-bold text-lg ${profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                                    {profit >= 0 ? '+' : ''}{formatCurrency(profit)}
-                                  </div>
-                                </div>
-                              </>
-                            )}
                           </div>
                           
                           {/* Documents */}
