@@ -232,9 +232,6 @@ export function TaxView() {
               Print Report
             </Button>
           </div>
-          <p className="text-sm text-blue-100 mt-2 print:text-slate-500">
-            Generated on {format(new Date(), 'MMMM d, yyyy')}
-          </p>
         </div>
       </header>
 
