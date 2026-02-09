@@ -40,6 +40,13 @@ const MONTH_NAMES = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
+// Helper function to parse date strings without timezone shift
+// Dates like "2025-05-02" should display as May 2, not May 1
+const parseLocalDate = (dateStr: string): Date => {
+  // Append T00:00:00 to interpret as local time, not UTC
+  return new Date(dateStr + 'T00:00:00');
+};
+
 export function TaxView() {
   const [purchases, setPurchases] = useState<BusinessPurchase[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -483,7 +490,7 @@ export function TaxView() {
                           <div className="flex flex-wrap gap-4 text-sm mt-2 text-slate-600">
                             <div>
                               <span className="text-slate-400">Date:</span>{" "}
-                              <span className="font-medium">{format(new Date(purchase.purchase_date), 'MMM d, yyyy')}</span>
+                              <span className="font-medium">{format(parseLocalDate(purchase.purchase_date), 'MMM d, yyyy')}</span>
                             </div>
                             <div>
                               <span className="text-slate-400">Payment:</span>{" "}
@@ -580,7 +587,7 @@ export function TaxView() {
                                   {formatCurrency(purchasePrice)}
                                 </div>
                                 <div className="text-sm text-slate-500">
-                                  {vehicle.purchase_date ? format(new Date(vehicle.purchase_date), 'MMM d, yyyy') : 'N/A'}
+                                  {vehicle.purchase_date ? format(parseLocalDate(vehicle.purchase_date), 'MMM d, yyyy') : 'N/A'}
                                 </div>
                               </div>
                             </div>

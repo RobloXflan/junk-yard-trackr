@@ -39,6 +39,13 @@ interface Vehicle {
   created_at: string;
 }
 
+// Helper function to parse date strings without timezone shift
+// Dates like "2025-05-02" should display as May 2, not May 1
+const parseLocalDate = (dateStr: string): Date => {
+  // Append T00:00:00 to interpret as local time, not UTC
+  return new Date(dateStr + 'T00:00:00');
+};
+
 export function TaxReports() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [purchases, setPurchases] = useState<BusinessPurchase[]>([]);
@@ -311,7 +318,7 @@ export function TaxReports() {
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div>
                           <span className="text-muted-foreground">Date:</span>{" "}
-                          <span className="font-medium">{format(new Date(purchase.purchase_date), 'MMM d, yyyy')}</span>
+                          <span className="font-medium">{format(parseLocalDate(purchase.purchase_date), 'MMM d, yyyy')}</span>
                         </div>
                         <div>
                           <span className="text-muted-foreground">Payment:</span>{" "}
@@ -388,7 +395,7 @@ export function TaxReports() {
                           <div className="bg-muted/50 rounded p-2 inline-block">
                             <div className="text-muted-foreground">Purchased</div>
                             <div className="font-medium">
-                              {vehicle.purchase_date ? format(new Date(vehicle.purchase_date), 'MMM d, yyyy') : 'N/A'}
+                              {vehicle.purchase_date ? format(parseLocalDate(vehicle.purchase_date), 'MMM d, yyyy') : 'N/A'}
                             </div>
                             <div className="font-bold text-orange-600">{formatCurrency(purchasePrice)}</div>
                           </div>
@@ -444,7 +451,7 @@ export function TaxReports() {
                 </div>
               </div>
               <div className="text-sm text-muted-foreground">
-                Date: {format(new Date(purchase.purchase_date), 'MMM d, yyyy')} | Payment: {purchase.payment_method}
+                Date: {format(parseLocalDate(purchase.purchase_date), 'MMM d, yyyy')} | Payment: {purchase.payment_method}
               </div>
               {purchase.notes_purpose && (
                 <div className="text-sm mt-1">Notes: {purchase.notes_purpose}</div>
