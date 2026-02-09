@@ -118,7 +118,7 @@ export function TaxView() {
     const grouped: Record<number, { items: BusinessPurchase[]; total: number }> = {};
     
     purchases.forEach(p => {
-      const month = getMonth(new Date(p.purchase_date));
+      const month = getMonth(parseLocalDate(p.purchase_date));
       if (!grouped[month]) {
         grouped[month] = { items: [], total: 0 };
       }
@@ -135,7 +135,7 @@ export function TaxView() {
     
     vehicles.forEach(v => {
       if (!v.purchase_date) return;
-      const month = getMonth(new Date(v.purchase_date));
+      const month = getMonth(parseLocalDate(v.purchase_date));
       const price = parseFloat(v.purchase_price || '0') || 0;
       
       if (!grouped[month]) {

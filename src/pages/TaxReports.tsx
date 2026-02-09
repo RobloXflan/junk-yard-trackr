@@ -148,7 +148,7 @@ export function TaxReports() {
 
     vehicles.forEach(v => {
       const purchasePrice = parseFloat(v.purchase_price || '0') || 0;
-      if (v.purchase_date && new Date(v.purchase_date).getFullYear().toString() === selectedYear) {
+      if (v.purchase_date && parseLocalDate(v.purchase_date).getFullYear().toString() === selectedYear) {
         totalPurchases += purchasePrice;
       }
     });
