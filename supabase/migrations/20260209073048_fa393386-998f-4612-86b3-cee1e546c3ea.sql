@@ -1,0 +1,1 @@
+DELETE FROM business_purchases WHERE id = 'ce126e84-9396-4496-9967-c5d220869436';
