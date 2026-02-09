@@ -445,18 +445,23 @@ export function TaxView() {
                   {expensesByMonth[month].items.map((purchase, idx) => (
                     <div key={purchase.id} className="p-4 print:break-inside-avoid bg-white">
                       <div className="flex flex-col lg:flex-row gap-4">
-                        {/* Receipt Image */}
+                        {/* Receipt Image - Clickable to open full size */}
                         {purchase.receipt_url && (
-                          <div className="lg:w-40 flex-shrink-0">
+                          <a 
+                            href={purchase.receipt_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="lg:w-40 flex-shrink-0 block cursor-pointer hover:opacity-80 transition-opacity"
+                          >
                             <img 
                               src={purchase.receipt_url} 
-                              alt="Receipt" 
-                              className="w-full h-auto rounded border shadow-sm object-contain max-h-48"
+                              alt="Receipt - Click to view full size" 
+                              className="w-full h-auto rounded border shadow-sm object-contain max-h-48 hover:shadow-lg transition-shadow"
                               onError={(e) => {
                                 (e.target as HTMLImageElement).style.display = 'none';
                               }}
                             />
-                          </div>
+                          </a>
                         )}
                         
                         {/* Details */}
