@@ -1,79 +1,57 @@
 
 
-## Fix: Vehicle Data Being Cut Off in Tax Reports
+## Playwright DMV Autofill via Supabase Edge Function
 
-### Problem Identified
+### The Idea
 
-The Tax View page is missing vehicle data for August through December because **Supabase has a default limit of 1,000 rows per query**.
+Your site sends vehicle data to a Supabase Edge Function → that function triggers a Playwright script (via a remote service like Browserless, which you already have a `BROWSERLESS_API_KEY` for) → Playwright opens the DMV NRL page and fills in the form → reports back success.
 
-**Root Cause:**
-- The database contains **1,746 vehicles total**
-- The current query fetches ALL vehicles without a row limit
-- Supabase returns only the **first 1,000 rows** by default
-- Since the query orders by `purchase_date ascending` (oldest first), newer vehicles from August 2025 onward are cut off
+### Flow
 
-**Evidence:**
-- August shows only 53 vehicles instead of 154 in the database
-- September-December show "-" (no data at all)
-- The first 1,000 rows cover vehicles up to approximately mid-August
-
----
-
-### Solution
-
-Modify the vehicle query to filter by year at the database level (much more efficient) instead of fetching all vehicles and filtering in JavaScript.
-
-**Current Code:**
-```javascript
-const { data: vehicleData } = await supabase
-  .from('vehicles')
-  .select('*')
-  .order('purchase_date', { ascending: true });
-
-// Then filters in JavaScript - misses data beyond 1000 rows!
-const filteredVehicles = vehicleData.filter(v => {
-  return v.purchase_date?.startsWith(year);
-});
+```text
+Pending Releases page
+  → Click "Auto-Release" on a vehicle card
+  → Calls Supabase Edge Function with vehicle/buyer data
+  → Edge Function connects to Browserless (cloud Playwright/Puppeteer)
+  → Browserless opens DMV NRL page, fills form fields
+  → Returns screenshot or success status
+  → UI shows confirmation, optionally marks vehicle as released
 ```
 
-**Fixed Code:**
-```javascript
-const { data: vehicleData } = await supabase
-  .from('vehicles')
-  .select('*')
-  .gte('purchase_date', `${year}-01-01`)
-  .lte('purchase_date', `${year}-12-31`)
-  .order('purchase_date', { ascending: true });
+### What I'll Build
 
-// No JavaScript filter needed - database handles it efficiently
-setVehicles(vehicleData || []);
-```
+**1. Supabase Edge Function: `dmv-autofill`**
+- Receives vehicle data (VIN, plate, buyer name, address, sale date)
+- Connects to Browserless using your existing `BROWSERLESS_API_KEY`
+- Uses Puppeteer (Browserless exposes a Puppeteer-compatible API) to:
+  - Navigate to `https://www.dmv.ca.gov/wasapp/nrl/nrlApplication.do`
+  - Fill in form fields (VIN, license plate, buyer first/last name, address, city, state, zip, sale date)
+  - Take a screenshot of the filled form for review
+  - Upload screenshot to Supabase storage so you can verify before manually submitting
+- Returns success/failure status and screenshot URL
 
----
+**2. Update Pending Releases page (`src/pages/PendingReleases.tsx`)**
+- Add an "Auto-Fill DMV" button on each vehicle card
+- When clicked, calls the `dmv-autofill` edge function with that vehicle's data
+- Shows a loading state while Browserless processes
+- On success, displays the screenshot of the filled DMV form in a dialog so you can verify it looks right
+- Optionally opens the DMV page link for manual submission
 
-### Files to Update
+**3. Important caveat: DMV form submission**
+- The script will FILL the form but NOT submit it — Browserless sessions are ephemeral, so you'd review the screenshot and then go submit manually
+- Alternatively, if you want full automation (fill + submit), the script can do that too, but you should verify the field mapping is correct first
 
-1. **`src/pages/TaxView.tsx`** - Fix the vehicle data query
-2. **`src/pages/TaxReports.tsx`** - Apply the same fix for consistency
+### Technical Details
 
----
+- **Browserless** is a headless browser service — your `BROWSERLESS_API_KEY` is already set up
+- The edge function will use Browserless's Puppeteer-compatible API to control a Chrome instance
+- DMV form field IDs will need to be inspected and mapped (I'll do this during implementation)
+- Screenshots stored in the existing `vehicle-documents` storage bucket
 
-### Technical Changes
+### Files
 
-**TaxView.tsx (lines 78-90):**
-- Add `.gte()` and `.lte()` filters for the year's date range
-- Remove the JavaScript filter since it's no longer needed
-- This reduces data transfer and ensures all vehicles for the year are included
-
-**TaxReports.tsx:**
-- Apply the same database-level filtering pattern
-- Ensures both pages work correctly with large datasets
-
----
-
-### Benefits
-
-- All vehicles for the selected year will now appear (even with 10,000+ records)
-- Faster page load (fetching ~1,000 for one year vs 1,746+ total)
-- August-December 2025 will show the correct vehicle counts and totals
+| File | Action |
+|------|--------|
+| `supabase/functions/dmv-autofill/index.ts` | Create — Browserless automation |
+| `src/pages/PendingReleases.tsx` | Update — Add "Auto-Fill DMV" button + screenshot preview |
 
